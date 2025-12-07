@@ -324,10 +324,10 @@ export const StagingSheet: React.FC<Props> = ({ existingSheet, onCancel, onLock,
                                         <tr key={i.srNo}>
                                             <td className="border border-black p-1 text-center">{i.srNo}</td>
                                             <td className="border border-black p-1">{i.skuName}</td>
-                                            <td className="border border-black p-1 text-center">{i.casesPerPlt}</td>
-                                            <td className="border border-black p-1 text-center">{i.fullPlt}</td>
-                                            <td className="border border-black p-1 text-center">{i.loose}</td>
-                                            <td className="border border-black p-1 text-center font-bold bg-gray-100">{i.ttlCases}</td>
+                                            <td className="border border-black p-1 text-center">{i.casesPerPlt || ''}</td>
+                                            <td className="border border-black p-1 text-center">{i.fullPlt || ''}</td>
+                                            <td className="border border-black p-1 text-center">{i.loose || ''}</td>
+                                            <td className="border border-black p-1 text-center font-bold bg-gray-100">{i.ttlCases || ''}</td>
                                         </tr>
                                     ))}
                                     <tr>
