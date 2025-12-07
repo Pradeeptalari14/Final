@@ -793,14 +793,33 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
     if (viewMode === 'audit') {
         const { auditLogs } = useApp();
 
+        // Filter Logs
+        const filteredLogs = auditLogs.filter(log =>
+            log.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            log.details.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+
         return (
             <div className="space-y-6">
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-                    <div className="mb-6">
-                        <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                            <History className="text-blue-600" /> System Audit Logs
-                        </h2>
-                        <p className="text-sm text-gray-500">Track all system activities and user actions.</p>
+                    <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                                <History className="text-blue-600" /> System Audit Logs
+                            </h2>
+                            <p className="text-sm text-gray-500">Track all system activities and user actions.</p>
+                        </div>
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                            <input
+                                type="text"
+                                placeholder="Search logs..."
+                                className="pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 transition-all w-64"
+                                value={searchTerm}
+                                onChange={e => setSearchTerm(e.target.value)}
+                            />
+                        </div>
                     </div>
 
                     <div className="overflow-hidden rounded-lg border border-slate-200 shadow-sm bg-white">
@@ -814,8 +833,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
-                                {auditLogs && auditLogs.length > 0 ? (
-                                    auditLogs.map((log: any) => (
+                                {filteredLogs.length > 0 ? (
+                                    filteredLogs.map((log: any) => (
                                         <tr key={log.id} className="hover:bg-slate-50 transition-colors">
                                             <td className="p-4 text-slate-500 font-mono text-xs">
                                                 {new Date(log.timestamp).toLocaleString()}
@@ -825,9 +844,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                                             </td>
                                             <td className="p-4">
                                                 <span className={`px-2 py-1 rounded text-xs font-bold ${log.action.includes('DELETE') ? 'bg-red-100 text-red-700' :
-                                                    log.action.includes('CREATE') ? 'bg-green-100 text-green-700' :
-                                                        log.action.includes('UPDATE') ? 'bg-blue-100 text-blue-700' :
-                                                            'bg-slate-100 text-slate-600'
+                                                        log.action.includes('CREATE') ? 'bg-green-100 text-green-700' :
+                                                            log.action.includes('UPDATE') ? 'bg-blue-100 text-blue-700' :
+                                                                'bg-slate-100 text-slate-600'
                                                     }`}>
                                                     {log.action}
                                                 </span>
@@ -840,7 +859,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                                 ) : (
                                     <tr>
                                         <td colSpan={4} className="p-8 text-center text-slate-400 italic">
-                                            No audit logs found.
+                                            No audit logs found matching "{searchTerm}".
                                         </td>
                                     </tr>
                                 )}
