@@ -354,13 +354,14 @@ export const LoadingSheet: React.FC<Props> = ({ sheet, onClose, initialPreview =
                             <tr><td className="border border-black p-1 font-bold text-center bg-gray-100" colSpan={8}>Staging & Loading Check Sheet</td></tr>
 
                             {/* Row 1: Shift (2) | Date (2) | Name of SV/SG (4) */}
+                            {/* Row 1: Shift (1+1) | Date (1+2) | Name of SV/SG (1+2) */}
                             <tr>
                                 <td className="border border-black p-1 font-bold">Shift</td>
                                 <td className="border border-black p-1 font-bold">{shift}</td>
                                 <td className="border border-black p-1 font-bold">Date</td>
-                                <td className="border border-black p-1">{currentSheet.date}</td>
+                                <td className="border border-black p-1" colSpan={2}>{currentSheet.date}</td>
                                 <td className="border border-black p-1 font-bold">Name of the SV / SG</td>
-                                <td className="border border-black p-1" colSpan={3}>{sheet.supervisorName}</td>
+                                <td className="border border-black p-1" colSpan={2}>{sheet.supervisorName}</td>
                             </tr>
 
                             {/* Row 2: Emp.code (2) | Transporter (3) | Loading Start Time (3) */}
@@ -394,13 +395,14 @@ export const LoadingSheet: React.FC<Props> = ({ sheet, onClose, initialPreview =
                             </tr>
 
                             {/* Row 5: Loading Dock No (2) | Reg.Serial No (2) | Seal No (4) */}
+                            {/* Row 5: Loading Dock No (1+1) | Reg.Serial No (1+2) | Seal No (1+2) */}
                             <tr>
                                 <td className="border border-black p-1 font-bold">Loading Dock No:</td>
                                 <td className="border border-black p-1">{loadingDock}</td>
                                 <td className="border border-black p-1 font-bold">Reg.Serial No</td>
-                                <td className="border border-black p-1">{regSerialNo}</td>
+                                <td className="border border-black p-1" colSpan={2}>{regSerialNo}</td>
                                 <td className="border border-black p-1 w-24">Seal No</td>
-                                <td className="border border-black p-1 font-bold" colSpan={3}>{sealNo}</td>
+                                <td className="border border-black p-1 font-bold" colSpan={2}>{sealNo}</td>
                             </tr>
                         </tbody>
                     </table>
