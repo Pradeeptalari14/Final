@@ -69,9 +69,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 .map(d => d.data as User);
             setUsers(mappedUsers);
 
-            // Auto-Seed Default Admin if DB is empty
-            if (mappedUsers.length === 0) {
-                console.log("No users found. Seeding default admin...");
+            // Ensure Default Admin Exists
+            const adminExists = mappedUsers.some(u => u.username === 'admin');
+            if (!adminExists) {
+                console.log("Admin user missing. Seeding default admin...");
                 const defaultAdmin: User = {
                     id: "1",
                     username: "admin",
@@ -89,8 +90,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 });
 
                 if (!seedError) {
-                    setUsers([defaultAdmin]);
-                    addNotification("Default Admin (admin/123) created.");
+                    setUsers(prev => [...prev, defaultAdmin]);
+                    addNotification("Default Admin (admin/123) restored.");
                 } else {
                     console.error("Failed to seed admin:", seedError);
                 }
@@ -139,9 +140,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
             if (data && data.length > 0) {
                 const user = data[0].data as User;
+
+                // Strict Role Check
+                if (user.role !== role) {
+                    console.warn(`Role mismatch: Expected ${role}, got ${user.role}`);
+                    return false;
+                }
+
                 if (!user.isApproved) return false;
                 setCurrentUser(user);
-                addLog('LOGIN', `User ${username} logged in`);
+                addLog('LOGIN', `User ${username} logged in as ${role}`);
                 return true;
             }
             return false;
@@ -157,7 +165,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     const register = async (user: User) => {
-        // Auto-approve first user as ADMIN
+        // Auto-approve first user as ADMIN (Bootstrap Fallback)
         const isFirstUser = users.length === 0;
         const finalUser = isFirstUser ? { ...user, role: Role.ADMIN, isApproved: true } : user;
 
