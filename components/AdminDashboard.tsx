@@ -508,7 +508,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                     <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
                         <div>
                             <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                                <UserIcon className="text-blue-600" /> User Administration <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full ml-2">v8.5 (Grid Layout)</span>
+                                <UserIcon className="text-blue-600" /> User Administration
                             </h2>
                             <p className="text-sm text-gray-500">Manage staff and permissions.</p>
                         </div>
@@ -641,8 +641,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                                                 </>
                                             ) : (
                                                 <>
-                                                    {user.id === currentUser?.id && ( // Replaced userIdMatches with direct comparison
-                                                        <button onClick={(e) => openResetPassword(e, user)} className="text-blue-600 hover:bg-blue-100 p-1.5 rounded" title="Change My Password">
+                                                    {(user.id === currentUser?.id || currentUser?.role === Role.ADMIN) && (
+                                                        <button onClick={(e) => openResetPassword(e, user)} className="text-blue-600 hover:bg-blue-100 p-1.5 rounded" title="Change Password">
                                                             <Key size={16} />
                                                         </button>
                                                     )}
