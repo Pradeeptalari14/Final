@@ -10,7 +10,10 @@ import {
     Check, X, Clipboard, Truck, Users as UserIcon, Trash2, Database,
     FileText, Search, Plus, ArrowUpDown, Download, Printer, Lock, Edit3, Eye, ShieldAlert,
     CheckCircle, XCircle, Key, UserPlus, Activity,
-    FileSpreadsheet, Filter, CheckCircle2, History
+    FileSpreadsheet, Filter, CheckCircle2, History,
+    LayoutDashboard, Settings, LogOut, ChevronLeft, ChevronRight,
+    AlertCircle, Clock, Calendar, Edit, ShieldCheck,
+    Minimize2, Maximize2, ChevronDown, CheckSquare, AlignJustify
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { widgetRegistry, getWidgetDefinition } from './widgets/WidgetRegistry';
@@ -22,6 +25,17 @@ interface AdminDashboardProps {
     onViewSheet: (sheet: SheetData) => void;
     onNavigate?: (page: string) => void;
     initialSearch?: string;
+}
+
+interface SortConfig {
+    key: keyof SheetData | string; // Allow string for user table sorting
+    direction: 'asc' | 'desc';
+}
+
+interface ViewConfig {
+    density: 'compact' | 'normal' | 'comfortable';
+    wrapText: boolean;
+    expandedRows: Set<string>;
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onViewSheet, onNavigate, initialSearch = '' }) => {
@@ -59,8 +73,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
     });
     const [isAddWidgetOpen, setAddWidgetOpen] = useState(false);
 
+    // View Configuration for Database Table
+    const [viewConfig, setViewConfig] = useState<ViewConfig>({
+        density: 'normal',
+        wrapText: false,
+        expandedRows: new Set()
+    });
+    const [isViewMenuOpen, setIsViewMenuOpen] = useState(false);
+
     // Sort State
-    const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
+    const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 
     const handleSort = (key: string) => {
         let direction: 'asc' | 'desc' = 'asc';
@@ -90,10 +112,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
     // --- ANALYTICS DATA PREP ---
 
     // Smart Name Resolution Helper
-    const resolveUserName = (username?: string) => {
-        if (!username) return undefined;
-        const user = users.find(u => u.username === username);
-        return user ? (user.fullName || user.username) : username;
+    const resolveUserName = (primaryName?: string, fallbackUsername?: string) => {
+        if (primaryName) return primaryName;
+        if (!fallbackUsername) return undefined;
+        const user = users.find(u => u.username === fallbackUsername);
+        return user ? (user.fullName || user.username) : fallbackUsername;
     };
 
     const stats = useMemo(() => {
@@ -887,6 +910,47 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                                     </button>
                                 )}
                             </div>
+
+                            {/* View Options Dropdown */}
+                            <div className="relative">
+                                <button
+                                    onClick={() => setIsViewMenuOpen(!isViewMenuOpen)}
+                                    className={`flex items-center gap-2 border px-4 py-2.5 rounded-lg shadow-sm transition-all text-sm font-medium ${isViewMenuOpen ? 'bg-slate-100 border-slate-300' : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'}`}
+                                >
+                                    <Settings size={16} /> View
+                                </button>
+                                {isViewMenuOpen && (
+                                    <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden animate-fade-in">
+                                        <div className="p-3 border-b border-slate-100">
+                                            <p className="text-xs font-bold text-slate-400 uppercase mb-2">Row Density</p>
+                                            <div className="flex bg-slate-100 rounded-lg p-1">
+                                                <button
+                                                    onClick={() => setViewConfig(prev => ({ ...prev, density: 'compact' }))}
+                                                    className={`flex-1 py-1 text-xs font-medium rounded ${viewConfig.density === 'compact' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+                                                >Compact</button>
+                                                <button
+                                                    onClick={() => setViewConfig(prev => ({ ...prev, density: 'normal' }))}
+                                                    className={`flex-1 py-1 text-xs font-medium rounded ${viewConfig.density === 'normal' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+                                                >Normal</button>
+                                                <button
+                                                    onClick={() => setViewConfig(prev => ({ ...prev, density: 'comfortable' }))}
+                                                    className={`flex-1 py-1 text-xs font-medium rounded ${viewConfig.density === 'comfortable' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+                                                >Cozy</button>
+                                            </div>
+                                        </div>
+                                        <div className="p-3">
+                                            <p className="text-xs font-bold text-slate-400 uppercase mb-2">Display</p>
+                                            <button
+                                                onClick={() => setViewConfig(prev => ({ ...prev, wrapText: !prev.wrapText }))}
+                                                className="w-full flex items-center justify-between text-sm p-2 hover:bg-slate-50 rounded text-slate-700"
+                                            >
+                                                <span className="flex items-center gap-2"><AlignJustify size={14} /> Wrap Text</span>
+                                                {viewConfig.wrapText && <CheckSquare size={14} className="text-blue-600" />}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
 
@@ -909,12 +973,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
 
                     <div className="overflow-hidden rounded-lg border border-slate-200 shadow-sm bg-white">
                         {/* Grid Header */}
-                        <div className="grid grid-cols-[1.2fr_1fr_1.2fr_1.2fr_1fr_1fr_0.8fr_0.8fr_0.8fr_1fr_100px] bg-slate-800 text-white font-bold text-xs uppercase divide-x divide-slate-700 border-b border-slate-600">
+                        <div className="grid grid-cols-[40px_1.2fr_1fr_1.2fr_1.2fr_1fr_1fr_0.8fr_0.8fr_0.8fr_1fr_100px] bg-slate-800 text-white font-bold text-xs uppercase divide-x divide-slate-700 border-b border-slate-600">
                             {/* Group Headers */}
-                            <div className="col-span-1 p-2 text-center bg-slate-900/50 text-blue-200 border-b border-slate-600">Sheet Info</div>
+                            <div className="col-span-1 bg-slate-900/50 border-b border-slate-600"></div>
+                            <div className="col-span-2 p-2 text-center bg-slate-900/50 text-blue-200 border-b border-slate-600">Sheet Info</div>
                             <div className="col-span-2 p-2 text-center bg-slate-900/50 text-emerald-200 border-b border-slate-600">Staging Details</div>
-                            <div className="col-span-6 p-2 text-center bg-slate-900/50 text-amber-200 border-b border-slate-600">Loading Details</div>
+                            <div className="col-span-5 p-2 text-center bg-slate-900/50 text-amber-200 border-b border-slate-600">Loading Details</div>
                             <div className="col-span-2 p-2 text-center bg-slate-900/50 text-gray-200 border-b border-slate-600">Status</div>
+
+                            {/* Column Headers */}
+                            <div className="p-4 flex items-center justify-center text-gray-500">
+                                <Maximize2 size={12} />
+                            </div>
 
                             {/* Column Headers */}
                             <div
@@ -935,7 +1005,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                             >
                                 Staging SV <ArrowUpDown size={14} className={sortConfig?.key === 'supervisorName' ? 'text-blue-400 opacity-100' : 'text-white opacity-30'} />
                             </div>
-                            <div className="p-4 flex items-center gap-2 text-gray-300">Loading SV</div>
+                            <div className="p-4 flex items-center text-gray-300">Loading SV</div>
                             <div className="p-4 flex items-center text-gray-300">Dock/Dest</div>
                             <div className="p-4 flex items-center text-gray-300">Transporter</div>
                             <div className="p-4 flex items-center text-gray-300">Start</div>
@@ -1008,35 +1078,137 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                                         }
                                     }
 
+                                    const padClass = viewConfig.density === 'compact' ? 'p-2 text-xs' : viewConfig.density === 'comfortable' ? 'p-5' : 'p-4';
+                                    const textClass = viewConfig.wrapText ? 'whitespace-normal break-words' : 'truncate whitespace-nowrap';
+                                    const isExpanded = viewConfig.expandedRows.has(s.id);
+
                                     return (
-                                        <div key={s.id} onClick={() => onViewSheet(s)} className="grid grid-cols-[1.2fr_1fr_1.2fr_1.2fr_1fr_1fr_0.8fr_0.8fr_0.8fr_1fr_100px] hover:bg-slate-50 transition-colors items-center text-sm text-slate-700 group cursor-pointer">
-                                            <div className="p-4 font-mono font-medium text-blue-600 group-hover:underline decoration-blue-200 underline-offset-4">{s.id}</div>
-                                            <div className="p-4 text-slate-600">{s.date}</div>
-                                            <div className="p-4 text-slate-700 truncate" title={s.supervisorName || resolveUserName(s.createdBy)}>{s.supervisorName || resolveUserName(s.createdBy)}</div>
-                                            <div className="p-4 text-slate-700 truncate" title={s.loadingSvName || resolveUserName(s.completedBy)}>{s.loadingSvName || resolveUserName(s.completedBy) || '-'}</div>
-                                            <div className="p-4 text-slate-600 truncate" title={s.loadingDockNo || s.destination}>{s.loadingDockNo || s.destination || '-'}</div>
-                                            <div className="p-4 text-slate-600 truncate" title={s.transporter}>{s.transporter || '-'}</div>
-                                            <div className="p-4 text-slate-500 font-mono text-xs">{s.loadingStartTime || '-'}</div>
-                                            <div className="p-4 text-slate-500 font-mono text-xs">{s.loadingEndTime || '-'}</div>
-                                            <div className="p-4 text-slate-800 font-medium">{duration}</div>
-                                            <div className="p-4">
-                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold
-                                                        ${s.status === 'DRAFT' ? 'bg-slate-100 text-slate-600' :
-                                                        s.status === 'LOCKED' ? 'bg-orange-100 text-orange-600' :
-                                                            s.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
+                                        <div key={s.id} className="group bg-white hover:bg-slate-50 transition-colors">
+                                            <div className={`grid grid-cols-[40px_1.2fr_1fr_1.2fr_1.2fr_1fr_1fr_0.8fr_0.8fr_0.8fr_1fr_100px] items-center text-sm text-slate-700 ${isExpanded ? 'bg-blue-50/30' : ''}`}>
+                                                {/* Expand Button */}
+                                                <div className="flex justify-center">
+                                                    <button
+                                                        onClick={() => {
+                                                            const newSet = new Set(viewConfig.expandedRows);
+                                                            if (newSet.has(s.id)) newSet.delete(s.id);
+                                                            else newSet.add(s.id);
+                                                            setViewConfig(prev => ({ ...prev, expandedRows: newSet }));
+                                                        }}
+                                                        className={`p-1 rounded hover:bg-slate-200 text-slate-400 hover:text-blue-600 transition-colors ${isExpanded ? 'rotate-90 text-blue-600' : ''}`}
+                                                    >
+                                                        <ChevronRight size={16} />
+                                                    </button>
+                                                </div>
+
+                                                <div className={`${padClass} font-mono font-bold text-blue-600 ${textClass}`}>{s.id}</div>
+                                                <div className={`${padClass} ${textClass}`}>{s.date}</div>
+                                                <div className={`${padClass}`}>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
+                                                        <span className={textClass}>{resolveUserName(s.supervisorName, s.createdBy)}</span>
+                                                    </div>
+                                                </div>
+                                                <div className={`${padClass}`}>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <div className={`w-1.5 h-1.5 rounded-full ${(s.loadingSvName || s.completedBy) ? 'bg-amber-500' : 'bg-slate-300'}`}></div>
+                                                        <span className={textClass}>{resolveUserName(s.loadingSvName, s.completedBy) || '-'}</span>
+                                                    </div>
+                                                </div>
+                                                <div className={`${padClass} text-slate-500 ${textClass}`}>{s.destination} ({s.loadingDockNo || '-'})</div>
+                                                <div className={`${padClass} text-slate-500 ${textClass}`}>{s.transporter || '-'}</div>
+                                                <div className={`${padClass} font-mono text-slate-500 text-xs ${textClass}`}>{s.loadingStartTime || '-'}</div>
+                                                <div className={`${padClass} font-mono text-slate-500 text-xs ${textClass}`}>{s.loadingEndTime || '-'}</div>
+                                                <div className={`${padClass} font-medium ${textClass}`}>
+                                                    {s.loadingStartTime && s.loadingEndTime ? (() => {
+                                                        const start = new Date(`1970-01-01T${s.loadingStartTime}`);
+                                                        const end = new Date(`1970-01-01T${s.loadingEndTime}`);
+                                                        const diff = (end.getTime() - start.getTime()) / 60000;
+                                                        return diff > 0 ? `${Math.floor(diff)}m` : '-';
+                                                    })() : '-'}
+                                                </div>
+                                                <div className={`${padClass}`}>
+                                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold
+                                                        ${s.status === SheetStatus.COMPLETED ? 'bg-green-100 text-green-700' :
+                                                            s.status === SheetStatus.LOCKED ? 'bg-amber-100 text-amber-700' :
                                                                 'bg-slate-100 text-slate-600'}`}>
-                                                    {s.status}
-                                                </span>
+                                                        {s.status === SheetStatus.COMPLETED && <CheckCircle2 size={12} />}
+                                                        {s.status === SheetStatus.LOCKED && <Clock size={12} />}
+                                                        {s.status === SheetStatus.DRAFT && <Edit size={12} />}
+                                                        {s.status}
+                                                    </span>
+                                                </div>
+                                                <div className={`${padClass} flex justify-center`}>
+                                                    <button
+                                                        onClick={() => onNavigate?.('admin')} // In real app, view details
+                                                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                        title="View Details"
+                                                    >
+                                                        <Eye size={16} />
+                                                    </button>
+                                                </div>
                                             </div>
-                                            <div className="p-4 flex justify-center">
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); handleDelete(e, s.id); }}
-                                                    className="text-slate-300 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                                                    title="Delete Sheet"
-                                                >
-                                                    <Trash2 size={18} />
-                                                </button>
-                                            </div>
+
+                                            {/* EXPANDED ROW DETAILS */}
+                                            {isExpanded && (
+                                                <div className="bg-slate-50 border-b border-slate-100 p-6 animate-fade-in shadow-inner">
+                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                                        <div className="space-y-4">
+                                                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 border-b border-slate-200 pb-2">Logistics Info</h4>
+                                                            <div className="grid grid-cols-2 gap-4 text-sm">
+                                                                <div>
+                                                                    <p className="text-slate-500 text-xs">Vehicle No</p>
+                                                                    <p className="font-medium text-slate-800">{s.vehicleNo || 'N/A'}</p>
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-slate-500 text-xs">Driver Name</p>
+                                                                    <p className="font-medium text-slate-800">{s.driverName || 'N/A'}</p>
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-slate-500 text-xs">Seal No</p>
+                                                                    <p className="font-medium text-slate-800">{s.sealNo || 'N/A'}</p>
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-slate-500 text-xs">Transporter</p>
+                                                                    <p className="font-medium text-slate-800">{s.transporter || 'N/A'}</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="space-y-4">
+                                                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 border-b border-slate-200 pb-2">Audit Trail</h4>
+                                                            <div className="space-y-2 text-xs">
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-slate-500">Created By:</span>
+                                                                    <span className="font-mono text-slate-700">{s.createdBy}</span>
+                                                                </div>
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-slate-500">Created At:</span>
+                                                                    <span className="font-mono text-slate-700">{new Date(s.createdAt).toLocaleString()}</span>
+                                                                </div>
+                                                                {s.completedBy && (
+                                                                    <>
+                                                                        <div className="flex justify-between">
+                                                                            <span className="text-slate-500">Completed By:</span>
+                                                                            <span className="font-mono text-slate-700">{s.completedBy}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between">
+                                                                            <span className="text-slate-500">Completed At:</span>
+                                                                            <span className="font-mono text-slate-700">{s.completedAt ? new Date(s.completedAt).toLocaleString() : 'N/A'}</span>
+                                                                        </div>
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="space-y-4">
+                                                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 border-b border-slate-200 pb-2">JSON Data</h4>
+                                                            <pre className="text-[10px] bg-slate-100 p-2 rounded border border-slate-200 overflow-auto max-h-32 text-slate-600 font-mono">
+                                                                {JSON.stringify({ skuCount: s.stagingItems.length, ...s }, null, 2)}
+                                                            </pre>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     );
                                 })
