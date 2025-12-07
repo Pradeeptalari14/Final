@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, SheetData, Role, Notification } from './types';
+import { User, SheetData, Role, Notification, Incident } from './types';
 import { supabase } from './services/supabaseClient';
 
 interface AppContextType {
@@ -9,6 +9,7 @@ interface AppContextType {
     sheets: SheetData[];
     notifications: Notification[];
     auditLogs: any[];
+    incidents: Incident[];
     isLoading: boolean;
     login: (username: string, pass: string, role: Role) => Promise<boolean>;
     logout: () => Promise<void>;
@@ -24,6 +25,7 @@ interface AppContextType {
     releaseLock: (sheetId: string) => void;
     addNotification: (msg: string) => void;
     markAllRead: () => void;
+    fetchIncidents: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -34,13 +36,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const [sheets, setSheets] = useState<SheetData[]>([]);
     const [auditLogs, setAuditLogs] = useState<any[]>([]);
     const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [incidents, setIncidents] = useState<Incident[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
     // Fetch data on load
     useEffect(() => {
         fetchSheets();
         fetchUsers();
+        fetchSheets();
+        fetchUsers();
         fetchLogs();
+        fetchIncidents();
     }, []);
 
     const fetchSheets = async () => {
@@ -58,6 +64,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     status: d.data.status || 'DRAFT'
                 })) as SheetData[];
             setSheets(loadedSheets);
+        }
+    };
+
+    const fetchIncidents = async () => {
+        const { data, error } = await supabase
+            .from('incidents')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (data && !error) {
+            setIncidents(data as Incident[]);
         }
     };
 
@@ -293,10 +310,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     return (
         <AppContext.Provider value={{
-            currentUser, users, sheets, notifications, auditLogs, isLoading,
+            currentUser, users, sheets, notifications, auditLogs, incidents, isLoading,
             login, logout, register, approveUser, deleteUser, resetPassword,
             addSheet, updateSheet, deleteSheet, addComment,
-            acquireLock, releaseLock, addNotification, markAllRead
+            acquireLock, releaseLock, addNotification, markAllRead, fetchIncidents
         }}>
             {children}
         </AppContext.Provider>

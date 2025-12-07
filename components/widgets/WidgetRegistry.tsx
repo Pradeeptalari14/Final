@@ -2,6 +2,7 @@ import React from 'react';
 import { WidgetDefinition } from './types';
 import { StaffPerformanceWidget } from './StaffPerformanceWidget';
 import { SLAMonitorWidget } from './SLAMonitorWidget';
+import { IncidentListWidget } from './IncidentListWidget';
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer
 } from 'recharts';
@@ -38,6 +39,14 @@ export const widgetRegistry: WidgetDefinition[] = [
         defaultSize: 'medium',
         component: SLAMonitorWidget
     },
+    {
+        id: 'incident-list',
+        title: 'Operational Incidents',
+        category: 'ITSM',
+        description: 'Track reported Damages, Shortages, and Quality issues.',
+        defaultSize: 'medium',
+        component: IncidentListWidget
+    }
     // We can add more wrappers here later for generic charts
 ];
 

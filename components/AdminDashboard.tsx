@@ -62,13 +62,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
     // --- WIDGET SYSTEM STATE ---
     // Persist preferences to LocalStorage keyed by username
     const [userWidgets, setUserWidgets] = useState<string[]>(() => {
-        if (!currentUser?.username) return ['staff-performance', 'sla-monitor'];
+        if (!currentUser?.username) return ['staff-performance', 'sla-monitor', 'incident-list'];
         try {
             const saved = localStorage.getItem(`unicharm_widgets_${currentUser.username}`);
-            return saved ? JSON.parse(saved) : ['staff-performance', 'sla-monitor'];
+            // Auto-migrate: If saved config exists but doesn't have incident-list, add it (for this update)
+            const loaded = saved ? JSON.parse(saved) : ['staff-performance', 'sla-monitor', 'incident-list'];
+            if (!loaded.includes('incident-list')) loaded.push('incident-list');
+            return loaded;
         } catch (e) {
             console.error("Failed to parse widget preferences", e);
-            return ['staff-performance', 'sla-monitor'];
+            return ['staff-performance', 'sla-monitor', 'incident-list'];
         }
     });
     const [isAddWidgetOpen, setAddWidgetOpen] = useState(false);

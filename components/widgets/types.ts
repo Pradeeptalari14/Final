@@ -10,7 +10,7 @@ export interface WidgetProps {
 export interface WidgetDefinition {
     id: string;
     title: string;
-    category: 'Score Card' | 'Chart' | 'List' | 'Analytics';
+    category: 'Score Card' | 'Chart' | 'List' | 'Analytics' | 'ITSM';
     description: string;
     defaultSize: 'small' | 'medium' | 'large' | 'full';
     component: React.ComponentType<any>;
