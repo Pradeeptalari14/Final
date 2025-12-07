@@ -35,7 +35,6 @@ interface SortConfig {
 interface ViewConfig {
     density: 'compact' | 'normal' | 'comfortable';
     wrapText: boolean;
-    expandedRows: Set<string>;
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onViewSheet, onNavigate, initialSearch = '' }) => {
@@ -76,8 +75,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
     // View Configuration for Database Table
     const [viewConfig, setViewConfig] = useState<ViewConfig>({
         density: 'normal',
-        wrapText: false,
-        expandedRows: new Set()
+        wrapText: false
     });
     const [isViewMenuOpen, setIsViewMenuOpen] = useState(false);
 
@@ -973,48 +971,42 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
 
                     <div className="overflow-hidden rounded-lg border border-slate-200 shadow-sm bg-white">
                         {/* Grid Header */}
-                        <div className="grid grid-cols-[40px_1.2fr_1fr_1.2fr_1.2fr_1fr_1fr_0.8fr_0.8fr_0.8fr_1fr_100px] bg-slate-800 text-white font-bold text-xs uppercase divide-x divide-slate-700 border-b border-slate-600">
+                        <div className="grid grid-cols-[1.2fr_1fr_1.2fr_1.2fr_1fr_1fr_0.8fr_0.8fr_0.8fr_1fr_100px] bg-slate-800 text-white font-bold text-xs uppercase divide-x divide-slate-700 border-b border-slate-600">
                             {/* Group Headers */}
-                            <div className="col-span-1 bg-slate-900/50 border-b border-slate-600"></div>
-                            <div className="col-span-2 p-2 text-center bg-slate-900/50 text-blue-200 border-b border-slate-600">Sheet Info</div>
+                            <div className="col-span-1 p-2 text-center bg-slate-900/50 text-blue-200 border-b border-slate-600">Sheet Info</div>
                             <div className="col-span-2 p-2 text-center bg-slate-900/50 text-emerald-200 border-b border-slate-600">Staging Details</div>
-                            <div className="col-span-5 p-2 text-center bg-slate-900/50 text-amber-200 border-b border-slate-600">Loading Details</div>
+                            <div className="col-span-6 p-2 text-center bg-slate-900/50 text-amber-200 border-b border-slate-600">Loading Details</div>
                             <div className="col-span-2 p-2 text-center bg-slate-900/50 text-gray-200 border-b border-slate-600">Status</div>
 
                             {/* Column Headers */}
-                            <div className="p-4 flex items-center justify-center text-gray-500">
-                                <Maximize2 size={12} />
-                            </div>
-
-                            {/* Column Headers */}
-                            <div
-                                className="p-4 flex items-center gap-2 cursor-pointer hover:bg-slate-700 transition-colors"
-                                onClick={() => handleSort('id')}
-                            >
+                            <div className="p-4 flex items-center gap-2 cursor-pointer hover:bg-slate-700 transition-colors" onClick={() => handleSort('id')}>
                                 Sheet ID <ArrowUpDown size={14} className={sortConfig?.key === 'id' ? 'text-blue-400 opacity-100' : 'text-white opacity-30'} />
                             </div>
-                            <div
-                                className="p-4 flex items-center gap-2 cursor-pointer hover:bg-slate-700 transition-colors"
-                                onClick={() => handleSort('date')}
-                            >
+                            <div className="p-4 flex items-center gap-2 cursor-pointer hover:bg-slate-700 transition-colors" onClick={() => handleSort('date')}>
                                 Date <ArrowUpDown size={14} className={sortConfig?.key === 'date' ? 'text-blue-400 opacity-100' : 'text-white opacity-30'} />
                             </div>
-                            <div
-                                className="p-4 flex items-center gap-2 cursor-pointer hover:bg-slate-700 transition-colors"
-                                onClick={() => handleSort('supervisorName')}
-                            >
+                            <div className="p-4 flex items-center gap-2 cursor-pointer hover:bg-slate-700 transition-colors" onClick={() => handleSort('supervisorName')}>
                                 Staging SV <ArrowUpDown size={14} className={sortConfig?.key === 'supervisorName' ? 'text-blue-400 opacity-100' : 'text-white opacity-30'} />
                             </div>
-                            <div className="p-4 flex items-center text-gray-300">Loading SV</div>
-                            <div className="p-4 flex items-center text-gray-300">Dock/Dest</div>
-                            <div className="p-4 flex items-center text-gray-300">Transporter</div>
-                            <div className="p-4 flex items-center text-gray-300">Start</div>
-                            <div className="p-4 flex items-center text-gray-300">End</div>
-                            <div className="p-4 flex items-center text-gray-300">Duration</div>
-                            <div
-                                className="p-4 flex items-center gap-2 cursor-pointer hover:bg-slate-700 transition-colors"
-                                onClick={() => handleSort('status')}
-                            >
+                            <div className="p-4 flex items-center gap-2 cursor-pointer hover:bg-slate-700 transition-colors" onClick={() => handleSort('loadingSvName')}>
+                                Loading SV <ArrowUpDown size={14} className={sortConfig?.key === 'loadingSvName' ? 'text-blue-400 opacity-100' : 'text-white opacity-30'} />
+                            </div>
+                            <div className="p-4 flex items-center gap-2 cursor-pointer hover:bg-slate-700 transition-colors" onClick={() => handleSort('dock')}>
+                                Dock/Dest <ArrowUpDown size={14} className={sortConfig?.key === 'dock' ? 'text-blue-400 opacity-100' : 'text-white opacity-30'} />
+                            </div>
+                            <div className="p-4 flex items-center gap-2 cursor-pointer hover:bg-slate-700 transition-colors" onClick={() => handleSort('transporter')}>
+                                Transporter <ArrowUpDown size={14} className={sortConfig?.key === 'transporter' ? 'text-blue-400 opacity-100' : 'text-white opacity-30'} />
+                            </div>
+                            <div className="p-4 flex items-center gap-2 cursor-pointer hover:bg-slate-700 transition-colors" onClick={() => handleSort('loadingStartTime')}>
+                                Start <ArrowUpDown size={14} className={sortConfig?.key === 'loadingStartTime' ? 'text-blue-400 opacity-100' : 'text-white opacity-30'} />
+                            </div>
+                            <div className="p-4 flex items-center gap-2 cursor-pointer hover:bg-slate-700 transition-colors" onClick={() => handleSort('loadingEndTime')}>
+                                End <ArrowUpDown size={14} className={sortConfig?.key === 'loadingEndTime' ? 'text-blue-400 opacity-100' : 'text-white opacity-30'} />
+                            </div>
+                            <div className="p-4 flex items-center gap-2 cursor-pointer hover:bg-slate-700 transition-colors" onClick={() => handleSort('duration')}>
+                                Duration <ArrowUpDown size={14} className={sortConfig?.key === 'duration' ? 'text-blue-400 opacity-100' : 'text-white opacity-30'} />
+                            </div>
+                            <div className="p-4 flex items-center gap-2 cursor-pointer hover:bg-slate-700 transition-colors" onClick={() => handleSort('status')}>
                                 Status <ArrowUpDown size={14} className={sortConfig?.key === 'status' ? 'text-blue-400 opacity-100' : 'text-white opacity-30'} />
                             </div>
                             <div className="p-4 flex items-center justify-center text-gray-300">Actions</div>
@@ -1040,8 +1032,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                                 .sort((a, b) => {
                                     if (!sortConfig) return 0;
                                     const { key, direction } = sortConfig;
-                                    const valA = a[key as keyof SheetData];
-                                    const valB = b[key as keyof SheetData];
+
+                                    // Helper to get value for sorting
+                                    const getValue = (item: SheetData, sortKey: string) => {
+                                        if (sortKey === 'duration') {
+                                            if (!item.loadingStartTime || !item.loadingEndTime) return -1;
+                                            const start = new Date(`1970-01-01T${item.loadingStartTime}`).getTime();
+                                            const end = new Date(`1970-01-01T${item.loadingEndTime}`).getTime();
+                                            return end - start;
+                                        }
+                                        if (sortKey === 'loadingSvName') return resolveUserName(item.loadingSvName, item.completedBy) || '';
+                                        if (sortKey === 'supervisorName') return resolveUserName(item.supervisorName, item.createdBy) || '';
+                                        if (sortKey === 'dock') return item.loadingDockNo || item.destination || '';
+                                        if (sortKey === 'transporter') return item.transporter || '';
+                                        if (sortKey === 'loadingStartTime' || sortKey === 'loadingEndTime') {
+                                            return item[sortKey] ? new Date(`1970-01-01T${item[sortKey]}`).getTime() : -1;
+                                        }
+
+                                        return item[sortKey as keyof SheetData];
+                                    };
+
+                                    const valA = getValue(a, key as string);
+                                    const valB = getValue(b, key as string);
 
                                     if (key === 'date') {
                                         const parseDate = (d: any) => {
@@ -1058,10 +1070,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                                         return direction === 'asc' ? timeA - timeB : timeB - timeA;
                                     }
 
-                                    const strA = String(valA || '').toLowerCase();
-                                    const strB = String(valB || '').toLowerCase();
-                                    const comparison = strA.localeCompare(strB, undefined, { numeric: true, sensitivity: 'base' });
-                                    return direction === 'asc' ? comparison : -comparison;
+                                    if (typeof valA === 'string' && typeof valB === 'string') {
+                                        const comparison = valA.localeCompare(valB, undefined, { numeric: true, sensitivity: 'base' });
+                                        return direction === 'asc' ? comparison : -comparison;
+                                    }
+
+                                    if (valA < valB) return direction === 'asc' ? -1 : 1;
+                                    if (valA > valB) return direction === 'asc' ? 1 : -1;
+                                    return 0;
                                 })
                                 .map((s) => {
                                     // Calculate Duration
@@ -1080,26 +1096,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
 
                                     const padClass = viewConfig.density === 'compact' ? 'p-2 text-xs' : viewConfig.density === 'comfortable' ? 'p-5' : 'p-4';
                                     const textClass = viewConfig.wrapText ? 'whitespace-normal break-words' : 'truncate whitespace-nowrap';
-                                    const isExpanded = viewConfig.expandedRows.has(s.id);
 
                                     return (
                                         <div key={s.id} className="group bg-white hover:bg-slate-50 transition-colors">
-                                            <div className={`grid grid-cols-[40px_1.2fr_1fr_1.2fr_1.2fr_1fr_1fr_0.8fr_0.8fr_0.8fr_1fr_100px] items-center text-sm text-slate-700 ${isExpanded ? 'bg-blue-50/30' : ''}`}>
-                                                {/* Expand Button */}
-                                                <div className="flex justify-center">
-                                                    <button
-                                                        onClick={() => {
-                                                            const newSet = new Set(viewConfig.expandedRows);
-                                                            if (newSet.has(s.id)) newSet.delete(s.id);
-                                                            else newSet.add(s.id);
-                                                            setViewConfig(prev => ({ ...prev, expandedRows: newSet }));
-                                                        }}
-                                                        className={`p-1 rounded hover:bg-slate-200 text-slate-400 hover:text-blue-600 transition-colors ${isExpanded ? 'rotate-90 text-blue-600' : ''}`}
-                                                    >
-                                                        <ChevronRight size={16} />
-                                                    </button>
-                                                </div>
-
+                                            <div className={`grid grid-cols-[1.2fr_1fr_1.2fr_1.2fr_1fr_1fr_0.8fr_0.8fr_0.8fr_1fr_100px] items-center text-sm text-slate-700`}>
                                                 <div className={`${padClass} font-mono font-bold text-blue-600 ${textClass}`}>{s.id}</div>
                                                 <div className={`${padClass} ${textClass}`}>{s.date}</div>
                                                 <div className={`${padClass}`}>
@@ -1119,12 +1119,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                                                 <div className={`${padClass} font-mono text-slate-500 text-xs ${textClass}`}>{s.loadingStartTime || '-'}</div>
                                                 <div className={`${padClass} font-mono text-slate-500 text-xs ${textClass}`}>{s.loadingEndTime || '-'}</div>
                                                 <div className={`${padClass} font-medium ${textClass}`}>
-                                                    {s.loadingStartTime && s.loadingEndTime ? (() => {
-                                                        const start = new Date(`1970-01-01T${s.loadingStartTime}`);
-                                                        const end = new Date(`1970-01-01T${s.loadingEndTime}`);
-                                                        const diff = (end.getTime() - start.getTime()) / 60000;
-                                                        return diff > 0 ? `${Math.floor(diff)}m` : '-';
-                                                    })() : '-'}
+                                                    {duration}
                                                 </div>
                                                 <div className={`${padClass}`}>
                                                     <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold
@@ -1149,66 +1144,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                                             </div>
 
                                             {/* EXPANDED ROW DETAILS */}
-                                            {isExpanded && (
-                                                <div className="bg-slate-50 border-b border-slate-100 p-6 animate-fade-in shadow-inner">
-                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                                        <div className="space-y-4">
-                                                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 border-b border-slate-200 pb-2">Logistics Info</h4>
-                                                            <div className="grid grid-cols-2 gap-4 text-sm">
-                                                                <div>
-                                                                    <p className="text-slate-500 text-xs">Vehicle No</p>
-                                                                    <p className="font-medium text-slate-800">{s.vehicleNo || 'N/A'}</p>
-                                                                </div>
-                                                                <div>
-                                                                    <p className="text-slate-500 text-xs">Driver Name</p>
-                                                                    <p className="font-medium text-slate-800">{s.driverName || 'N/A'}</p>
-                                                                </div>
-                                                                <div>
-                                                                    <p className="text-slate-500 text-xs">Seal No</p>
-                                                                    <p className="font-medium text-slate-800">{s.sealNo || 'N/A'}</p>
-                                                                </div>
-                                                                <div>
-                                                                    <p className="text-slate-500 text-xs">Transporter</p>
-                                                                    <p className="font-medium text-slate-800">{s.transporter || 'N/A'}</p>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="space-y-4">
-                                                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 border-b border-slate-200 pb-2">Audit Trail</h4>
-                                                            <div className="space-y-2 text-xs">
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-slate-500">Created By:</span>
-                                                                    <span className="font-mono text-slate-700">{s.createdBy}</span>
-                                                                </div>
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-slate-500">Created At:</span>
-                                                                    <span className="font-mono text-slate-700">{new Date(s.createdAt).toLocaleString()}</span>
-                                                                </div>
-                                                                {s.completedBy && (
-                                                                    <>
-                                                                        <div className="flex justify-between">
-                                                                            <span className="text-slate-500">Completed By:</span>
-                                                                            <span className="font-mono text-slate-700">{s.completedBy}</span>
-                                                                        </div>
-                                                                        <div className="flex justify-between">
-                                                                            <span className="text-slate-500">Completed At:</span>
-                                                                            <span className="font-mono text-slate-700">{s.completedAt ? new Date(s.completedAt).toLocaleString() : 'N/A'}</span>
-                                                                        </div>
-                                                                    </>
-                                                                )}
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="space-y-4">
-                                                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 border-b border-slate-200 pb-2">JSON Data</h4>
-                                                            <pre className="text-[10px] bg-slate-100 p-2 rounded border border-slate-200 overflow-auto max-h-32 text-slate-600 font-mono">
-                                                                {JSON.stringify({ skuCount: s.stagingItems.length, ...s }, null, 2)}
-                                                            </pre>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
+                                            {/* Removed expanded row details as per instruction */}
                                         </div>
                                     );
                                 })
