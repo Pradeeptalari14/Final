@@ -353,20 +353,22 @@ export const LoadingSheet: React.FC<Props> = ({ sheet, onClose, initialPreview =
                         <tbody>
                             <tr><td className="border border-black p-1 font-bold text-center bg-gray-100" colSpan={8}>Staging & Loading Check Sheet</td></tr>
 
-                            {/* Row 1: Transporter (4) | Seal No (4) */}
+                            {/* Row 1: Shift (2) | Date (2) | Name of SV/SG (4) */}
                             <tr>
-                                <td className="border border-black p-1 w-24">Transporter</td>
-                                <td className="border border-black p-1 font-bold" colSpan={3}>{transporter}</td>
-                                <td className="border border-black p-1 w-24">Seal No</td>
-                                <td className="border border-black p-1 font-bold" colSpan={3}>{sealNo}</td>
-                            </tr>
-
-                            {/* Row 2: Date (2) | Name of SV/SG (3) | Loading Start Time (3) */}
-                            <tr>
+                                <td className="border border-black p-1 font-bold">Shift</td>
+                                <td className="border border-black p-1 font-bold">{shift}</td>
                                 <td className="border border-black p-1 font-bold">Date</td>
                                 <td className="border border-black p-1">{currentSheet.date}</td>
                                 <td className="border border-black p-1 font-bold">Name of the SV / SG</td>
-                                <td className="border border-black p-1" colSpan={2}>{sheet.supervisorName}</td>
+                                <td className="border border-black p-1" colSpan={3}>{sheet.supervisorName}</td>
+                            </tr>
+
+                            {/* Row 2: Emp.code (2) | Transporter (3) | Loading Start Time (3) */}
+                            <tr>
+                                <td className="border border-black p-1 font-bold">Emp.code</td>
+                                <td className="border border-black p-1">{sheet.empCode}</td>
+                                <td className="border border-black p-1 w-24">Transporter</td>
+                                <td className="border border-black p-1 font-bold" colSpan={2}>{transporter}</td>
                                 <td className="border border-black p-1 font-bold">Loading Start Time</td>
                                 <td className="border border-black p-1" colSpan={2}>{startTime}</td>
                             </tr>
@@ -381,26 +383,24 @@ export const LoadingSheet: React.FC<Props> = ({ sheet, onClose, initialPreview =
                                 <td className="border border-black p-1" colSpan={2}>{endTime}</td>
                             </tr>
 
-                            {/* Row 4: Picking Crosschecked By (2) | Vehicle No (3) | Driver Name (3) */}
+                            {/* Row 4: Picking Crosschecked By (2) | Driver Name (3) | Vehicle No (3) */}
                             <tr>
                                 <td className="border border-black p-1 font-bold">Picking Crosschecked By</td>
                                 <td className="border border-black p-1 font-bold">{pickingCrosscheckedBy}</td>
-                                <td className="border border-black p-1 font-bold">Vehicle No</td>
-                                <td className="border border-black p-1 font-bold uppercase" colSpan={2}>{vehicleNo}</td>
                                 <td className="border border-black p-1 font-bold">Driver Name</td>
                                 <td className="border border-black p-1 font-bold" colSpan={2}>{driverName}</td>
+                                <td className="border border-black p-1 font-bold">Vehicle No</td>
+                                <td className="border border-black p-1 font-bold uppercase" colSpan={2}>{vehicleNo}</td>
                             </tr>
 
-                            {/* Row 5: Loading Dock No (2) | Reg.Serial No (2) | Emp.code (2) | Shift (2) */}
+                            {/* Row 5: Loading Dock No (2) | Reg.Serial No (2) | Seal No (4) */}
                             <tr>
                                 <td className="border border-black p-1 font-bold">Loading Dock No:</td>
                                 <td className="border border-black p-1">{loadingDock}</td>
                                 <td className="border border-black p-1 font-bold">Reg.Serial No</td>
                                 <td className="border border-black p-1">{regSerialNo}</td>
-                                <td className="border border-black p-1 font-bold">Emp.code</td>
-                                <td className="border border-black p-1">{sheet.empCode}</td>
-                                <td className="border border-black p-1 font-bold">Shift</td>
-                                <td className="border border-black p-1 font-bold">{shift}</td>
+                                <td className="border border-black p-1 w-24">Seal No</td>
+                                <td className="border border-black p-1 font-bold" colSpan={3}>{sealNo}</td>
                             </tr>
                         </tbody>
                     </table>
