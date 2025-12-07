@@ -103,8 +103,11 @@ export const LoadingSheet: React.FC<Props> = ({ sheet, onClose, initialPreview =
         setSealNo(sheet.sealNo || '');
         setRegSerialNo(sheet.regSerialNo || '');
 
-        // Auto-fill Supervisor Name from Current User if missing (UX Improvement)
-        const defaultSvName = sheet.loadingSvName || (currentUser?.fullName || currentUser?.username || '');
+        // Stronger Auto-fill: checking for empty or whitespace-only strings
+        let defaultSvName = sheet.loadingSvName;
+        if (!defaultSvName || defaultSvName.trim() === '') {
+            defaultSvName = currentUser?.fullName || currentUser?.username || '';
+        }
         setSvName(defaultSvName);
 
         setSvSign(sheet.loadingSupervisorSign || '');
