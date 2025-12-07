@@ -352,40 +352,55 @@ export const LoadingSheet: React.FC<Props> = ({ sheet, onClose, initialPreview =
                         <thead><tr><th colSpan={8} className="border border-black p-1 text-center text-xl font-bold">UCIA - FG WAREHOUSE</th></tr></thead>
                         <tbody>
                             <tr><td className="border border-black p-1 font-bold text-center bg-gray-100" colSpan={8}>Staging & Loading Check Sheet</td></tr>
-                            <tr><td className="border border-black p-1"></td><td className="border border-black p-1 font-bold"></td><td className="border border-black p-1">Transporter</td><td className="border border-black p-1 font-bold">{transporter}</td><td className="border border-black p-1"></td><td className="border border-black p-1 font-bold"></td><td className="border border-black p-1">Seal No</td><td className="border border-black p-1 font-bold">{sealNo}</td></tr>
+
+                            {/* Row 1: Transporter (4) | Seal No (4) */}
                             <tr>
-                                <td rowSpan={3} className="border border-black p-1 text-center font-bold text-xl align-middle">{shift}</td>
+                                <td className="border border-black p-1 w-24">Transporter</td>
+                                <td className="border border-black p-1 font-bold" colSpan={3}>{transporter}</td>
+                                <td className="border border-black p-1 w-24">Seal No</td>
+                                <td className="border border-black p-1 font-bold" colSpan={3}>{sealNo}</td>
+                            </tr>
+
+                            {/* Row 2: Date (2) | Name of SV/SG (3) | Loading Start Time (3) */}
+                            <tr>
                                 <td className="border border-black p-1 font-bold">Date</td>
                                 <td className="border border-black p-1">{currentSheet.date}</td>
                                 <td className="border border-black p-1 font-bold">Name of the SV / SG</td>
-                                <td className="border border-black p-1">{sheet.supervisorName}</td>
+                                <td className="border border-black p-1" colSpan={2}>{sheet.supervisorName}</td>
                                 <td className="border border-black p-1 font-bold">Loading Start Time</td>
-                                <td colSpan={2} className="border border-black p-1">{startTime}</td>
+                                <td className="border border-black p-1" colSpan={2}>{startTime}</td>
                             </tr>
+
+                            {/* Row 3: Picking By (2) | Destination (3) | Loading End Time (3) */}
                             <tr>
                                 <td className="border border-black p-1 font-bold">Picking By</td>
                                 <td className="border border-black p-1 font-bold">{pickingBy}</td>
                                 <td className="border border-black p-1 font-bold">Destination</td>
-                                <td className="border border-black p-1">{sheet.destination}</td>
+                                <td className="border border-black p-1" colSpan={2}>{sheet.destination}</td>
                                 <td className="border border-black p-1 font-bold">Loading End Time</td>
-                                <td colSpan={2} className="border border-black p-1">{endTime}</td>
+                                <td className="border border-black p-1" colSpan={2}>{endTime}</td>
                             </tr>
+
+                            {/* Row 4: Picking Crosschecked By (2) | Vehicle No (3) | Driver Name (3) */}
                             <tr>
                                 <td className="border border-black p-1 font-bold">Picking Crosschecked By</td>
                                 <td className="border border-black p-1 font-bold">{pickingCrosscheckedBy}</td>
                                 <td className="border border-black p-1 font-bold">Vehicle No</td>
-                                <td className="border border-black p-1 font-bold">{vehicleNo}</td>
+                                <td className="border border-black p-1 font-bold uppercase" colSpan={2}>{vehicleNo}</td>
                                 <td className="border border-black p-1 font-bold">Driver Name</td>
-                                <td colSpan={2} className="border border-black p-1 font-bold">{driverName}</td>
+                                <td className="border border-black p-1 font-bold" colSpan={2}>{driverName}</td>
                             </tr>
+
+                            {/* Row 5: Loading Dock No (2) | Reg.Serial No (2) | Emp.code (2) | Shift (2) */}
                             <tr>
-                                <td className="border border-black p-1"></td>
                                 <td className="border border-black p-1 font-bold">Loading Dock No:</td>
                                 <td className="border border-black p-1">{loadingDock}</td>
                                 <td className="border border-black p-1 font-bold">Reg.Serial No</td>
                                 <td className="border border-black p-1">{regSerialNo}</td>
                                 <td className="border border-black p-1 font-bold">Emp.code</td>
-                                <td colSpan={2} className="border border-black p-1">{sheet.empCode}</td>
+                                <td className="border border-black p-1">{sheet.empCode}</td>
+                                <td className="border border-black p-1 font-bold">Shift</td>
+                                <td className="border border-black p-1 font-bold">{shift}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -493,7 +508,7 @@ export const LoadingSheet: React.FC<Props> = ({ sheet, onClose, initialPreview =
                                 {extraItemsWithQty.map((item, idx) => (
                                     <div key={`ext-${idx}`} className="flex items-end text-[9px]">
                                         <span>For <strong>{item.skuName}</strong> {item.total} Cases Extra loaded.</span>
-                                        <span className="ml-4 flex-1 border-b border-black text-right pr-2">Approval Sign:</span>
+                                        <span className="ml-4 flex-1 border-b border-black text-center pr-2">Approval Sign:</span>
                                     </div>
                                 ))}
                             </div>
