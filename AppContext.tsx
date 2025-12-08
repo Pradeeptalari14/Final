@@ -39,16 +39,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const [incidents, setIncidents] = useState<Incident[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
-    // Fetch data on load
-    useEffect(() => {
-        fetchSheets();
-        fetchUsers();
-        fetchSheets();
-        fetchUsers();
-        fetchLogs();
-        fetchIncidents();
-    }, []);
-
+    // --- DATA FUNCTIONS ---
+    // Defined BEFORE useEffect to avoid "used before defined" errors
     const fetchSheets = async () => {
         const { data, error } = await supabase
             .from('sheets')
@@ -141,6 +133,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
     };
 
+    // Fetch data on load
+    useEffect(() => {
+        // Restore Session
+        const savedSession = localStorage.getItem('unicharm_user');
+        if (savedSession) {
+            try {
+                const user = JSON.parse(savedSession);
+                setCurrentUser(user);
+            } catch (e) {
+                console.error("Failed to restore session", e);
+                localStorage.removeItem('unicharm_user');
+            }
+        }
+
+        fetchSheets();
+        fetchUsers();
+        fetchLogs();
+        fetchIncidents();
+    }, []);
+
     const login = async (username: string, pass: string, role: Role) => {
         try {
             const { data, error } = await supabase
@@ -166,6 +178,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
                 if (!user.isApproved) return false;
                 setCurrentUser(user);
+                localStorage.setItem('unicharm_user', JSON.stringify(user)); // Save Session
                 addLog('LOGIN', `User ${username} logged in as ${role}`);
                 return true;
             }
@@ -179,6 +192,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const logout = async () => {
         if (currentUser) addLog('LOGOUT', `User ${currentUser.username} logged out`);
         setCurrentUser(null);
+        localStorage.removeItem('unicharm_user'); // Clear Session
     };
 
     const register = async (user: User) => {
