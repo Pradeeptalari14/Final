@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../AppContext';
-import { SheetData, SheetStatus, LoadingItemData, AdditionalItem } from '../types';
+import { SheetData, SheetStatus, LoadingItemData, AdditionalItem, Role } from '../types';
 import {
     Camera,
     Printer,
@@ -49,6 +49,10 @@ export const LoadingSheet: React.FC<Props> = ({ sheet, onClose, initialPreview =
 
     // Controls to hide Submit / Show Print after completion
     const isCompleted = currentSheet.status === SheetStatus.COMPLETED;
+    const isPendingVerification = currentSheet.status === SheetStatus.LOADING_VERIFICATION_PENDING;
+    const canApprove = (currentUser?.role === Role.SHIFT_LEAD || currentUser?.role === Role.ADMIN) && isPendingVerification;
+    // Lock edits if completed or pending verification (unless rejecting, but that's a separate action)
+    const isLocked = isCompleted || isPendingVerification;
 
     const [isIncidentModalOpen, setIncidentModalOpen] = useState(false);
 
@@ -318,12 +322,48 @@ export const LoadingSheet: React.FC<Props> = ({ sheet, onClose, initialPreview =
             return;
         }
 
-        // Non-blocking save - gathers all data and completes immediately
-        const finalSheet = buildSheetData(SheetStatus.COMPLETED);
+        // Transition to Verification Pending
+        const finalSheet = buildSheetData(SheetStatus.LOADING_VERIFICATION_PENDING);
         updateSheet(finalSheet);
         setCurrentSheet(finalSheet);
         setEndTime(finalSheet.loadingEndTime || '');
-        alert("Sheet Completed Successfully!");
+        alert("Submitted for Shift Lead Verification!");
+    };
+
+    const handleApprove = async (approve: boolean) => {
+        if (approve) {
+            if (confirm("Confirm final approval? This sheet will be marked as COMPLETED.")) {
+                const finalSheet: SheetData = {
+                    ...currentSheet,
+                    status: SheetStatus.COMPLETED,
+                    loadingApprovedBy: currentUser?.username,
+                    loadingApprovedAt: new Date().toISOString(),
+                    slSign: currentUser?.fullName,
+                    completedBy: currentUser?.username,
+                    completedAt: new Date().toISOString()
+                };
+                updateSheet(finalSheet);
+                setCurrentSheet(finalSheet);
+            }
+        } else {
+            const reason = prompt("Enter rejection reason:");
+            if (reason) {
+                const rejectedSheet: SheetData = {
+                    ...currentSheet,
+                    status: SheetStatus.LOCKED, // Return to Locked (In Progress) for corrections
+                    rejectionReason: reason,
+                    history: [...(currentSheet.history || []), {
+                        id: Date.now().toString(),
+                        actor: currentUser?.username || 'Unknown',
+                        action: 'REJECTED_LOADING',
+                        timestamp: new Date().toISOString(),
+                        details: `Rejected: ${reason}`
+                    }]
+                };
+                updateSheet(rejectedSheet);
+                setCurrentSheet(rejectedSheet);
+            }
+        }
     };
 
     const togglePreview = () => setIsPreview(!isPreview);
@@ -361,10 +401,17 @@ export const LoadingSheet: React.FC<Props> = ({ sheet, onClose, initialPreview =
             )}
             {/* Screen Header */}
             <div className={`flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200 ${isPreview ? 'hidden' : 'block'} print:hidden`}>
-                <div className="flex items-center gap-4"><button type="button" onClick={onClose} className="text-slate-500 hover:text-blue-600"><ArrowLeft size={20} /></button><div><h2 className="text-xl font-bold text-slate-800">Loading Check Sheet</h2><p className="text-xs text-slate-400 font-mono">ID: {currentSheet.id}</p></div></div>
+                <div className="flex items-center gap-4"><button type="button" onClick={onClose} className="text-slate-500 hover:text-blue-600"><ArrowLeft size={20} /></button>
+                    <div>
+                        <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                            Loading Check Sheet
+                            {isPendingVerification && <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full border border-purple-200">VERIFICATION PENDING</span>}
+                        </h2>
+                        <p className="text-xs text-slate-400 font-mono">ID: {currentSheet.id}</p>
+                    </div></div>
                 <div className="flex gap-2">
                     {isCompleted && <button type="button" onClick={togglePreview} className="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"><Printer size={16} /> Print Preview</button>}
-                    {!isCompleted && <button type="button" onClick={handleSaveProgress} className="bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-slate-50"><Save size={16} /> Save Progress</button>}
+                    {!isLocked && <button type="button" onClick={handleSaveProgress} className="bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-slate-50"><Save size={16} /> Save Progress</button>}
                 </div>
             </div>
 
@@ -563,7 +610,7 @@ export const LoadingSheet: React.FC<Props> = ({ sheet, onClose, initialPreview =
                         <input type="text" value={transporter} onChange={e => { setTransporter(e.target.value); clearError('transporter'); }} disabled={isCompleted} className="w-full bg-transparent text-sm font-medium text-slate-700 outline-none placeholder:text-slate-300" placeholder="Enter Transporter" />
                     </HeaderField>
                     <HeaderField label="Loading Dock *" icon={MapPin} hasError={errors.includes('loadingDock')}>
-                        <input type="text" value={loadingDock} onChange={e => setLoadingDock(e.target.value)} disabled={isCompleted || (!!sheet.loadingDockNo && sheet.loadingDockNo.trim() !== '')} className={`w-full bg-transparent text-sm font-medium text-slate-700 outline-none ${(!sheet.loadingDockNo && !isCompleted) ? 'placeholder:text-blue-400' : 'cursor-not-allowed text-slate-500'}`} placeholder={!sheet.loadingDockNo ? "Enter Dock No" : ""} />
+                        <input type="text" value={loadingDock} onChange={e => setLoadingDock(e.target.value)} disabled={isLocked || (!!sheet.loadingDockNo && sheet.loadingDockNo.trim() !== '')} className={`w-full bg-transparent text-sm font-medium text-slate-700 outline-none ${(!sheet.loadingDockNo && !isLocked) ? 'placeholder:text-blue-400' : 'cursor-not-allowed text-slate-500'}`} placeholder={!sheet.loadingDockNo ? "Enter Dock No" : ""} />
                     </HeaderField>
                     <HeaderField label="Loading Start Time" icon={Clock}>
                         <input type="text" value={startTime} onChange={e => setStartTime(e.target.value)} disabled={isCompleted} className="w-full bg-transparent text-sm font-medium text-slate-700 outline-none placeholder:text-slate-300" placeholder="HH:MM:SS" />
@@ -705,10 +752,20 @@ export const LoadingSheet: React.FC<Props> = ({ sheet, onClose, initialPreview =
                     </div>
                 )}
 
-                {!isCompleted && !cameraActive && (
+                {!isLocked && !cameraActive && !isPendingVerification && (
                     <div className="fixed bottom-0 left-0 w-full p-4 bg-white/90 backdrop-blur-md border-t border-slate-200 shadow flex justify-center gap-4 z-50 lg:pl-64 no-print">
                         <button type="button" id="cameraButton" onClick={startCamera} className="px-6 py-2.5 bg-slate-100 text-slate-700 border border-slate-300 rounded-lg flex items-center gap-2 cursor-pointer hover:bg-slate-200 transition-colors pointer-events-auto"><Camera size={18} /> Add Photo</button>
-                        <button type="button" id="submitButton" onClick={handleSubmit} className="px-8 py-2.5 bg-green-600 text-white rounded-lg flex items-center gap-2 font-bold shadow-lg cursor-pointer hover:bg-green-700 transition-colors pointer-events-auto"><CheckCircle size={18} /> Complete Loading</button>
+                        <button type="button" id="submitButton" onClick={handleSubmit} className="px-8 py-2.5 bg-green-600 text-white rounded-lg flex items-center gap-2 font-bold shadow-lg cursor-pointer hover:bg-green-700 transition-colors pointer-events-auto"><CheckCircle size={18} /> Request Verification</button>
+                    </div>
+                )}
+
+                {/* Approval Footer */}
+                {isPendingVerification && canApprove && (
+                    <div className="fixed bottom-0 left-0 w-full p-4 bg-purple-50/90 backdrop-blur-md border-t border-purple-200 shadow flex justify-center gap-4 z-50 lg:pl-64 no-print animate-in slide-in-from-bottom-4">
+                        <button type="button" onClick={() => handleApprove(false)} className="px-6 py-2.5 bg-white text-red-600 border border-red-200 rounded-lg hover:bg-red-50 flex items-center gap-2 shadow-sm font-bold transition-all text-sm"><AlertTriangle size={18} /> Reject</button>
+                        <button type="button" onClick={() => handleApprove(true)} className="px-8 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2 font-bold shadow-lg shadow-purple-500/30 transform hover:scale-[1.02] active:scale-[0.98] transition-all text-sm">
+                            <CheckCircle size={18} /> Approve & Complete
+                        </button>
                     </div>
                 )}
                 {cameraActive && (

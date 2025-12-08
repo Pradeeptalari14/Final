@@ -13,8 +13,12 @@ interface Props {
 
 export const StagingSheet: React.FC<Props> = ({ existingSheet, onCancel, onLock, initialPreview = false }) => {
     const { currentUser, addSheet, updateSheet, acquireLock, releaseLock } = useApp();
-    const isLocked = (existingSheet?.status === SheetStatus.LOCKED || existingSheet?.status === SheetStatus.COMPLETED) ||
+    const isLocked = (existingSheet?.status === SheetStatus.LOCKED || existingSheet?.status === SheetStatus.COMPLETED || existingSheet?.status === SheetStatus.STAGING_VERIFICATION_PENDING) ||
         (existingSheet?.status === SheetStatus.DRAFT && existingSheet.createdBy !== currentUser?.username && currentUser?.role !== Role.ADMIN);
+
+    // Shift Lead Approval Mode
+    const isPendingApproval = existingSheet?.status === SheetStatus.STAGING_VERIFICATION_PENDING;
+    const canApprove = currentUser?.role === Role.SHIFT_LEAD || currentUser?.role === Role.ADMIN;
 
     // Print Preview State
     const [isPreview, setIsPreview] = useState(initialPreview);
@@ -170,7 +174,7 @@ export const StagingSheet: React.FC<Props> = ({ existingSheet, onCancel, onLock,
 
             const sheetData: SheetData = {
                 id: sheetId,
-                status: lock ? SheetStatus.LOCKED : SheetStatus.DRAFT,
+                status: lock ? SheetStatus.STAGING_VERIFICATION_PENDING : SheetStatus.DRAFT,
                 version: (existingSheet?.version || 0),
                 shift,
                 date,
@@ -224,6 +228,52 @@ export const StagingSheet: React.FC<Props> = ({ existingSheet, onCancel, onLock,
         }
     };
 
+    const handleApprove = async (approve: boolean) => {
+        if (!existingSheet) return;
+
+        if (approve) {
+            if (confirm("Confirm approval of this Staging Sheet? It will be locked for loading.")) {
+                const updatedSheet: SheetData = {
+                    ...existingSheet,
+                    status: SheetStatus.LOCKED,
+                    stagingApprovedBy: currentUser?.username,
+                    stagingApprovedAt: new Date().toISOString(),
+                    slSign: currentUser?.fullName, // Auto-sign with name
+                    lockedBy: currentUser?.username, // Technically the SL is "locking" it now
+                    lockedAt: new Date().toISOString()
+                };
+
+                // Ensure loading items are generated if not present (redundant safety)
+                if ((!updatedSheet.loadingItems || updatedSheet.loadingItems.length === 0) && updatedSheet.stagingItems) {
+                    const validStagingItems = updatedSheet.stagingItems.filter(item => item.skuName && item.ttlCases > 0);
+                    updatedSheet.loadingItems = validStagingItems.map(sItem => ({ skuSrNo: sItem.srNo, cells: [], looseInput: 0, total: 0, balance: sItem.ttlCases }));
+                    updatedSheet.additionalItems = Array.from({ length: 5 }, (_, i) => ({ id: i + 1, skuName: '', counts: Array(10).fill(0), total: 0 }));
+                }
+
+                updateSheet(updatedSheet);
+                onLock(updatedSheet); // Refreshes parent view
+            }
+        } else {
+            const reason = prompt("Enter rejection reason:");
+            if (reason) {
+                const updatedSheet: SheetData = {
+                    ...existingSheet,
+                    status: SheetStatus.DRAFT,
+                    rejectionReason: reason,
+                    history: [...(existingSheet.history || []), {
+                        id: Date.now().toString(),
+                        actor: currentUser?.username || 'Unknown',
+                        action: 'REJECTED_STAGING',
+                        timestamp: new Date().toISOString(),
+                        details: `Rejected: ${reason}`
+                    }]
+                };
+                updateSheet(updatedSheet);
+                onCancel(); // Close or refresh
+            }
+        }
+    };
+
     const handleBack = () => {
         if (isDirty) {
             if (window.confirm("You have unsaved changes. Are you sure you want to discard them?")) {
@@ -255,9 +305,10 @@ export const StagingSheet: React.FC<Props> = ({ existingSheet, onCancel, onLock,
                         </button>
                         <div className="flex items-center gap-3">
                             <h2 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight">Staging Check Sheet</h2>
-                            {isLocked && <span className="bg-orange-100 text-orange-700 text-xs px-2.5 py-1 rounded-full font-bold border border-orange-200">LOCKED</span>}
+                            {isLocked && !isPendingApproval && <span className="bg-orange-100 text-orange-700 text-xs px-2.5 py-1 rounded-full font-bold border border-orange-200">LOCKED</span>}
+                            {isPendingApproval && <span className="bg-purple-100 text-purple-700 text-xs px-2.5 py-1 rounded-full font-bold border border-purple-200 flex items-center gap-1"><AlertTriangle size={12} /> PENDING APPROVAL</span>}
                             {existingSheet?.status === SheetStatus.DRAFT && <span className="bg-slate-100 text-slate-600 text-xs px-2.5 py-1 rounded-full font-medium border border-slate-200">DRAFT</span>}
-                            {isDirty && <span className="text-amber-500 text-xs flex items-center gap-1"><AlertTriangle size={12} /> Unsaved Changes</span>}
+                            {isDirty && !isLocked && <span className="text-amber-500 text-xs flex items-center gap-1"><AlertTriangle size={12} /> Unsaved Changes</span>}
                         </div>
                     </div>
                     <div className="flex gap-2">
@@ -422,9 +473,20 @@ export const StagingSheet: React.FC<Props> = ({ existingSheet, onCancel, onLock,
             {!isLocked && !isPreview && (
                 <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-slate-200 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)] flex justify-center gap-4 z-40 lg:ml-64 print:hidden">
                     <button type="button" onClick={() => handleSave(false)} className="px-6 py-2.5 bg-white text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 flex items-center gap-2 shadow-sm font-medium transition-all text-sm"><Save size={18} /> Save Draft</button>
-                    <button type="button" id="lockButton" onClick={(e) => handleSave(true, e)} className="px-8 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 font-bold shadow-lg shadow-blue-500/30 transform hover:scale-[1.02] active:scale-[0.98] transition-all text-sm"><Lock size={18} /> Lock & Submit</button>
+                    <button type="button" id="lockButton" onClick={(e) => handleSave(true, e)} className="px-8 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2 font-bold shadow-lg shadow-purple-500/30 transform hover:scale-[1.02] active:scale-[0.98] transition-all text-sm"><Lock size={18} /> Request Verification</button>
                 </div>
             )}
-        </div>
+
+            {/* Approval Footer (Shift Lead) */}
+            {isPendingApproval && canApprove && !isPreview && (
+                <div className="fixed bottom-0 left-0 right-0 p-4 bg-purple-50/90 backdrop-blur-md border-t border-purple-200 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)] flex justify-center gap-4 z-40 lg:ml-64 print:hidden animate-in slide-in-from-bottom-4">
+                    <button type="button" onClick={() => handleApprove(false)} className="px-6 py-2.5 bg-white text-red-600 border border-red-200 rounded-lg hover:bg-red-50 flex items-center gap-2 shadow-sm font-bold transition-all text-sm"><AlertTriangle size={18} /> Reject</button>
+                    <button type="button" onClick={() => handleApprove(true)} className="px-8 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2 font-bold shadow-lg shadow-purple-500/30 transform hover:scale-[1.02] active:scale-[0.98] transition-all text-sm">
+                        <Lock size={18} /> Approve & Lock
+                    </button>
+                </div>
+            )
+            }
+        </div >
     );
 };

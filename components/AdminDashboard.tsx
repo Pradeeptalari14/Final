@@ -172,8 +172,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
 
         const stagingStaff = users.filter(u => u.role === Role.STAGING_SUPERVISOR && u.isApproved).length;
         const loadingStaff = users.filter(u => u.role === Role.LOADING_SUPERVISOR && u.isApproved).length;
+        const shiftLeads = users.filter(u => u.role === Role.SHIFT_LEAD && u.isApproved).length;
 
-        return { total, completed, locked, draft, lineData, barData, pieData, createdToday, completedToday, stagingStaff, loadingStaff };
+        // Pending Verification Stats
+        const pendingStaging = sheets.filter(s => s.status === SheetStatus.STAGING_VERIFICATION_PENDING).length;
+        const pendingLoading = sheets.filter(s => s.status === SheetStatus.LOADING_VERIFICATION_PENDING).length;
+
+        return { total, completed, locked, draft, lineData, barData, pieData, createdToday, completedToday, stagingStaff, loadingStaff, shiftLeads, pendingStaging, pendingLoading };
     }, [sheets, users]);
 
     // --- EXCEL EXPORT ---
@@ -278,8 +283,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
     };
 
     const isAdmin = currentUser?.role === Role.ADMIN;
-    const showStaging = isAdmin || currentUser?.role === Role.STAGING_SUPERVISOR;
-    const showLoading = isAdmin || currentUser?.role === Role.LOADING_SUPERVISOR;
+    const isShiftLead = currentUser?.role === Role.SHIFT_LEAD;
+    const showStaging = isAdmin || isShiftLead || currentUser?.role === Role.STAGING_SUPERVISOR;
+    const showLoading = isAdmin || isShiftLead || currentUser?.role === Role.LOADING_SUPERVISOR;
+    const showApprovals = isAdmin || isShiftLead;
 
     // --- VIEW 1: ANALYTICS DASHBOARD (Monitoring) ---
     if (viewMode === 'analytics') {
@@ -382,6 +389,42 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                         </div>
                     )}
 
+                    {/* COL 2.5: APPROVALS OVERVIEW (Visible to Admin & Shift Lead) */}
+                    {showApprovals && (
+                        <div
+                            onClick={() => onNavigate?.('approvals')} // You might want to filter the list by pending status
+                            className="bg-slate-50 p-5 rounded-xl border border-slate-200 cursor-pointer hover:bg-purple-50/50 transition-colors group relative overflow-hidden"
+                        >
+                            <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+                            <div className="flex items-center gap-2 mb-4">
+                                <div className="p-2 bg-purple-100 text-purple-600 rounded-lg group-hover:bg-purple-600 group-hover:text-white transition-colors"><ShieldCheck size={18} /></div>
+                                <h3 className="font-bold text-slate-700">Approvals Pending</h3>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-100">
+                                    <p className="text-[10px] uppercase font-bold text-slate-400">Staging</p>
+                                    <p className="text-xl font-bold text-slate-800 text-orange-600">{stats.pendingStaging}</p>
+                                </div>
+                                <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-100">
+                                    <p className="text-[10px] uppercase font-bold text-slate-400">Loading</p>
+                                    <p className="text-xl font-bold text-slate-800 text-blue-600">{stats.pendingLoading}</p>
+                                </div>
+                                <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-100 col-span-2">
+                                    <p className="text-[10px] uppercase font-bold text-slate-400">Shift Leads</p>
+                                    <p
+                                        className="text-xl font-bold text-slate-800 cursor-pointer hover:text-purple-600 hover:underline"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onNavigate?.('admin_SHIFT_LEAD');
+                                        }}
+                                    >
+                                        {stats.shiftLeads}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* COL 3: GLOBAL SUMMARY (Merged KPIs) */}
                     <div className="space-y-4">
                         <div
@@ -472,6 +515,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                 if (currentUser?.role === Role.LOADING_SUPERVISOR) {
                     return searchMatch && u.role === Role.LOADING_SUPERVISOR; // Loading sees Loading
                 }
+                if (currentUser?.role === Role.SHIFT_LEAD) {
+                    // Shift Lead acts like a viewer/manager for staff but mostly focuses on ops
+                    return searchMatch;
+                }
                 return false;
             })
             .sort((a, b) => {
@@ -533,6 +580,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                                     className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-2 ${filterRole === Role.ADMIN ? 'bg-white text-purple-700 shadow-sm' : 'text-slate-500 hover:text-purple-600'}`}
                                 >
                                     <ShieldAlert size={14} /> Admin
+                                </button>
+                                <button
+                                    onClick={() => setFilterRole(Role.SHIFT_LEAD)}
+                                    className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-2 ${filterRole === Role.SHIFT_LEAD ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-emerald-600'}`}
+                                >
+                                    <ShieldCheck size={14} /> Shift Lead
                                 </button>
                             </div>
                         )}
@@ -612,6 +665,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                                                             'bg-slate-100 text-slate-600'}`}>
                                                 {user.role === Role.STAGING_SUPERVISOR && <Clipboard size={12} />}
                                                 {user.role === Role.LOADING_SUPERVISOR && <Truck size={12} />}
+                                                {user.role === Role.SHIFT_LEAD && <ShieldCheck size={12} />}
                                                 {user.role === Role.ADMIN && <ShieldAlert size={12} />}
                                                 {user.role}
                                             </span>
@@ -732,6 +786,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                                         >
                                             <option value={Role.STAGING_SUPERVISOR}>Staging Supervisor</option>
                                             <option value={Role.LOADING_SUPERVISOR}>Loading Supervisor</option>
+                                            <option value={Role.SHIFT_LEAD}>Shift Lead</option>
                                             <option value={Role.ADMIN}>Administrator</option>
                                             <option value={Role.VIEWER}>Viewer</option>
                                         </select>

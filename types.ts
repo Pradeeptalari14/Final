@@ -3,12 +3,15 @@ export enum Role {
   ADMIN = 'ADMIN',
   STAGING_SUPERVISOR = 'STAGING_SUPERVISOR',
   LOADING_SUPERVISOR = 'LOADING_SUPERVISOR',
+  SHIFT_LEAD = 'SHIFT_LEAD',
   VIEWER = 'VIEWER'
 }
 
 export enum SheetStatus {
   DRAFT = 'DRAFT',
+  STAGING_VERIFICATION_PENDING = 'STAGING_VERIFICATION_PENDING',
   LOCKED = 'LOCKED', // Ready for loading
+  LOADING_VERIFICATION_PENDING = 'LOADING_VERIFICATION_PENDING',
   COMPLETED = 'COMPLETED'
 }
 
@@ -58,6 +61,7 @@ export interface Comment {
   author: string;
   text: string;
   timestamp: string;
+  type?: 'remark' | 'rejection'; // Enhanced comment type
 }
 
 export interface HistoryLog {
@@ -113,6 +117,13 @@ export interface SheetData {
   loadingSupervisorSign?: string;
   slSign?: string;
   deoSign?: string;
+
+  // Approval Metadata
+  stagingApprovedBy?: string;
+  stagingApprovedAt?: string;
+  loadingApprovedBy?: string;
+  loadingApprovedAt?: string;
+  rejectionReason?: string;
 
   // Metadata
   createdBy: string;
