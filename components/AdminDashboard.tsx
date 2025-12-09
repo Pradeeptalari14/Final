@@ -523,7 +523,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                 (s.vehicleNo && s.vehicleNo.toLowerCase().includes(term)) ||
                 (s.destination && s.destination.toLowerCase().includes(term));
 
-            const matchesStatus = !statusFilter || statusFilter === 'ALL' || s.status === statusFilter;
+            let matchesStatus = !statusFilter || statusFilter === 'ALL' || s.status === statusFilter;
+
+            // SPECIAL RULE: Shift Lead View only shows Pending Approvals by default
+            if (viewMode === 'approvals' && (!statusFilter || statusFilter === 'ALL')) {
+                matchesStatus = s.status === 'STAGING_VERIFICATION_PENDING' || s.status === 'LOADING_VERIFICATION_PENDING';
+            }
+
             return matchesSearch && matchesStatus;
         }).sort((a, b) => {
             if (!sortConfig) return 0;
@@ -655,7 +661,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
 
                         {dbWorkflow === 'APPROVALS' && (
                             <div className="flex items-center gap-2 overflow-x-auto">
-                                <button onClick={() => navigateToDatabase('ALL')} className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${!statusFilter || statusFilter === 'ALL' ? 'bg-purple-100 text-purple-700 border-purple-200' : 'bg-white text-slate-500 border-slate-200'}`}>All</button>
                                 <button onClick={() => onNavigate && onNavigate('staging', 'STAGING_VERIFICATION_PENDING')} className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${statusFilter === 'STAGING_VERIFICATION_PENDING' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300'}`}>Staging Approval</button>
                                 <button onClick={() => onNavigate && onNavigate('loading', 'LOADING_VERIFICATION_PENDING')} className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${statusFilter === 'LOADING_VERIFICATION_PENDING' ? 'bg-orange-600 text-white border-orange-600' : 'bg-white text-slate-500 border-slate-200 hover:border-orange-300'}`}>Loading Approval</button>
                             </div>
