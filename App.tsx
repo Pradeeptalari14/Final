@@ -55,7 +55,16 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, Error
 const App = () => {
     // ... existing hook calls ...
     const { currentUser, sheets } = useApp();
-    const [currentPage, setCurrentPage] = useState('dashboard');
+
+    // Initialize Page from URL
+    const [currentPage, setCurrentPage] = useState(() => {
+        const params = new URLSearchParams(window.location.search);
+        const view = params.get('view');
+        if (view === 'staging-db') return 'staging-db';
+        if (view === 'loading-db') return 'loading-db';
+        return 'dashboard';
+    });
+
     // ... rest of state ...
     const [selectedSheetId, setSelectedSheetId] = useState<string | null>(null);
     const [isCreatingNew, setIsCreatingNew] = useState(false);
@@ -155,6 +164,12 @@ const App = () => {
 
             case 'database':
                 return <AdminDashboard viewMode="database" onViewSheet={(s) => handleViewSheet(s)} />;
+
+            case 'staging-db':
+                return <AdminDashboard viewMode="staging_workflow" onViewSheet={(s) => handleViewSheet(s)} />;
+
+            case 'loading-db':
+                return <AdminDashboard viewMode="loading_workflow" onViewSheet={(s) => handleViewSheet(s)} />;
 
             case 'staging-editor':
                 return <StagingSheet
