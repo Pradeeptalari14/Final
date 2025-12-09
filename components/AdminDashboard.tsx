@@ -19,6 +19,14 @@ import * as XLSX from 'xlsx';
 import { widgetRegistry, getWidgetDefinition } from './widgets/WidgetRegistry';
 import { AddWidgetModal } from './widgets/AddWidgetModal';
 
+// --- CONFIGURATION: VIEW FILTERS ---
+// Defines which statuses are visible in each workflow view.
+const VIEW_SCOPES: Record<string, SheetStatus[]> = {
+    'staging_workflow': [SheetStatus.DRAFT, SheetStatus.STAGING_VERIFICATION_PENDING, SheetStatus.LOCKED],
+    'loading_workflow': [SheetStatus.LOCKED, SheetStatus.LOADING_VERIFICATION_PENDING, SheetStatus.COMPLETED],
+    // 'approvals' & 'database' have dynamic/all scopes, handled in logic
+};
+
 interface AdminDashboardProps {
     viewMode: 'analytics' | 'users' | 'database' | 'audit' | 'approvals' | 'staging_workflow' | 'loading_workflow';
     onViewSheet: (sheet: SheetData) => void;
@@ -621,23 +629,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                 (s.vehicleNo && s.vehicleNo.toLowerCase().includes(term)) ||
                 (s.destination && s.destination.toLowerCase().includes(term));
 
-            let matchesStatus = !statusFilter || statusFilter === 'ALL' || s.status === statusFilter;
+            // 1. Primary Filter: Status from URL (Overrules everything if set and not 'ALL')
+            if (statusFilter && statusFilter !== 'ALL') {
+                if (s.status !== statusFilter) return false;
+            }
 
-            // SPECIAL RULE: Shift Lead View only shows Pending Approvals by default
+            // 2. Scope Filter: Workflow Constraints
+            // Does this view have a strict list of allowed statuses?
+            const allowedStatuses = VIEW_SCOPES[viewMode];
+            if (allowedStatuses) {
+                if (!allowedStatuses.includes(s.status)) return false;
+            }
+
+            // 3. Special Case: Approvals View Default
+            // If we are in Approvals view and NO specific filter is set, show Pending items by default.
             if (viewMode === 'approvals' && (!statusFilter || statusFilter === 'ALL')) {
-                matchesStatus = s.status === 'STAGING_VERIFICATION_PENDING' || s.status === 'LOADING_VERIFICATION_PENDING';
-            }
-            // SPECIAL RULE: Staging Workflow View only shows Staging-related statuses
-            if (viewMode === 'staging_workflow') {
-                matchesStatus = matchesStatus && (s.status === 'DRAFT' || s.status === 'STAGING_VERIFICATION_PENDING' || s.status === 'LOCKED');
-            }
-            // SPECIAL RULE: Loading Workflow View only shows Loading-related statuses
-            if (viewMode === 'loading_workflow') {
-                matchesStatus = matchesStatus && (s.status === 'LOCKED' || s.status === 'LOADING_VERIFICATION_PENDING' || s.status === 'COMPLETED');
+                const isPending = s.status === SheetStatus.STAGING_VERIFICATION_PENDING ||
+                    s.status === SheetStatus.LOADING_VERIFICATION_PENDING;
+                if (!isPending) return false;
             }
 
-
-            return matchesSearch && matchesStatus;
+            return matchesSearch;
         }).sort((a, b) => {
             if (!sortConfig) return 0;
             const { key, direction } = sortConfig;
