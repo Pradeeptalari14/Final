@@ -48,8 +48,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigat
           setIsMobileMenuOpen(false); // Close menu on mobile nav
         }}
         className={`group w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-all duration-200 rounded-lg mx-2 w-[calc(100%-16px)] ${isActive
-            ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
-            : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+          ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
+          : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
           }`}
       >
         <Icon size={20} className={`transition-colors ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`} />
@@ -135,6 +135,12 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigat
             icon={Truck}
             label="Loading Sheets"
             roles={[Role.LOADING_SUPERVISOR, Role.ADMIN, Role.SHIFT_LEAD]}
+          />
+          <NavItem
+            page="approvals"
+            icon={ClipboardList} // Using ClipboardList as it fits
+            label="Approvals"
+            roles={[Role.ADMIN, Role.SHIFT_LEAD]}
           />
           <div className="pt-4 pb-2 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Administration</div>
           <NavItem

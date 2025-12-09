@@ -816,9 +816,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                                         <div className="p-4 text-xs text-slate-500 font-mono">{s.stagingApprovedAt ? new Date(s.stagingApprovedAt).toLocaleString() : '-'}</div>
                                         <div className="p-4 truncate text-orange-600">{s.loadingApprovedBy || '-'}</div>
                                         <div className="p-4">
-                                            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${s.status === 'COMPLETED' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}>
-                                                {s.status}
-                                            </span>
+                                            {/* Pipeline Visualization */}
+                                            <div className="flex items-center gap-1">
+                                                {/* Draft Status */}
+                                                <div className={`w-2 h-2 rounded-full ${s.status === 'DRAFT' ? 'bg-slate-500 ring-2 ring-slate-200' : (s.status !== 'DRAFT' ? 'bg-slate-300' : 'bg-slate-200')}`} title="Draft"></div>
+                                                <div className={`w-4 h-0.5 ${s.status !== 'DRAFT' ? 'bg-slate-300' : 'bg-slate-200'}`}></div>
+
+                                                {/* Staging Verification */}
+                                                <div className={`w-2 h-2 rounded-full ${s.status === 'STAGING_VERIFICATION_PENDING' ? 'bg-blue-500 ring-2 ring-blue-200 animate-pulse' : (['LOCKED', 'LOADING_VERIFICATION_PENDING', 'COMPLETED'].includes(s.status) ? 'bg-blue-400' : 'bg-slate-200')}`} title="Staging Verification"></div>
+                                                <div className={`w-4 h-0.5 ${['LOCKED', 'LOADING_VERIFICATION_PENDING', 'COMPLETED'].includes(s.status) ? 'bg-blue-300' : 'bg-slate-200'}`}></div>
+
+                                                {/* Locked (Ready to Load) */}
+                                                <div className={`w-2 h-2 rounded-full ${s.status === 'LOCKED' ? 'bg-orange-500 ring-2 ring-orange-200' : (['LOADING_VERIFICATION_PENDING', 'COMPLETED'].includes(s.status) ? 'bg-orange-400' : 'bg-slate-200')}`} title="Ready to Load"></div>
+                                                <div className={`w-4 h-0.5 ${['LOADING_VERIFICATION_PENDING', 'COMPLETED'].includes(s.status) ? 'bg-orange-300' : 'bg-slate-200'}`}></div>
+
+                                                {/* Loading Verification */}
+                                                <div className={`w-2 h-2 rounded-full ${s.status === 'LOADING_VERIFICATION_PENDING' ? 'bg-purple-500 ring-2 ring-purple-200 animate-pulse' : (s.status === 'COMPLETED' ? 'bg-purple-400' : 'bg-slate-200')}`} title="Loading Verification"></div>
+                                                <div className={`w-4 h-0.5 ${s.status === 'COMPLETED' ? 'bg-purple-300' : 'bg-slate-200'}`}></div>
+
+                                                {/* Completed */}
+                                                <div className={`w-2 h-2 rounded-full ${s.status === 'COMPLETED' ? 'bg-green-500 ring-2 ring-green-200' : 'bg-slate-200'}`} title="Completed"></div>
+                                            </div>
+                                            <span className="text-[10px] font-bold text-slate-500 mt-1 block uppercase">{s.status.replace(/_/g, ' ').replace('VERIFICATION PENDING', 'VERIFY')}</span>
                                         </div>
                                         <div className="p-4 flex justify-center gap-2">
                                             <button onClick={() => onViewSheet(s)} className="text-blue-600 hover:bg-blue-50 p-1 rounded"><Eye size={16} /></button>
