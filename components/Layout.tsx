@@ -198,12 +198,18 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigat
               <Menu size={24} />
             </button>
             <h2 className="text-lg md:text-xl font-bold text-slate-800 capitalize tracking-tight truncate">
-              {currentPage.replace('-', ' ')}
+              {currentPage === 'admin' ? 'User Administration' : currentPage.replace('-', ' ')}
             </h2>
           </div>
 
           <div className="flex items-center gap-4 md:gap-6">
-            <div className="hidden md:flex flex-col items-end">
+            {/* User Profile in Header */}
+            <div className="hidden md:flex flex-col items-end mr-2">
+              <span className="text-sm font-bold text-slate-800">{currentUser?.fullName || currentUser?.username}</span>
+              <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{currentUser?.role.replace(/_/g, ' ')}</span>
+            </div>
+
+            <div className="hidden md:flex flex-col items-end border-l border-slate-200 pl-4">
               <span className="text-xs font-semibold text-slate-600">{new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
             </div>
             <div className="h-8 w-[1px] bg-slate-200 hidden md:block"></div>

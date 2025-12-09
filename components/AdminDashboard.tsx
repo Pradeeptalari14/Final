@@ -431,7 +431,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                                     {!user.isApproved ? (
                                         <><button onClick={(e) => handleApprove(e, user.id)} className="text-green-600"><CheckCircle size={16} /></button><button onClick={(e) => handleReject(e, user.id)} className="text-red-600"><XCircle size={16} /></button></>
                                     ) : (
-                                        currentUser?.role === Role.ADMIN && <button onClick={(e) => handleUserDelete(e, user.id, user.username)} className="text-red-600"><Trash2 size={16} /></button>
+                                        currentUser?.role === Role.ADMIN && (
+                                            <>
+                                                <button onClick={() => { setResetData({ id: user.id, username: user.username, newPass: '' }); setResetPasswordOpen(true); }} className="text-blue-600 hover:text-blue-800" title="Change Password"><Key size={16} /></button>
+                                                <button onClick={(e) => handleUserDelete(e, user.id, user.username)} className="text-red-600 hover:text-red-800" title="Delete User"><Trash2 size={16} /></button>
+                                            </>
+                                        )
                                     )}
                                 </div>
                             </div>
@@ -456,6 +461,37 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                                     <option value={Role.ADMIN}>Admin</option>
                                 </select>
                                 <div className="flex gap-2 justify-end mt-4"><button type="button" onClick={() => setCreateUserOpen(false)} className="px-4 py-2 border rounded">Cancel</button><button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded">Create</button></div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
+                {/* Reset Password Modal */}
+                {isResetPasswordOpen && resetData && (
+                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-xl p-6 w-full max-w-sm">
+                            <h3 className="font-bold text-lg mb-4 flex items-center gap-2"><Key size={20} className="text-blue-600" /> Reset Password</h3>
+                            <p className="text-sm text-slate-500 mb-4">Set a new password for <strong>{resetData.username}</strong>.</p>
+                            <form onSubmit={(e) => {
+                                e.preventDefault();
+                                if (!resetData.newPass) return;
+                                resetPassword(resetData.id, resetData.newPass);
+                                setResetPasswordOpen(false);
+                                setResetData(null);
+                                alert(`Password for ${resetData.username} changed successfully.`);
+                            }} className="space-y-4">
+                                <input
+                                    className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                                    placeholder="New Password"
+                                    type="password"
+                                    value={resetData.newPass}
+                                    onChange={e => setResetData({ ...resetData, newPass: e.target.value })}
+                                    required
+                                />
+                                <div className="flex gap-2 justify-end mt-4">
+                                    <button type="button" onClick={() => { setResetPasswordOpen(false); setResetData(null); }} className="px-4 py-2 border rounded hover:bg-slate-50">Cancel</button>
+                                    <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Update Password</button>
+                                </div>
                             </form>
                         </div>
                     </div>
