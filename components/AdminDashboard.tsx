@@ -80,7 +80,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
     // NEW: Database View Mode (Standard vs Duration)
     const [dbViewMode, setDbViewMode] = useState<'details' | 'duration'>('details');
     // NEW: Database Workflow Context
-    const [dbWorkflow, setDbWorkflow] = useState<'ALL' | 'STAGING' | 'LOADING' | 'APPROVALS'>('ALL');
+    const [dbWorkflow, setDbWorkflow] = useState<'ALL' | 'STAGING' | 'LOADING' | 'APPROVALS'>(() => {
+        const params = new URLSearchParams(window.location.search);
+        const wf = params.get('workflow');
+        return (wf === 'STAGING' || wf === 'LOADING' || wf === 'APPROVALS') ? wf : 'ALL';
+    });
     const [isViewMenuOpen, setIsViewMenuOpen] = useState(false);
 
     // Sort State
@@ -120,14 +124,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
     };
 
     // Navigation Helper
-    const navigateToDatabase = (statusFilter: string) => {
+    const navigateToDatabase = (statusFilter: string, workflow: 'ALL' | 'STAGING' | 'LOADING' | 'APPROVALS' = 'ALL') => {
         const newUrl = new URL(window.location.href);
-        newUrl.searchParams.set('view', 'database'); // Ensure we switch tab if logic depends on it, though router usually handles path
-        // For this app architecture, it seems we might be relying on props or URL.
-        // Let's assume URL query param driving viewMode or just reload with param.
+        newUrl.searchParams.set('view', 'database');
         newUrl.searchParams.set('status', statusFilter);
+        newUrl.searchParams.set('workflow', workflow); // Set workflow param
         window.history.pushState({}, '', newUrl.toString());
-        window.location.reload(); // Force reload to pick up new state if simple routing isn't fully reactive to URL params
+        window.location.reload();
     };
 
     // --- HELPER FUNCTIONS ---
@@ -253,7 +256,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                 </div>
 
                 <div
-                    onClick={() => { const newUrl = new URL(window.location.href); newUrl.searchParams.set('status', 'COMPLETED'); window.history.pushState({}, '', newUrl.toString()); window.location.reload(); }}
+                    onClick={() => navigateToDatabase('COMPLETED', 'ALL')}
                     className="bg-white rounded-xl p-6 shadow-sm border border-slate-200 cursor-pointer hover:shadow-md hover:border-green-300 transition-all group relative overflow-hidden"
                 >
                     <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><CheckCircle size={120} className="text-green-500" /></div>
@@ -271,15 +274,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                             <div><h3 className="font-bold text-slate-700">Staging Overview</h3><div className="text-xs text-slate-400">{stats.staging.staff} Staff</div></div>
                         </div>
                         <div className="grid grid-cols-3 gap-2"> {/* Changed to 3 cols for Locked */}
-                            <div onClick={() => onNavigate && onNavigate('staging', 'DRAFT')} className="p-3 bg-blue-50/50 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors">
+                            <div onClick={() => navigateToDatabase('DRAFT', 'STAGING')} className="p-3 bg-blue-50/50 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors">
                                 <span className="text-[10px] text-blue-500 uppercase font-bold block mb-1">Drafts</span>
                                 <span className="text-xl font-bold text-blue-700">{stats.staging.drafts}</span>
                             </div>
-                            <div onClick={() => onNavigate && onNavigate('staging', 'STAGING_VERIFICATION_PENDING')} className="p-3 bg-yellow-50 rounded-lg cursor-pointer hover:bg-yellow-100 transition-colors">
+                            <div onClick={() => navigateToDatabase('STAGING_VERIFICATION_PENDING', 'STAGING')} className="p-3 bg-yellow-50 rounded-lg cursor-pointer hover:bg-yellow-100 transition-colors">
                                 <span className="text-[10px] text-yellow-600 uppercase font-bold block mb-1">Pending</span>
                                 <span className="text-xl font-bold text-yellow-700">{stats.staging.pending}</span>
                             </div>
-                            <div onClick={() => onNavigate && onNavigate('staging', 'LOCKED')} className="p-3 bg-orange-50 rounded-lg cursor-pointer hover:bg-orange-100 transition-colors">
+                            <div onClick={() => navigateToDatabase('LOCKED', 'STAGING')} className="p-3 bg-orange-50 rounded-lg cursor-pointer hover:bg-orange-100 transition-colors">
                                 <span className="text-[10px] text-orange-600 uppercase font-bold block mb-1">Locked</span>
                                 <span className="text-xl font-bold text-orange-700">{stats.staging.locked}</span>
                             </div>
@@ -292,14 +295,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                             <div><h3 className="font-bold text-slate-700">Loading Overview</h3><div className="text-xs text-slate-400">{stats.loading.staff} Staff</div></div>
                         </div>
                         <div className="grid grid-cols-2 gap-3">
-                            <div onClick={() => onNavigate && onNavigate('loading', 'LOCKED')} className="p-2 bg-orange-50 rounded-lg cursor-pointer hover:bg-orange-100 transition-colors flex items-center justify-between group">
+                            <div onClick={() => navigateToDatabase('LOCKED', 'LOADING')} className="p-2 bg-orange-50 rounded-lg cursor-pointer hover:bg-orange-100 transition-colors flex items-center justify-between group">
                                 <div>
                                     <span className="text-[10px] text-orange-600 uppercase font-bold block mb-1">Ready to Load</span>
                                     <span className="text-lg font-bold text-orange-700">{stats.loading.locked}</span>
                                 </div>
                                 <Lock className="text-orange-300 group-hover:text-orange-500 transition-colors" size={24} />
                             </div>
-                            <div onClick={() => onNavigate && onNavigate('loading', 'LOADING_VERIFICATION_PENDING')} className="p-2 bg-yellow-50 rounded-lg cursor-pointer hover:bg-yellow-100 transition-colors flex items-center justify-between group">
+                            <div onClick={() => navigateToDatabase('LOADING_VERIFICATION_PENDING', 'LOADING')} className="p-2 bg-yellow-50 rounded-lg cursor-pointer hover:bg-yellow-100 transition-colors flex items-center justify-between group">
                                 <div>
                                     <span className="text-[10px] text-yellow-600 uppercase font-bold block mb-1">Pending</span>
                                     <span className="text-lg font-bold text-yellow-700">{stats.loading.pending}</span>
@@ -315,12 +318,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                             <div><h3 className="font-bold text-slate-700">Shift Lead</h3><div className="text-xs text-slate-400">{stats.approvals.staff} Leads</div></div>
                         </div>
                         <div className="space-y-3">
-                            <div onClick={() => onNavigate && onNavigate('staging', 'STAGING_VERIFICATION_PENDING')} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors">
+                            <div onClick={() => navigateToDatabase('STAGING_VERIFICATION_PENDING', 'STAGING')} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors">
                                 <span className="text-sm font-bold text-slate-700">Staging</span>
+                                <span className="text-sm text-slate-500">(Pending)</span>
                                 <span className="text-lg font-bold text-blue-700">{stats.approvals.staging}</span>
                             </div>
-                            <div onClick={() => onNavigate && onNavigate('loading', 'LOADING_VERIFICATION_PENDING')} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg cursor-pointer hover:bg-orange-100 transition-colors">
+                            <div onClick={() => navigateToDatabase('LOADING_VERIFICATION_PENDING', 'LOADING')} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg cursor-pointer hover:bg-orange-100 transition-colors">
                                 <span className="text-sm font-bold text-slate-700">Loading</span>
+                                <span className="text-sm text-slate-500">(Pending)</span>
                                 <span className="text-lg font-bold text-orange-700">{stats.approvals.loading}</span>
                             </div>
                         </div>
@@ -336,12 +341,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm"><h3 className="font-bold mb-4">Incidents</h3>{React.createElement(getWidgetDefinition('incident-list')!.component)}</div>
                     )}
                 </div>
-                {userWidgets.includes('staff-performance') && getWidgetDefinition('staff-performance') && (
-                    <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm"><h3 className="font-bold mb-4">Staff Performance</h3>{React.createElement(getWidgetDefinition('staff-performance')!.component)}</div>
-                )}
+                {
+                    userWidgets.includes('staff-performance') && getWidgetDefinition('staff-performance') && (
+                        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm"><h3 className="font-bold mb-4">Staff Performance</h3>{React.createElement(getWidgetDefinition('staff-performance')!.component)}</div>
+                    )
+                }
 
                 <AddWidgetModal isOpen={isAddWidgetOpen} onClose={() => setAddWidgetOpen(false)} onAdd={handleAddWidget} activeWidgets={userWidgets} />
-            </div>
+            </div >
         );
     }
 
@@ -618,6 +625,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                                     className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${dbWorkflow === 'ALL' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                                 >
                                     All Sheets
+                                </button>
+                                {/* NEW: PENDING Filter for ALL */}
+                                <button
+                                    onClick={() => navigateToDatabase('PENDING', 'ALL')}
+                                    className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${statusFilter === 'PENDING' ? 'bg-white text-yellow-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                >
+                                    Pending (All)
                                 </button>
                                 <button
                                     onClick={() => { setDbWorkflow('STAGING'); navigateToDatabase('ALL'); }}
