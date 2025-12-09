@@ -326,10 +326,14 @@ export const LoadingSheet: React.FC<Props> = ({ sheet, onClose, initialPreview =
         }
 
         // Transition to Verification Pending
-        const finalSheet = buildSheetData(SheetStatus.LOADING_VERIFICATION_PENDING);
+        const timeNow = new Date().toLocaleTimeString('en-US', { hour12: false });
+        setEndTime(timeNow); // Update UI state
+
+        const tempSheet = buildSheetData(SheetStatus.LOADING_VERIFICATION_PENDING);
+        const finalSheet = { ...tempSheet, loadingEndTime: timeNow }; // Force update with current time
+
         updateSheet(finalSheet);
         setCurrentSheet(finalSheet);
-        setEndTime(finalSheet.loadingEndTime || '');
         alert("Submitted for Shift Lead Verification!");
     };
 
@@ -620,7 +624,7 @@ export const LoadingSheet: React.FC<Props> = ({ sheet, onClose, initialPreview =
                         <input type="text" value={startTime} onChange={e => setStartTime(e.target.value)} disabled={isCompleted} className="w-full bg-transparent text-sm font-medium text-slate-700 outline-none placeholder:text-slate-300" placeholder="HH:MM:SS" />
                     </HeaderField>
                     <HeaderField label="Loading End Time" icon={Clock}>
-                        <input type="text" value={endTime} onChange={e => setEndTime(e.target.value)} disabled={isCompleted} className="w-full bg-transparent text-sm font-medium text-slate-700 outline-none placeholder:text-slate-300" placeholder="--:--:--" />
+                        <input type="text" value={endTime} onChange={e => setEndTime(e.target.value)} disabled={true} className="w-full bg-transparent text-sm font-medium text-slate-700 outline-none placeholder:text-slate-300" placeholder="Auto-set on Submit" />
                     </HeaderField>
                     <HeaderField label="Picking By *" icon={User} hasError={errors.includes('pickingBy')}><input type="text" value={pickingBy} onChange={e => { setPickingBy(e.target.value); clearError('pickingBy'); }} disabled={isCompleted} className="w-full bg-transparent text-sm font-medium text-slate-700 outline-none" placeholder="Auto-filled / Picker" /></HeaderField>
                     <HeaderField label="Crosschecked By" icon={FileCheck}><input type="text" value={pickingCrosscheckedBy} onChange={e => setPickingCrosscheckedBy(e.target.value)} disabled={isCompleted} className="w-full bg-transparent text-sm font-medium text-slate-700 outline-none" placeholder="Checker Name" /></HeaderField>
