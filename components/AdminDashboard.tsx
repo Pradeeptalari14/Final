@@ -604,33 +604,35 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                     </div>
 
                     <div className="flex flex-col gap-4 mb-6">
-                        {/* Workflow Context Tabs */}
-                        <div className="flex p-1 bg-slate-100 rounded-lg w-fit">
-                            <button
-                                onClick={() => { setDbWorkflow('ALL'); navigateToDatabase('ALL'); }}
-                                className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${dbWorkflow === 'ALL' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                            >
-                                All Sheets
-                            </button>
-                            <button
-                                onClick={() => { setDbWorkflow('STAGING'); navigateToDatabase('ALL'); }}
-                                className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${dbWorkflow === 'STAGING' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                            >
-                                Staging Workflow
-                            </button>
-                            <button
-                                onClick={() => { setDbWorkflow('LOADING'); navigateToDatabase('ALL'); }}
-                                className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${dbWorkflow === 'LOADING' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                            >
-                                Loading Workflow
-                            </button>
-                            <button
-                                onClick={() => { setDbWorkflow('APPROVALS'); navigateToDatabase('ALL'); }}
-                                className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${dbWorkflow === 'APPROVALS' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                            >
-                                Shift Lead Workflow
-                            </button>
-                        </div>
+                        {/* Workflow Context Tabs - Hidden in Shift Lead View */}
+                        {viewMode !== 'approvals' && (
+                            <div className="flex p-1 bg-slate-100 rounded-lg w-fit">
+                                <button
+                                    onClick={() => { setDbWorkflow('ALL'); navigateToDatabase('ALL'); }}
+                                    className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${dbWorkflow === 'ALL' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                >
+                                    All Sheets
+                                </button>
+                                <button
+                                    onClick={() => { setDbWorkflow('STAGING'); navigateToDatabase('ALL'); }}
+                                    className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${dbWorkflow === 'STAGING' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                >
+                                    Staging Workflow
+                                </button>
+                                <button
+                                    onClick={() => { setDbWorkflow('LOADING'); navigateToDatabase('ALL'); }}
+                                    className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${dbWorkflow === 'LOADING' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                >
+                                    Loading Workflow
+                                </button>
+                                <button
+                                    onClick={() => { setDbWorkflow('APPROVALS'); navigateToDatabase('ALL'); }}
+                                    className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${dbWorkflow === 'APPROVALS' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                >
+                                    Shift Lead Workflow
+                                </button>
+                            </div>
+                        )}
 
                         {/* Status Filters based on Workflow */}
                         {dbWorkflow === 'STAGING' && (
