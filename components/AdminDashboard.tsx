@@ -141,7 +141,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
         newUrl.searchParams.set('status', statusFilter);
         newUrl.searchParams.set('workflow', workflow); // Still helpful for internal state
         window.history.pushState({}, '', newUrl.toString());
-        window.location.reload();
+
+        // Fix Flashing: Use Client-Side Navigation instead of Reload
+        if (onNavigate) {
+            if (workflow === 'STAGING') onNavigate('staging-db');
+            else if (workflow === 'LOADING') onNavigate('loading-db');
+            else if (workflow === 'APPROVALS') onNavigate('approvals');
+            else onNavigate('database');
+        } else {
+            window.location.reload(); // Fallback
+        }
     };
 
     // --- HELPER FUNCTIONS ---

@@ -165,13 +165,13 @@ const App = () => {
                 return <AdminDashboard viewMode="users" onViewSheet={(s) => handleViewSheet(s)} initialSearch={initialSearch} />;
 
             case 'database':
-                return <AdminDashboard viewMode="database" onViewSheet={(s) => handleViewSheet(s)} />;
+                return <AdminDashboard viewMode="database" onViewSheet={(s) => handleViewSheet(s)} onNavigate={handleNavigate} />;
 
             case 'staging-db':
-                return <AdminDashboard viewMode="staging_workflow" onViewSheet={(s) => handleViewSheet(s)} />;
+                return <AdminDashboard viewMode="staging_workflow" onViewSheet={(s) => handleViewSheet(s)} onNavigate={handleNavigate} />;
 
             case 'loading-db':
-                return <AdminDashboard viewMode="loading_workflow" onViewSheet={(s) => handleViewSheet(s)} />;
+                return <AdminDashboard viewMode="loading_workflow" onViewSheet={(s) => handleViewSheet(s)} onNavigate={handleNavigate} />;
 
             case 'staging-editor':
                 return <StagingSheet
