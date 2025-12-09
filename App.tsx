@@ -64,6 +64,10 @@ const App = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [initialSearch, setInitialSearch] = useState('');
 
+    // Sidebar View Filters
+    const [stagingFilter, setStagingFilter] = useState('ALL');
+    const [loadingFilter, setLoadingFilter] = useState('ALL');
+
     if (!currentUser) {
         return <Auth />;
     }
@@ -166,9 +170,21 @@ const App = () => {
                 const filteredSheets = sheets.filter(s => {
                     const matchesSearch = s.id.includes(searchTerm) || s.supervisorName.toLowerCase().includes(searchTerm.toLowerCase());
                     if (isStagingView) {
-                        return matchesSearch;
+                        const matchesFilter = stagingFilter === 'ALL' || s.status === stagingFilter;
+                        return matchesSearch && matchesFilter;
                     } else {
-                        return matchesSearch && (s.status === SheetStatus.LOCKED || s.status === SheetStatus.COMPLETED);
+                        // For Loading View, default valid statuses are LOCKED (Ready) or COMPLETED.
+                        // But if we want to show 'Pending Verification' which is LOADING_VERIFICATION_PENDING... we need to include it.
+                        // The original code passed LOCKED and COMPLETED.
+                        // Wait, Loading View usually implies "Loading Supervisor Work".
+                        // Logic Update:
+                        let matchesFilter = false;
+                        if (loadingFilter === 'ALL') {
+                            matchesFilter = s.status === SheetStatus.LOCKED || s.status === SheetStatus.LOADING_VERIFICATION_PENDING || s.status === SheetStatus.COMPLETED;
+                        } else {
+                            matchesFilter = s.status === loadingFilter;
+                        }
+                        return matchesSearch && matchesFilter;
                     }
                 });
 
@@ -185,6 +201,24 @@ const App = () => {
                                     onChange={e => setSearchTerm(e.target.value)}
                                 />
                             </div>
+
+                            {/* Sidebar Filters */}
+                            {isStagingView ? (
+                                <div className="flex bg-slate-100 p-1 rounded-lg overflow-x-auto">
+                                    <button onClick={() => setStagingFilter('ALL')} className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${stagingFilter === 'ALL' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}>All</button>
+                                    <button onClick={() => setStagingFilter('DRAFT')} className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${stagingFilter === 'DRAFT' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}>Drafts</button>
+                                    <button onClick={() => setStagingFilter('STAGING_VERIFICATION_PENDING')} className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${stagingFilter === 'STAGING_VERIFICATION_PENDING' ? 'bg-white shadow-sm text-yellow-600' : 'text-slate-500 hover:text-slate-700'}`}>Pending</button>
+                                    <button onClick={() => setStagingFilter('LOCKED')} className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${stagingFilter === 'LOCKED' ? 'bg-white shadow-sm text-green-600' : 'text-slate-500 hover:text-slate-700'}`}>Locked</button>
+                                </div>
+                            ) : (
+                                <div className="flex bg-slate-100 p-1 rounded-lg overflow-x-auto">
+                                    <button onClick={() => setLoadingFilter('ALL')} className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${loadingFilter === 'ALL' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}>All</button>
+                                    <button onClick={() => setLoadingFilter('LOCKED')} className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${loadingFilter === 'LOCKED' ? 'bg-white shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}>Ready</button>
+                                    <button onClick={() => setLoadingFilter('LOADING_VERIFICATION_PENDING')} className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${loadingFilter === 'LOADING_VERIFICATION_PENDING' ? 'bg-white shadow-sm text-yellow-600' : 'text-slate-500 hover:text-slate-700'}`}>Pending</button>
+                                    <button onClick={() => setLoadingFilter('COMPLETED')} className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${loadingFilter === 'COMPLETED' ? 'bg-white shadow-sm text-green-600' : 'text-slate-500 hover:text-slate-700'}`}>Completed</button>
+                                </div>
+                            )}
+
                             {isStagingView && (effectiveUser.role === Role.ADMIN || effectiveUser.role === Role.STAGING_SUPERVISOR) && (
                                 <button
                                     onClick={handleCreateSheet}
