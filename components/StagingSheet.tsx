@@ -2,7 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../AppContext';
 import { SheetData, SheetStatus, StagingItem, LoadingItemData, AdditionalItem, Role, EMPTY_STAGING_ITEMS } from '../types';
-import { Save, Lock, ArrowLeft, Printer, Calendar, User, MapPin, Plus, AlertTriangle, ClipboardList, CheckCircle } from 'lucide-react';
+import {
+    Save, Lock, Printer, ArrowLeft, Plus, Calendar, MapPin, User,
+    FileText, CheckCircle, AlertTriangle, ImageIcon, Trash2
+} from 'lucide-react';
 
 interface Props {
     existingSheet?: SheetData;
@@ -101,7 +104,30 @@ export const StagingSheet: React.FC<Props> = ({ existingSheet, onCancel, onLock,
         setItems(newItems);
     };
 
-    const handleAddRow = () => {
+
+    const handleRemoveItem = (index: number) => {
+        if (isLocked) return;
+        if (items.length <= 1) {
+            alert("Cannot delete the last row.");
+            return;
+        }
+
+        if (confirm("Are you sure you want to delete this item?")) {
+            const newItems = items.filter((_, i) => i !== index).map((item, i) => ({
+                ...item,
+                srNo: i + 1 // Re-index logic
+            }));
+
+            // If we removed the last item and now have fewer than 15, we might want to pad it back or just leave it.
+            // For now, let's keep it dynamic but ensure at least one empty row if needed? 
+            // The request was just to delete.
+
+            setItems(newItems);
+            setIsDirty(true);
+        }
+    };
+
+    const handleAddItem = () => {
         setItems(prev => [
             ...prev,
             { srNo: prev.length + 1, skuName: '', casesPerPlt: '', fullPlt: '', loose: '', ttlCases: '' }
@@ -146,7 +172,7 @@ export const StagingSheet: React.FC<Props> = ({ existingSheet, onCancel, onLock,
                 return { ...item, casesPerPlt: c, fullPlt: f, loose: l, ttlCases: (c * f) + l };
             });
 
-            const sheetId = existingSheet?.id || `SH-${Date.now()}`;
+            const sheetId = existingSheet?.id || `SH - ${Date.now()} `;
 
             if (lock) {
                 const hasLock = acquireLock(sheetId);
@@ -268,7 +294,7 @@ export const StagingSheet: React.FC<Props> = ({ existingSheet, onCancel, onLock,
                         actor: currentUser?.username || 'Unknown',
                         action: 'REJECTED_STAGING',
                         timestamp: new Date().toISOString(),
-                        details: `Rejected: ${reason}`
+                        details: `Rejected: ${reason} `
                     }]
                 };
                 updateSheet(updatedSheet);
@@ -331,7 +357,7 @@ export const StagingSheet: React.FC<Props> = ({ existingSheet, onCancel, onLock,
             )}
 
             {/* EXCEL PRINT LAYOUT (Visible in Preview Mode & Print) */}
-            <div className={`${isPreview ? 'block' : 'hidden'} print:block font-sans text-[10px] w-full text-black bg-white p-4 print:p-0 overflow-auto`}>
+            <div className={`${isPreview ? 'block' : 'hidden'} print:block font - sans text - [10px] w - full text - black bg - white p - 4 print: p - 0 overflow - auto`}>
                 <div className="min-w-[800px]">
                     <table className="w-full border-collapse border border-black mb-1">
                         <thead><tr><th colSpan={8} className="border border-black p-1 text-center text-xl font-bold">UCIA - FG WAREHOUSE</th></tr></thead>
@@ -399,7 +425,7 @@ export const StagingSheet: React.FC<Props> = ({ existingSheet, onCancel, onLock,
             </div>
 
             {/* SCREEN FORM (Hidden in Preview) */}
-            <div className={`p-4 md:p-6 bg-slate-50/50 border-b border-slate-100 ${isPreview ? 'hidden' : 'block'} print:hidden`}>
+            <div className={`p - 4 md: p - 6 bg - slate - 50 / 50 border - b border - slate - 100 ${isPreview ? 'hidden' : 'block'} print: hidden`}>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                     <div>
                         <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1"><Calendar size={14} /> Shift</label>
@@ -429,7 +455,7 @@ export const StagingSheet: React.FC<Props> = ({ existingSheet, onCancel, onLock,
             </div>
 
             {/* STAGING TABLE (Screen Only - Full Width) */}
-            <div className={`p-4 md:p-6 ${isPreview ? 'hidden' : 'block'} print:hidden flex-1 flex flex-col`}>
+            <div className={`p - 4 md: p - 6 ${isPreview ? 'hidden' : 'block'} print:hidden flex - 1 flex flex - col`}>
                 <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm flex-1 custom-scrollbar">
                     {/* Min width ensures table is readable on mobile */}
                     <table className="w-full min-w-[600px] text-sm">
@@ -445,8 +471,21 @@ export const StagingSheet: React.FC<Props> = ({ existingSheet, onCancel, onLock,
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {items.map((item, index) => (
-                                <tr key={item.srNo} className={`hover:bg-blue-50/30 transition-colors group ${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'}`}>
-                                    <td className="p-3 text-center text-slate-400 font-mono text-xs">{item.srNo}</td>
+                                <tr key={item.srNo} className={`hover: bg - blue - 50 / 30 transition - colors group ${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'} `}>
+                                    <td className="p-3 text-center text-slate-400 font-mono text-xs">
+                                        <div className="flex items-center justify-center gap-1">
+                                            {item.srNo}
+                                            {!isLocked && (
+                                                <button
+                                                    onClick={() => handleRemoveItem(index)}
+                                                    className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-all"
+                                                    title="Delete Row"
+                                                >
+                                                    <Trash2 size={12} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </td>
                                     <td className="p-1"><input type="text" value={item.skuName} onChange={e => handleItemChange(index, 'skuName', e.target.value)} disabled={isLocked} className="w-full p-2 bg-transparent rounded hover:bg-white focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all placeholder:text-slate-300" placeholder="Type SKU name..." /></td>
                                     <td className="p-1"><input type="number" value={item.casesPerPlt} onChange={e => handleItemChange(index, 'casesPerPlt', e.target.value)} disabled={isLocked} className="w-full p-2 text-center bg-transparent rounded hover:bg-white focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all" placeholder="-" /></td>
                                     <td className="p-1"><input type="number" value={item.fullPlt} onChange={e => handleItemChange(index, 'fullPlt', e.target.value)} disabled={isLocked} className="w-full p-2 text-center bg-transparent rounded hover:bg-white focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all" placeholder="-" /></td>
@@ -465,7 +504,7 @@ export const StagingSheet: React.FC<Props> = ({ existingSheet, onCancel, onLock,
                 </div>
                 {!isLocked && (
                     <div className="mt-4 flex justify-center pb-4">
-                        <button onClick={handleAddRow} className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-6 py-3 rounded-lg transition-colors">
+                        <button onClick={handleAddItem} className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-6 py-3 rounded-lg transition-colors">
                             <Plus size={16} /> Add Row
                         </button>
                     </div>
@@ -491,7 +530,7 @@ export const StagingSheet: React.FC<Props> = ({ existingSheet, onCancel, onLock,
                         </h4>
                         <div className="grid sm:grid-cols-3 gap-3">
                             <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer p-2 hover:bg-purple-50 rounded-lg transition-colors border border-transparent hover:border-purple-100">
-                                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${stagingChecks.qty ? 'bg-purple-600 border-purple-600 text-white' : 'bg-white border-slate-300'}`}>
+                                <div className={`w - 5 h - 5 rounded border flex items - center justify - center transition - colors ${stagingChecks.qty ? 'bg-purple-600 border-purple-600 text-white' : 'bg-white border-slate-300'} `}>
                                     {stagingChecks.qty && <CheckCircle size={12} strokeWidth={4} />}
                                 </div>
                                 <input type="checkbox" className="hidden" checked={stagingChecks.qty} onChange={() => setStagingChecks(prev => ({ ...prev, qty: !prev.qty }))} />
@@ -499,7 +538,7 @@ export const StagingSheet: React.FC<Props> = ({ existingSheet, onCancel, onLock,
                             </label>
 
                             <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer p-2 hover:bg-purple-50 rounded-lg transition-colors border border-transparent hover:border-purple-100">
-                                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${stagingChecks.condition ? 'bg-purple-600 border-purple-600 text-white' : 'bg-white border-slate-300'}`}>
+                                <div className={`w - 5 h - 5 rounded border flex items - center justify - center transition - colors ${stagingChecks.condition ? 'bg-purple-600 border-purple-600 text-white' : 'bg-white border-slate-300'} `}>
                                     {stagingChecks.condition && <CheckCircle size={12} strokeWidth={4} />}
                                 </div>
                                 <input type="checkbox" className="hidden" checked={stagingChecks.condition} onChange={() => setStagingChecks(prev => ({ ...prev, condition: !prev.condition }))} />
@@ -507,7 +546,7 @@ export const StagingSheet: React.FC<Props> = ({ existingSheet, onCancel, onLock,
                             </label>
 
                             <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer p-2 hover:bg-purple-50 rounded-lg transition-colors border border-transparent hover:border-purple-100">
-                                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${stagingChecks.sign ? 'bg-purple-600 border-purple-600 text-white' : 'bg-white border-slate-300'}`}>
+                                <div className={`w - 5 h - 5 rounded border flex items - center justify - center transition - colors ${stagingChecks.sign ? 'bg-purple-600 border-purple-600 text-white' : 'bg-white border-slate-300'} `}>
                                     {stagingChecks.sign && <CheckCircle size={12} strokeWidth={4} />}
                                 </div>
                                 <input type="checkbox" className="hidden" checked={stagingChecks.sign} onChange={() => setStagingChecks(prev => ({ ...prev, sign: !prev.sign }))} />
@@ -522,7 +561,7 @@ export const StagingSheet: React.FC<Props> = ({ existingSheet, onCancel, onLock,
                             type="button"
                             disabled={!Object.values(stagingChecks).every(Boolean)}
                             onClick={() => handleApprove(true)}
-                            className={`px-8 py-2.5 rounded-lg flex items-center gap-2 font-bold shadow-lg transform transition-all text-sm ${Object.values(stagingChecks).every(Boolean) ? 'bg-purple-600 text-white hover:bg-purple-700 hover:scale-[1.02] active:scale-[0.98] shadow-purple-500/30' : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'}`}
+                            className={`px - 8 py - 2.5 rounded - lg flex items - center gap - 2 font - bold shadow - lg transform transition - all text - sm ${Object.values(stagingChecks).every(Boolean) ? 'bg-purple-600 text-white hover:bg-purple-700 hover:scale-[1.02] active:scale-[0.98] shadow-purple-500/30' : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'} `}
                         >
                             <Lock size={18} /> Approve & Lock
                         </button>
