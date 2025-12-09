@@ -80,8 +80,8 @@ export const Auth = () => {
 
             <div className="w-full max-w-sm bg-black/60 backdrop-blur-md p-8 rounded-2xl shadow-2xl text-white border border-white/10 z-10 mx-4">
                 <div className="text-center mb-8">
-                    <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-900/50">
-                        <span className="text-2xl font-bold text-white">U</span>
+                    <div className="w-24 h-24 mx-auto mb-6 flex items-center justify-center">
+                        <img src="/login-logo.png" alt="Logo" className="w-full h-full object-contain drop-shadow-lg" />
                     </div>
                     <h1 className="text-2xl font-bold mb-1">Unicharm SCM</h1>
                     <p className="text-white/60 text-xs">FG Warehouse Operations</p>
