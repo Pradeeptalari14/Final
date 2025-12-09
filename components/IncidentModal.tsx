@@ -17,6 +17,14 @@ export const IncidentModal: React.FC<IncidentModalProps> = ({ sheetId, currentUs
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    // Reset form when modal opens
+    React.useEffect(() => {
+        setType('OTHER');
+        setPriority('MEDIUM');
+        setDescription('');
+        setError(null);
+    }, [sheetId]);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!description.trim()) {

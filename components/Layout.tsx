@@ -139,7 +139,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigat
           <NavItem
             page="approvals"
             icon={ClipboardList} // Using ClipboardList as it fits
-            label="Approvals"
+            label="Shift Lead"
             roles={[Role.ADMIN, Role.SHIFT_LEAD]}
           />
           <div className="pt-4 pb-2 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Administration</div>

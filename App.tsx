@@ -83,6 +83,16 @@ const App = () => {
             const roleFilter = page.replace('admin_', '').replace('_SUPERVISOR', ' SUPERVISOR'); // "STAGING SUPERVISOR"
             setInitialSearch(roleFilter);
             setCurrentPage('admin');
+        } else if (page === 'staging' && filter) {
+            // Support Direct Filter Navigation
+            setStagingFilter(filter);
+            setSearchTerm('');
+            setCurrentPage('staging');
+        } else if (page === 'loading' && filter) {
+            // Support Direct Filter Navigation
+            setLoadingFilter(filter);
+            setSearchTerm('');
+            setCurrentPage('loading');
         } else {
             // Apply specific filter if provided (User Drill-down)
             if (filter) {

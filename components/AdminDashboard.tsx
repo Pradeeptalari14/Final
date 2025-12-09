@@ -22,7 +22,7 @@ import { AddWidgetModal } from './widgets/AddWidgetModal';
 interface AdminDashboardProps {
     viewMode: 'analytics' | 'users' | 'database' | 'audit' | 'approvals';
     onViewSheet: (sheet: SheetData) => void;
-    onNavigate?: (page: string) => void;
+    onNavigate?: (page: string, filter?: string) => void;
     initialSearch?: string;
 }
 
@@ -271,15 +271,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                             <div><h3 className="font-bold text-slate-700">Staging Overview</h3><div className="text-xs text-slate-400">{stats.staging.staff} Staff</div></div>
                         </div>
                         <div className="grid grid-cols-3 gap-2"> {/* Changed to 3 cols for Locked */}
-                            <div onClick={() => navigateToDatabase('DRAFT')} className="p-3 bg-blue-50/50 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors">
+                            <div onClick={() => onNavigate && onNavigate('staging', 'DRAFT')} className="p-3 bg-blue-50/50 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors">
                                 <span className="text-[10px] text-blue-500 uppercase font-bold block mb-1">Drafts</span>
                                 <span className="text-xl font-bold text-blue-700">{stats.staging.drafts}</span>
                             </div>
-                            <div onClick={() => navigateToDatabase('STAGING_VERIFICATION_PENDING')} className="p-3 bg-yellow-50 rounded-lg cursor-pointer hover:bg-yellow-100 transition-colors">
+                            <div onClick={() => onNavigate && onNavigate('staging', 'STAGING_VERIFICATION_PENDING')} className="p-3 bg-yellow-50 rounded-lg cursor-pointer hover:bg-yellow-100 transition-colors">
                                 <span className="text-[10px] text-yellow-600 uppercase font-bold block mb-1">Pending</span>
                                 <span className="text-xl font-bold text-yellow-700">{stats.staging.pending}</span>
                             </div>
-                            <div onClick={() => navigateToDatabase('LOCKED')} className="p-3 bg-orange-50 rounded-lg cursor-pointer hover:bg-orange-100 transition-colors">
+                            <div onClick={() => onNavigate && onNavigate('staging', 'LOCKED')} className="p-3 bg-orange-50 rounded-lg cursor-pointer hover:bg-orange-100 transition-colors">
                                 <span className="text-[10px] text-orange-600 uppercase font-bold block mb-1">Locked</span>
                                 <span className="text-xl font-bold text-orange-700">{stats.staging.locked}</span>
                             </div>
@@ -292,14 +292,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                             <div><h3 className="font-bold text-slate-700">Loading Overview</h3><div className="text-xs text-slate-400">{stats.loading.staff} Staff</div></div>
                         </div>
                         <div className="grid grid-cols-2 gap-3">
-                            <div onClick={() => navigateToDatabase('LOCKED')} className="p-2 bg-orange-50 rounded-lg cursor-pointer hover:bg-orange-100 transition-colors flex items-center justify-between group">
+                            <div onClick={() => onNavigate && onNavigate('loading', 'LOCKED')} className="p-2 bg-orange-50 rounded-lg cursor-pointer hover:bg-orange-100 transition-colors flex items-center justify-between group">
                                 <div>
                                     <span className="text-[10px] text-orange-600 uppercase font-bold block mb-1">Ready to Load</span>
                                     <span className="text-lg font-bold text-orange-700">{stats.loading.locked}</span>
                                 </div>
                                 <Lock className="text-orange-300 group-hover:text-orange-500 transition-colors" size={24} />
                             </div>
-                            <div onClick={() => navigateToDatabase('LOADING_VERIFICATION_PENDING')} className="p-2 bg-yellow-50 rounded-lg cursor-pointer hover:bg-yellow-100 transition-colors flex items-center justify-between group">
+                            <div onClick={() => onNavigate && onNavigate('loading', 'LOADING_VERIFICATION_PENDING')} className="p-2 bg-yellow-50 rounded-lg cursor-pointer hover:bg-yellow-100 transition-colors flex items-center justify-between group">
                                 <div>
                                     <span className="text-[10px] text-yellow-600 uppercase font-bold block mb-1">Pending</span>
                                     <span className="text-lg font-bold text-yellow-700">{stats.loading.pending}</span>
@@ -312,14 +312,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                     <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
                         <div className="flex items-center gap-3 mb-4 pb-3 border-b border-slate-100">
                             <div className="p-2 bg-purple-100 rounded-lg text-purple-600"><CheckCircle2 size={20} /></div>
-                            <div><h3 className="font-bold text-slate-700">Approvals</h3><div className="text-xs text-slate-400">{stats.approvals.staff} Leads</div></div>
+                            <div><h3 className="font-bold text-slate-700">Shift Lead</h3><div className="text-xs text-slate-400">{stats.approvals.staff} Leads</div></div>
                         </div>
                         <div className="space-y-3">
-                            <div onClick={() => navigateToDatabase('STAGING_VERIFICATION_PENDING')} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors">
+                            <div onClick={() => onNavigate && onNavigate('staging', 'STAGING_VERIFICATION_PENDING')} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors">
                                 <span className="text-sm font-bold text-slate-700">Staging</span>
                                 <span className="text-lg font-bold text-blue-700">{stats.approvals.staging}</span>
                             </div>
-                            <div onClick={() => navigateToDatabase('LOADING_VERIFICATION_PENDING')} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg cursor-pointer hover:bg-orange-100 transition-colors">
+                            <div onClick={() => onNavigate && onNavigate('loading', 'LOADING_VERIFICATION_PENDING')} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg cursor-pointer hover:bg-orange-100 transition-colors">
                                 <span className="text-sm font-bold text-slate-700">Loading</span>
                                 <span className="text-lg font-bold text-orange-700">{stats.approvals.loading}</span>
                             </div>
@@ -493,8 +493,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
         );
     }
 
-    // --- VIEW 4: DATABASE PANEL ---
-    if (viewMode === 'database') {
+    // --- VIEW 4: DATABASE PANEL (and SHIFT LEAD VIEW) ---
+    // --- VIEW 4: DATABASE PANEL (and SHIFT LEAD VIEW) ---
+    if (viewMode === 'database' || viewMode === 'approvals') {
         const isAdmin = currentUser?.role === Role.ADMIN;
         const isShiftLead = currentUser?.role === Role.SHIFT_LEAD;
 
@@ -554,8 +555,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
                     <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
                         <div>
-                            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2"><Database className="text-blue-600" /> Database Management <span className="text-slate-400 font-medium text-lg">({filteredSheets.length})</span></h2>
-                            <p className="text-sm text-gray-500">View and manage all system data.</p>
+                            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2"><Database className="text-blue-600" /> {viewMode === 'approvals' ? 'Shift Lead Dashboard' : 'Database Management'} <span className="text-slate-400 font-medium text-lg">({filteredSheets.length})</span></h2>
+                            <p className="text-sm text-gray-500">{viewMode === 'approvals' ? 'Manage approvals and verification.' : 'View and manage all system data.'}</p>
                         </div>
                         <div className="flex flex-wrap items-center gap-3">
                             <div className="flex items-center bg-slate-100 p-1 rounded-lg">
@@ -627,7 +628,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                                 onClick={() => { setDbWorkflow('APPROVALS'); navigateToDatabase('ALL'); }}
                                 className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${dbWorkflow === 'APPROVALS' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                             >
-                                Shift Lead (Approval)
+                                Shift Lead Workflow
                             </button>
                         </div>
 
@@ -653,8 +654,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                         {dbWorkflow === 'APPROVALS' && (
                             <div className="flex items-center gap-2 overflow-x-auto">
                                 <button onClick={() => navigateToDatabase('ALL')} className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${!statusFilter || statusFilter === 'ALL' ? 'bg-purple-100 text-purple-700 border-purple-200' : 'bg-white text-slate-500 border-slate-200'}`}>All</button>
-                                <button onClick={() => navigateToDatabase('STAGING_VERIFICATION_PENDING')} className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${statusFilter === 'STAGING_VERIFICATION_PENDING' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300'}`}>Staging Approval</button>
-                                <button onClick={() => navigateToDatabase('LOADING_VERIFICATION_PENDING')} className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${statusFilter === 'LOADING_VERIFICATION_PENDING' ? 'bg-orange-600 text-white border-orange-600' : 'bg-white text-slate-500 border-slate-200 hover:border-orange-300'}`}>Loading Approval</button>
+                                <button onClick={() => onNavigate && onNavigate('staging', 'STAGING_VERIFICATION_PENDING')} className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${statusFilter === 'STAGING_VERIFICATION_PENDING' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300'}`}>Staging Approval</button>
+                                <button onClick={() => onNavigate && onNavigate('loading', 'LOADING_VERIFICATION_PENDING')} className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${statusFilter === 'LOADING_VERIFICATION_PENDING' ? 'bg-orange-600 text-white border-orange-600' : 'bg-white text-slate-500 border-slate-200 hover:border-orange-300'}`}>Loading Approval</button>
                             </div>
                         )}
                     </div>
