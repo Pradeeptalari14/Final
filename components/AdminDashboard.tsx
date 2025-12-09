@@ -8,7 +8,7 @@ import {
 import {
     Check, X, Clipboard, Truck, Users as UserIcon, Trash2, Database,
     FileText, Search, Plus, ArrowUpDown, Download, Printer, Lock, Edit3, Eye, ShieldAlert,
-    CheckCircle, XCircle, Key, UserPlus, Activity,
+    CheckCircle, XCircle, Key, UserPlus, Activity, ClipboardList,
     FileSpreadsheet, Filter, CheckCircle2, History,
     LayoutDashboard, Settings, LogOut, ChevronLeft, ChevronRight,
     AlertCircle, Clock, Calendar, Edit, ShieldCheck,
@@ -769,6 +769,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                             <button onClick={handleExportExcel} className="flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2.5 rounded-lg shadow-sm transition-all text-sm font-medium">
                                 <Download size={16} /> Export All
                             </button>
+                            {/* LOCKED Filter Button (Show Only Ready to Load) */}
+                            <button
+                                onClick={() => {
+                                    const newUrl = new URL(window.location.href);
+                                    if (statusFilter === 'LOCKED') {
+                                        newUrl.searchParams.delete('status');
+                                    } else {
+                                        newUrl.searchParams.set('status', 'LOCKED');
+                                    }
+                                    window.history.pushState({}, '', newUrl.toString());
+                                    // Trigger re-render by forcing update or reloading (simplest for now is just let React Router handle if we used it, but here we depend on window search. We might need a local state update to trigger re-render if we don't have a listener. 
+                                    // Actually, let's just use window.location.reload() for simplicity or better, assume the component re-reads URL on render? No, it reads once.
+                                    // Let's use a simple link navigation or reload. 
+                                    window.location.reload();
+                                }}
+                                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg shadow-sm transition-all text-sm font-bold border ${statusFilter === 'LOCKED' ? 'bg-orange-600 text-white border-orange-600' : 'bg-white text-slate-700 border-slate-200 hover:bg-orange-50'}`}
+                                title="Show Only Ready to Load"
+                            >
+                                <Lock size={16} /> {statusFilter === 'LOCKED' ? 'Showing Ready' : 'Show Ready'}
+                            </button>
+
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
                                 <input type="text" placeholder="Search sheets..." className="pl-10 pr-10 py-2.5 border rounded-lg text-sm w-full sm:min-w-[240px]" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
@@ -783,7 +804,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                                 <Search size={16} className="text-blue-600" />
                                 <span className="text-sm text-blue-900 font-medium">Filtering by Status: <span className="font-bold">{statusFilter || 'ALL'}</span> {searchTerm && <>and Search: <span className="font-bold">"{searchTerm}"</span></>}</span>
                             </div>
-                            <button onClick={() => setSearchTerm('')} className="text-xs text-blue-600 hover:text-blue-800 font-bold underline px-2">Clear</button>
+                            <button onClick={() => {
+                                const newUrl = new URL(window.location.href);
+                                newUrl.searchParams.delete('status');
+                                window.history.pushState({}, '', newUrl.toString());
+                                window.location.reload();
+                            }} className="text-xs text-blue-600 hover:text-blue-800 font-bold underline px-2">Clear</button>
                         </div>
                     )}
 
@@ -831,23 +857,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
 
                                                     {/* Station 2: Staging Check (Shift Lead) */}
                                                     <div className={`relative group`}>
-                                                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${['LOCKED', 'LOADING_VERIFICATION_PENDING', 'COMPLETED'].includes(s.status) ? 'bg-blue-500 border-blue-500 text-white' : s.status === 'STAGING_VERIFICATION_PENDING' ? 'bg-white border-blue-500 text-blue-500 animate-pulse' : 'bg-white border-slate-300 text-slate-300'}`}>
-                                                            <Clipboard size={8} strokeWidth={3} />
+                                                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${['LOCKED', 'LOADING_VERIFICATION_PENDING', 'COMPLETED'].includes(s.status) ? 'bg-green-500 border-green-500 text-white' : s.status === 'STAGING_VERIFICATION_PENDING' ? 'bg-white border-blue-500 text-blue-500 animate-pulse' : 'bg-white border-slate-300 text-slate-300'}`}>
+                                                            {['LOCKED', 'LOADING_VERIFICATION_PENDING', 'COMPLETED'].includes(s.status) ? <CheckCircle size={10} /> : <ClipboardList size={8} strokeWidth={3} />}
                                                         </div>
                                                         <span className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 text-[8px] font-bold text-slate-500 uppercase whitespace-nowrap">Check</span>
                                                     </div>
 
-                                                    {/* Station 3: Ready/Load */}
+                                                    {/* Station 3: Ready/Load (Locked) */}
                                                     <div className={`relative group`}>
-                                                        <div className={`w-3 h-3 rounded-full border-2 ${['LOADING_VERIFICATION_PENDING', 'COMPLETED'].includes(s.status) ? 'bg-orange-500 border-orange-500' : s.status === 'LOCKED' ? 'bg-white border-orange-500' : 'bg-white border-slate-300'}`}></div>
+                                                        {/* "Present to save data" means active. "Locked" status = Ready to load. */}
+                                                        <div className={`w-3 h-3 rounded text-[8px] flex items-center justify-center border ${['LOADING_VERIFICATION_PENDING', 'COMPLETED'].includes(s.status) ? 'bg-orange-500 border-orange-500 text-white' : s.status === 'LOCKED' ? 'bg-orange-600 border-orange-600 text-white shadow-sm' : 'bg-white border-slate-300 text-slate-300'}`}>
+                                                            <Plus size={8} strokeWidth={4} />
+                                                        </div>
+                                                        <span className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 text-[8px] font-bold text-slate-500 uppercase whitespace-nowrap">Ready</span>
                                                     </div>
 
                                                     {/* Station 4: Loading Check (Shift Lead) */}
                                                     <div className={`relative group`}>
-                                                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${s.status === 'COMPLETED' ? 'bg-green-500 border-green-500 text-white' : s.status === 'LOADING_VERIFICATION_PENDING' ? 'bg-white border-orange-500 text-orange-500 animate-pulse' : 'bg-white border-slate-300 text-slate-300'}`}>
-                                                            <Truck size={8} strokeWidth={3} />
+                                                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${s.status === 'COMPLETED' ? 'bg-green-600 border-green-600 text-white' : s.status === 'LOADING_VERIFICATION_PENDING' ? 'bg-white border-orange-500 text-orange-500 animate-pulse' : 'bg-white border-slate-300 text-slate-300'}`}>
+                                                            {s.status === 'COMPLETED' ? <CheckCircle size={10} /> : <Truck size={8} strokeWidth={3} />}
                                                         </div>
-                                                        <span className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 text-[8px] font-bold text-slate-500 uppercase whitespace-nowrap">Check</span>
+                                                        <span className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 text-[8px] font-bold text-slate-500 uppercase whitespace-nowrap">Verify</span>
                                                     </div>
 
                                                     {/* Station 5: End */}

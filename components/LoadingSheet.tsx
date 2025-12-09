@@ -52,9 +52,12 @@ export const LoadingSheet: React.FC<Props> = ({ sheet, onClose, initialPreview =
     const isPendingVerification = currentSheet.status === SheetStatus.LOADING_VERIFICATION_PENDING;
     const canApprove = (currentUser?.role === Role.SHIFT_LEAD || currentUser?.role === Role.ADMIN) && isPendingVerification;
     // Lock edits if completed or pending verification (unless rejecting, but that's a separate action)
-    const isLocked = isCompleted || isPendingVerification;
+    const isLocked = (isCompleted || isPendingVerification) && currentUser?.role !== Role.ADMIN;
 
     const [isIncidentModalOpen, setIncidentModalOpen] = useState(false);
+
+    // Checklist State
+    const [loadingChecks, setLoadingChecks] = useState({ vehicle: false, seal: false, returns: false, sign: false });
 
     // Print Preview State
     const [isPreview, setIsPreview] = useState(initialPreview);
@@ -761,11 +764,59 @@ export const LoadingSheet: React.FC<Props> = ({ sheet, onClose, initialPreview =
 
                 {/* Approval Footer */}
                 {isPendingVerification && canApprove && (
-                    <div className="fixed bottom-0 left-0 w-full p-4 bg-purple-50/90 backdrop-blur-md border-t border-purple-200 shadow flex justify-center gap-4 z-50 lg:pl-64 no-print animate-in slide-in-from-bottom-4">
-                        <button type="button" onClick={() => handleApprove(false)} className="px-6 py-2.5 bg-white text-red-600 border border-red-200 rounded-lg hover:bg-red-50 flex items-center gap-2 shadow-sm font-bold transition-all text-sm"><AlertTriangle size={18} /> Reject</button>
-                        <button type="button" onClick={() => handleApprove(true)} className="px-8 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2 font-bold shadow-lg shadow-purple-500/30 transform hover:scale-[1.02] active:scale-[0.98] transition-all text-sm">
-                            <CheckCircle size={18} /> Approve & Complete
-                        </button>
+                    <div className="fixed bottom-0 left-0 w-full p-4 bg-purple-50/90 backdrop-blur-md border-t border-purple-200 shadow flex flex-col items-center gap-4 z-50 lg:pl-64 no-print animate-in slide-in-from-bottom-4">
+
+                        {/* Verification Checklist (Loading Level) */}
+                        <div className="w-full max-w-3xl bg-white border border-purple-200 rounded-xl p-4 shadow-sm">
+                            <h4 className="text-xs font-bold text-purple-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                                <Truck size={14} /> Verification Checklist (Loading Level)
+                            </h4>
+                            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer p-2 hover:bg-purple-50 rounded-lg transition-colors border border-transparent hover:border-purple-100">
+                                    <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${loadingChecks.vehicle ? 'bg-purple-600 border-purple-600 text-white' : 'bg-white border-slate-300'}`}>
+                                        {loadingChecks.vehicle && <CheckCircle size={12} strokeWidth={4} />}
+                                    </div>
+                                    <input type="checkbox" className="hidden" checked={loadingChecks.vehicle} onChange={() => setLoadingChecks(prev => ({ ...prev, vehicle: !prev.vehicle }))} />
+                                    <span className="font-medium">Vehicle Clean/Dry</span>
+                                </label>
+
+                                <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer p-2 hover:bg-purple-50 rounded-lg transition-colors border border-transparent hover:border-purple-100">
+                                    <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${loadingChecks.seal ? 'bg-purple-600 border-purple-600 text-white' : 'bg-white border-slate-300'}`}>
+                                        {loadingChecks.seal && <CheckCircle size={12} strokeWidth={4} />}
+                                    </div>
+                                    <input type="checkbox" className="hidden" checked={loadingChecks.seal} onChange={() => setLoadingChecks(prev => ({ ...prev, seal: !prev.seal }))} />
+                                    <span className="font-medium">Vehi/Seal No Match</span>
+                                </label>
+
+                                <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer p-2 hover:bg-purple-50 rounded-lg transition-colors border border-transparent hover:border-purple-100">
+                                    <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${loadingChecks.returns ? 'bg-purple-600 border-purple-600 text-white' : 'bg-white border-slate-300'}`}>
+                                        {loadingChecks.returns && <CheckCircle size={12} strokeWidth={4} />}
+                                    </div>
+                                    <input type="checkbox" className="hidden" checked={loadingChecks.returns} onChange={() => setLoadingChecks(prev => ({ ...prev, returns: !prev.returns }))} />
+                                    <span className="font-medium">Returns Justified</span>
+                                </label>
+
+                                <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer p-2 hover:bg-purple-50 rounded-lg transition-colors border border-transparent hover:border-purple-100">
+                                    <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${loadingChecks.sign ? 'bg-purple-600 border-purple-600 text-white' : 'bg-white border-slate-300'}`}>
+                                        {loadingChecks.sign && <CheckCircle size={12} strokeWidth={4} />}
+                                    </div>
+                                    <input type="checkbox" className="hidden" checked={loadingChecks.sign} onChange={() => setLoadingChecks(prev => ({ ...prev, sign: !prev.sign }))} />
+                                    <span className="font-medium">Loading Sv Sign</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-4">
+                            <button type="button" onClick={() => handleApprove(false)} className="px-6 py-2.5 bg-white text-red-600 border border-red-200 rounded-lg hover:bg-red-50 flex items-center gap-2 shadow-sm font-bold transition-all text-sm"><AlertTriangle size={18} /> Reject</button>
+                            <button
+                                type="button"
+                                disabled={!Object.values(loadingChecks).every(Boolean)}
+                                onClick={() => handleApprove(true)}
+                                className={`px-8 py-2.5 rounded-lg flex items-center gap-2 font-bold shadow-lg transform transition-all text-sm ${Object.values(loadingChecks).every(Boolean) ? 'bg-purple-600 text-white hover:bg-purple-700 hover:scale-[1.02] active:scale-[0.98] shadow-purple-500/30' : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'}`}
+                            >
+                                <CheckCircle size={18} /> Approve & Complete
+                            </button>
+                        </div>
                     </div>
                 )}
                 {cameraActive && (

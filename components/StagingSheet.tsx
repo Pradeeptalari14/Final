@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../AppContext';
 import { SheetData, SheetStatus, StagingItem, LoadingItemData, AdditionalItem, Role, EMPTY_STAGING_ITEMS } from '../types';
-import { Save, Lock, ArrowLeft, Printer, Calendar, User, MapPin, Plus, AlertTriangle } from 'lucide-react';
+import { Save, Lock, ArrowLeft, Printer, Calendar, User, MapPin, Plus, AlertTriangle, ClipboardList, CheckCircle } from 'lucide-react';
 
 interface Props {
     existingSheet?: SheetData;
@@ -13,12 +13,15 @@ interface Props {
 
 export const StagingSheet: React.FC<Props> = ({ existingSheet, onCancel, onLock, initialPreview = false }) => {
     const { currentUser, addSheet, updateSheet, acquireLock, releaseLock } = useApp();
-    const isLocked = (existingSheet?.status === SheetStatus.LOCKED || existingSheet?.status === SheetStatus.COMPLETED || existingSheet?.status === SheetStatus.STAGING_VERIFICATION_PENDING) ||
+    const isLocked = (existingSheet?.status === SheetStatus.LOCKED || existingSheet?.status === SheetStatus.COMPLETED || existingSheet?.status === SheetStatus.STAGING_VERIFICATION_PENDING) && currentUser?.role !== Role.ADMIN ||
         (existingSheet?.status === SheetStatus.DRAFT && existingSheet.createdBy !== currentUser?.username && currentUser?.role !== Role.ADMIN);
 
     // Shift Lead Approval Mode
     const isPendingApproval = existingSheet?.status === SheetStatus.STAGING_VERIFICATION_PENDING;
     const canApprove = currentUser?.role === Role.SHIFT_LEAD || currentUser?.role === Role.ADMIN;
+
+    // Checklist State
+    const [stagingChecks, setStagingChecks] = useState({ qty: false, condition: false, sign: false });
 
     // Print Preview State
     const [isPreview, setIsPreview] = useState(initialPreview);
@@ -479,11 +482,51 @@ export const StagingSheet: React.FC<Props> = ({ existingSheet, onCancel, onLock,
 
             {/* Approval Footer (Shift Lead) */}
             {isPendingApproval && canApprove && !isPreview && (
-                <div className="fixed bottom-0 left-0 right-0 p-4 bg-purple-50/90 backdrop-blur-md border-t border-purple-200 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)] flex justify-center gap-4 z-40 lg:ml-64 print:hidden animate-in slide-in-from-bottom-4">
-                    <button type="button" onClick={() => handleApprove(false)} className="px-6 py-2.5 bg-white text-red-600 border border-red-200 rounded-lg hover:bg-red-50 flex items-center gap-2 shadow-sm font-bold transition-all text-sm"><AlertTriangle size={18} /> Reject</button>
-                    <button type="button" onClick={() => handleApprove(true)} className="px-8 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2 font-bold shadow-lg shadow-purple-500/30 transform hover:scale-[1.02] active:scale-[0.98] transition-all text-sm">
-                        <Lock size={18} /> Approve & Lock
-                    </button>
+                <div className="fixed bottom-0 left-0 right-0 p-4 bg-purple-50/90 backdrop-blur-md border-t border-purple-200 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)] flex flex-col items-center gap-4 z-40 lg:ml-64 print:hidden animate-in slide-in-from-bottom-4">
+
+                    {/* Verification Checklist */}
+                    <div className="w-full max-w-2xl bg-white border border-purple-200 rounded-xl p-4 shadow-sm">
+                        <h4 className="text-xs font-bold text-purple-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                            <ClipboardList size={14} /> Verification Checklist (Staging Level)
+                        </h4>
+                        <div className="grid sm:grid-cols-3 gap-3">
+                            <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer p-2 hover:bg-purple-50 rounded-lg transition-colors border border-transparent hover:border-purple-100">
+                                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${stagingChecks.qty ? 'bg-purple-600 border-purple-600 text-white' : 'bg-white border-slate-300'}`}>
+                                    {stagingChecks.qty && <CheckCircle size={12} strokeWidth={4} />}
+                                </div>
+                                <input type="checkbox" className="hidden" checked={stagingChecks.qty} onChange={() => setStagingChecks(prev => ({ ...prev, qty: !prev.qty }))} />
+                                <span className="font-medium">Qty Matches</span>
+                            </label>
+
+                            <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer p-2 hover:bg-purple-50 rounded-lg transition-colors border border-transparent hover:border-purple-100">
+                                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${stagingChecks.condition ? 'bg-purple-600 border-purple-600 text-white' : 'bg-white border-slate-300'}`}>
+                                    {stagingChecks.condition && <CheckCircle size={12} strokeWidth={4} />}
+                                </div>
+                                <input type="checkbox" className="hidden" checked={stagingChecks.condition} onChange={() => setStagingChecks(prev => ({ ...prev, condition: !prev.condition }))} />
+                                <span className="font-medium">Pallet OK</span>
+                            </label>
+
+                            <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer p-2 hover:bg-purple-50 rounded-lg transition-colors border border-transparent hover:border-purple-100">
+                                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${stagingChecks.sign ? 'bg-purple-600 border-purple-600 text-white' : 'bg-white border-slate-300'}`}>
+                                    {stagingChecks.sign && <CheckCircle size={12} strokeWidth={4} />}
+                                </div>
+                                <input type="checkbox" className="hidden" checked={stagingChecks.sign} onChange={() => setStagingChecks(prev => ({ ...prev, sign: !prev.sign }))} />
+                                <span className="font-medium">Sup. Sign</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div className="flex gap-4">
+                        <button type="button" onClick={() => handleApprove(false)} className="px-6 py-2.5 bg-white text-red-600 border border-red-200 rounded-lg hover:bg-red-50 flex items-center gap-2 shadow-sm font-bold transition-all text-sm"><AlertTriangle size={18} /> Reject</button>
+                        <button
+                            type="button"
+                            disabled={!Object.values(stagingChecks).every(Boolean)}
+                            onClick={() => handleApprove(true)}
+                            className={`px-8 py-2.5 rounded-lg flex items-center gap-2 font-bold shadow-lg transform transition-all text-sm ${Object.values(stagingChecks).every(Boolean) ? 'bg-purple-600 text-white hover:bg-purple-700 hover:scale-[1.02] active:scale-[0.98] shadow-purple-500/30' : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'}`}
+                        >
+                            <Lock size={18} /> Approve & Lock
+                        </button>
+                    </div>
                 </div>
             )
             }
