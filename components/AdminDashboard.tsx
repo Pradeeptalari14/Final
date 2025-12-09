@@ -671,12 +671,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
 
                         {/* Status Filters based on Workflow */}
                         <div className="flex items-center gap-2 overflow-x-auto">
-                            <button onClick={() => navigateToDatabase('ALL')} className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${!statusFilter || statusFilter === 'ALL' ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-white text-slate-500 border-slate-200'}`}>All</button>
-                            <button onClick={() => navigateToDatabase('DRAFT')} className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${statusFilter === 'DRAFT' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300'}`}>Drafts</button>
-                            <button onClick={() => navigateToDatabase('STAGING_VERIFICATION_PENDING')} className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${statusFilter === 'STAGING_VERIFICATION_PENDING' ? 'bg-yellow-500 text-white border-yellow-500' : 'bg-white text-slate-500 border-slate-200 hover:border-yellow-300'}`}>Pending Verification</button>
+                            {/* Standard Filters - Hide in Shift Lead View */}
+                            {viewMode !== 'approvals' && (
+                                <>
+                                    <button onClick={() => navigateToDatabase('ALL')} className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${!statusFilter || statusFilter === 'ALL' ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-white text-slate-500 border-slate-200'}`}>All</button>
+                                    <button onClick={() => navigateToDatabase('DRAFT')} className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${statusFilter === 'DRAFT' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300'}`}>Drafts</button>
+                                    <button onClick={() => navigateToDatabase('STAGING_VERIFICATION_PENDING')} className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${statusFilter === 'STAGING_VERIFICATION_PENDING' ? 'bg-yellow-500 text-white border-yellow-500' : 'bg-white text-slate-500 border-slate-200 hover:border-yellow-300'}`}>Pending Verification</button>
+                                </>
+                            )}
 
-
-                            {dbWorkflow === 'LOADING' && (
+                            {dbWorkflow === 'LOADING' && viewMode !== 'approvals' && (
                                 <div className="flex items-center gap-2 overflow-x-auto">
                                     <button onClick={() => navigateToDatabase('ALL')} className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${!statusFilter || statusFilter === 'ALL' ? 'bg-orange-100 text-orange-700 border-orange-200' : 'bg-white text-slate-500 border-slate-200'}`}>All</button>
                                     <button onClick={() => navigateToDatabase('LOCKED')} className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${statusFilter === 'LOCKED' ? 'bg-orange-600 text-white border-orange-600' : 'bg-white text-slate-500 border-slate-200 hover:border-orange-300'}`}>Ready to Load</button>
@@ -685,7 +689,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                                 </div>
                             )}
 
-                            {dbWorkflow === 'APPROVALS' && (
+                            {/* SHIFT LEAD DEDICATED FILTERS */}
+                            {(viewMode === 'approvals' || dbWorkflow === 'APPROVALS') && (
                                 <div className="flex items-center gap-2 overflow-x-auto">
                                     <button onClick={() => navigateToDatabase('STAGING_VERIFICATION_PENDING', 'APPROVALS')} className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${statusFilter === 'STAGING_VERIFICATION_PENDING' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300'}`}>Staging Approval</button>
                                     <button onClick={() => navigateToDatabase('LOADING_VERIFICATION_PENDING', 'APPROVALS')} className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${statusFilter === 'LOADING_VERIFICATION_PENDING' ? 'bg-orange-600 text-white border-orange-600' : 'bg-white text-slate-500 border-slate-200 hover:border-orange-300'}`}>Loading Approval</button>
