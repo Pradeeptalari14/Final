@@ -365,7 +365,7 @@ export const StagingSheet: React.FC<Props> = ({ existingSheet, onCancel, onLock,
             )}
 
             {/* EXCEL PRINT LAYOUT (Visible in Preview Mode & Print) */}
-            <div className={`${isPreview ? 'block' : 'hidden'} print:block font - sans text - [10px] w - full text - black bg - white p - 4 print: p - 0 overflow - auto`}>
+            <div className={`${isPreview ? 'block' : 'hidden'} print:block font-sans text-[10px] w-full text-black bg-white p-4 print:p-0 overflow-auto`}>
                 <div className="min-w-[800px]">
                     <table className="w-full border-collapse border border-black mb-1">
                         <thead><tr><th colSpan={8} className="border border-black p-1 text-center text-xl font-bold">UCIA - FG WAREHOUSE</th></tr></thead>
@@ -433,7 +433,7 @@ export const StagingSheet: React.FC<Props> = ({ existingSheet, onCancel, onLock,
             </div>
 
             {/* SCREEN FORM (Hidden in Preview) */}
-            <div className={`p - 4 md: p - 6 bg - slate - 50 border - b border - slate - 100 ${isPreview ? 'hidden' : 'block'} print: hidden`}>
+            <div className={`p-4 md:p-6 bg-slate-50 border-b border-slate-100 ${isPreview ? 'hidden' : 'block'} print:hidden`}>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                     <div>
                         <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1"><Calendar size={14} /> Shift</label>
@@ -462,7 +462,7 @@ export const StagingSheet: React.FC<Props> = ({ existingSheet, onCancel, onLock,
             </div>
 
             {/* STAGING TABLE (Screen Only - Full Width) */}
-            <div className={`p - 4 md: p - 6 ${isPreview ? 'hidden' : 'block'} print:hidden flex - 1 flex flex - col`}>
+            <div className={`p-4 md:p-6 ${isPreview ? 'hidden' : 'block'} print:hidden flex-1 flex flex-col`}>
                 <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm flex-1 custom-scrollbar">
                     {/* Min width ensures table is readable on mobile */}
                     <table className="w-full min-w-[600px] text-sm">
@@ -478,7 +478,7 @@ export const StagingSheet: React.FC<Props> = ({ existingSheet, onCancel, onLock,
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {items.map((item, index) => (
-                                <tr key={item.srNo} className={`hover: bg - blue - 50 / 30 transition - colors group ${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'} `}>
+                                <tr key={item.srNo} className={`hover:bg-blue-50/30 transition-colors group ${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'}`}>
                                     <td className="p-3 text-center text-slate-400 font-mono text-xs">
                                         <div className="flex items-center justify-center gap-1">
                                             {item.srNo}
