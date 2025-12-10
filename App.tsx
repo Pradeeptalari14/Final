@@ -64,6 +64,9 @@ const App = () => {
         if (view === 'loading-db') return 'loading-db';
         if (view === 'approvals') return 'approvals';
         if (view === 'database') return 'database';
+        if (view === 'incidents') return 'incidents';
+        if (view === 'incidents') return 'incidents';
+        if (view === 'incidents') return 'incidents';
         return 'dashboard';
     });
 

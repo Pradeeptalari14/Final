@@ -418,6 +418,9 @@ export const LoadingSheet: React.FC<Props> = ({ sheet, onClose, initialPreview =
                         <p className="text-xs text-slate-400 font-mono">ID: {currentSheet.id}</p>
                     </div></div>
                 <div className="flex gap-2">
+                    <button type="button" onClick={() => setIncidentModalOpen(true)} className="bg-rose-50 text-rose-600 border border-rose-200 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-rose-100 transition-colors">
+                        <AlertTriangle size={16} /> Report Incident
+                    </button>
                     {isCompleted && <button type="button" onClick={togglePreview} className="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"><Printer size={16} /> Print Preview</button>}
                     {!isLocked && <button type="button" onClick={handleSaveProgress} className="bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-slate-50"><Save size={16} /> Save Progress</button>}
                 </div>

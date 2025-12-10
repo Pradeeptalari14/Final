@@ -28,7 +28,7 @@ const VIEW_SCOPES: Record<string, SheetStatus[]> = {
 };
 
 interface AdminDashboardProps {
-    viewMode: 'analytics' | 'users' | 'database' | 'audit' | 'approvals' | 'staging-db' | 'loading-db';
+    viewMode: 'analytics' | 'users' | 'database' | 'audit' | 'approvals' | 'staging-db' | 'loading-db' | 'incidents';
     onViewSheet: (sheet: SheetData) => void;
     onNavigate?: (page: string, filter?: string) => void;
     initialSearch?: string;
@@ -45,7 +45,7 @@ interface ViewConfig {
 
 // Forced HMR Rebuild v3
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onViewSheet, onNavigate, initialSearch = '' }) => {
-    const { users, approveUser, deleteUser, sheets, deleteSheet, register, resetPassword, currentUser, isLoading, updateSheet } = useApp();
+    const { users, approveUser, deleteUser, sheets, deleteSheet, register, resetPassword, currentUser, isLoading, updateSheet, incidents } = useApp();
 
     const [searchTerm, setSearchTerm] = useState(initialSearch);
     const [filterRole, setFilterRole] = useState<Role | 'ALL'>('ALL');
@@ -637,6 +637,98 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
 
     // --- VIEW 4: DATABASE PANEL (and SHIFT LEAD VIEW) ---
     // --- VIEW 3: DATABASE & APPROVALS & DEDICATED WORKFLOWS ---
+    // --- VIEW 5: INCIDENT CONTROL CENTER ---
+    if (viewMode === 'incidents') {
+        const openIncidents = incidents.filter(i => i.status === 'OPEN').length;
+        const criticalIncidents = incidents.filter(i => i.priority === 'CRITICAL' && i.status !== 'RESOLVED').length;
+        const resolvedIncidents = incidents.filter(i => i.status === 'RESOLVED').length;
+
+        // Simple Resolve Handler (Mock for now, would need a real DB update function)
+        const handleResolve = (id: string, notes: string) => {
+            alert(`Resolving incident ${id} with notes: ${notes}`);
+            // In a real app: updateIncident(id, { status: 'RESOLVED', resolutionNotes: notes, resolvedAt: new Date().toISOString() })
+            // For now, we rely on the user understanding this is a UI demo or we need to add updateIncident to AppContext
+        };
+
+        return (
+            <div className="space-y-6">
+                {/* KPI Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-white p-4 rounded-xl border border-rose-100 shadow-sm flex items-center justify-between">
+                        <div><p className="text-sm text-slate-500 font-bold uppercase">Critical Issues</p><h3 className="text-2xl font-bold text-rose-600">{criticalIncidents}</h3></div>
+                        <div className="p-3 bg-rose-50 rounded-lg text-rose-500"><AlertTriangle size={24} /></div>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl border border-blue-100 shadow-sm flex items-center justify-between">
+                        <div><p className="text-sm text-slate-500 font-bold uppercase">Open Incidents</p><h3 className="text-2xl font-bold text-blue-600">{openIncidents}</h3></div>
+                        <div className="p-3 bg-blue-50 rounded-lg text-blue-500"><AlertCircle size={24} /></div>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl border border-green-100 shadow-sm flex items-center justify-between">
+                        <div><p className="text-sm text-slate-500 font-bold uppercase">Resolved Total</p><h3 className="text-2xl font-bold text-green-600">{resolvedIncidents}</h3></div>
+                        <div className="p-3 bg-green-50 rounded-lg text-green-500"><CheckCircle size={24} /></div>
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div className="p-4 border-b border-slate-100 flex justify-between items-center">
+                        <h3 className="font-bold text-slate-800 flex items-center gap-2"><ShieldAlert className="text-slate-400" size={18} /> Incident Control Center</h3>
+                        <div className="flex gap-2">
+                            {/* Filters could go here */}
+                        </div>
+                    </div>
+                    <table className="w-full text-sm text-left">
+                        <thead className="bg-slate-50 text-slate-500 font-semibold uppercase text-xs">
+                            <tr>
+                                <th className="p-4">Priority</th>
+                                <th className="p-4">Type</th>
+                                <th className="p-4">Description</th>
+                                <th className="p-4">Reported By</th>
+                                <th className="p-4">Sheet ID</th>
+                                <th className="p-4">Status</th>
+                                <th className="p-4 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {incidents.length === 0 ? (
+                                <tr><td colSpan={7} className="p-8 text-center text-slate-400">No incidents reported.</td></tr>
+                            ) : (
+                                incidents.map(inc => (
+                                    <tr key={inc.id} className="hover:bg-slate-50">
+                                        <td className="p-4">
+                                            <span className={`px-2 py-1 rounded text-xs font-bold ${inc.priority === 'CRITICAL' ? 'bg-rose-100 text-rose-700' :
+                                                    inc.priority === 'HIGH' ? 'bg-orange-100 text-orange-700' :
+                                                        inc.priority === 'MEDIUM' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700'
+                                                }`}>{inc.priority}</span>
+                                        </td>
+                                        <td className="p-4 font-bold text-slate-700">{inc.type}</td>
+                                        <td className="p-4 max-w-xs truncate" title={inc.description}>{inc.description}</td>
+                                        <td className="p-4 text-slate-600">{inc.createdBy}<br /><span className="text-[10px] text-slate-400">{new Date(inc.createdAt).toLocaleString()}</span></td>
+                                        <td className="p-4 font-mono text-blue-600">{inc.sheetId}</td>
+                                        <td className="p-4">
+                                            <span className={`flex items-center gap-1 font-bold text-xs ${inc.status === 'OPEN' ? 'text-rose-600' : inc.status === 'RESOLVED' ? 'text-green-600' : 'text-amber-600'}`}>
+                                                {inc.status === 'RESOLVED' ? <CheckCircle size={14} /> : <AlertCircle size={14} />}
+                                                {inc.status}
+                                            </span>
+                                        </td>
+                                        <td className="p-4 text-center">
+                                            {inc.status !== 'RESOLVED' && (
+                                                <button
+                                                    onClick={() => handleResolve(inc.id, "Resolved by Admin")}
+                                                    className="px-3 py-1 bg-green-50 text-green-700 hover:bg-green-100 rounded-lg text-xs font-bold border border-green-200 transition-colors"
+                                                >
+                                                    Resolve
+                                                </button>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        );
+    }
+
     if (viewMode === 'database' || viewMode === 'approvals' || viewMode === 'staging-db' || viewMode === 'loading-db') {
 
         // Title & Context Logic
