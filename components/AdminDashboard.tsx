@@ -640,7 +640,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
             viewTitle = 'Loading Workflow Database';
             isLockedWorkflow = true;
         } else if (viewMode === 'approvals') {
-            viewTitle = 'Pending Approvals';
+            viewTitle = 'Shift Lead Database'; // Unified Title
         }
 
         const isAdmin = currentUser?.role === Role.ADMIN;
@@ -907,7 +907,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                         <div className="overflow-hidden rounded-lg border border-slate-200 shadow-sm bg-white overflow-x-auto">
                             <div className="min-w-[1600px]">
                                 {dbViewMode === 'details' ? (
-                                    <div className="grid grid-cols-[100px_100px_120px_120px_120px_180px_180px_180px_180px_100px_80px] bg-slate-800 text-white font-bold text-xs uppercase divide-x divide-slate-700 border-b border-slate-600">
+                                    <div className="grid grid-cols-[100px_100px_120px_120px_120px_180px_180px_180px_180px_220px_80px] bg-slate-800 text-white font-bold text-xs uppercase divide-x divide-slate-700 border-b border-slate-600">
                                         <div className="p-4 cursor-pointer" onClick={() => handleSort('id')}>ID</div>
                                         <div className="p-4 cursor-pointer" onClick={() => handleSort('date')}>Date</div>
                                         <div className="p-4 cursor-pointer" onClick={() => handleSort('supervisorName')}>Staging SV</div>
@@ -937,7 +937,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                                 <div className="divide-y divide-slate-100">
                                     {filteredSheets.length > 0 ? filteredSheets.map((s) => (
                                         dbViewMode === 'details' ? (
-                                            <div key={s.id} className={`grid grid-cols-[100px_100px_120px_120px_120px_180px_180px_180px_180px_100px_80px] items-center text-sm border-l-4 transition-all ${s.status === 'STAGING_VERIFICATION_PENDING' ? 'bg-blue-50/50 border-l-blue-500 hover:bg-blue-100' : s.status === 'LOADING_VERIFICATION_PENDING' ? 'bg-orange-50/50 border-l-orange-500 hover:bg-orange-100' : s.status === 'COMPLETED' ? 'bg-green-50/30 border-l-green-600 hover:bg-green-100' : 'bg-white border-l-transparent hover:bg-slate-50'
+                                            <div key={s.id} className={`grid grid-cols-[100px_100px_120px_120px_120px_180px_180px_180px_180px_220px_80px] items-center text-sm border-l-4 transition-all ${s.status === 'STAGING_VERIFICATION_PENDING' ? 'bg-blue-50/50 border-l-blue-500 hover:bg-blue-100' : s.status === 'LOADING_VERIFICATION_PENDING' ? 'bg-orange-50/50 border-l-orange-500 hover:bg-orange-100' : s.status === 'COMPLETED' ? 'bg-green-50/30 border-l-green-600 hover:bg-green-100' : 'bg-white border-l-transparent hover:bg-slate-50'
                                                 }`}>
                                                 <div className="p-4 font-mono font-bold text-blue-600">{s.id}</div>
                                                 <div className="p-4">{s.date}</div>
@@ -950,7 +950,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                                                 <div className="p-4 truncate text-orange-600">{s.loadingApprovedBy || '-'}</div>
                                                 <div className="p-4">
                                                     {/* Enhanced Station Pipeline Visualization */}
-                                                    <div className="flex flex-col gap-1 w-[160px]">
+                                                    <div className="flex flex-col gap-1 w-full max-w-[200px]">
                                                         <div className="flex items-center justify-between relative">
                                                             {/* Connecting Line */}
                                                             <div className="absolute top-1/2 left-0 w-full h-0.5 bg-slate-200 -z-10"></div>
