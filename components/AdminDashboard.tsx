@@ -155,7 +155,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
         let targetView = 'database';
         if (workflowContext === 'STAGING') targetView = 'staging-db';
         else if (workflowContext === 'LOADING') targetView = 'loading-db';
-        // else if (workflowContext === 'APPROVALS') targetView = 'approvals'; // REMOVED: Don't switch view
+        else if (workflowContext === 'APPROVALS' || viewMode === 'approvals') targetView = 'approvals'; // RESTORED: Keep in Approvals View
 
         // Update URL Params
         newUrl.searchParams.set('view', targetView);
