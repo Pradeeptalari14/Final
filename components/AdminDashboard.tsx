@@ -99,6 +99,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
     }, [viewMode]);
     const [isViewMenuOpen, setIsViewMenuOpen] = useState(false);
 
+    // NEW: Global Filters State (Hoisted to fix Rules of Hooks)
+    const [dateRange, setDateRange] = useState<{ start: string, end: string }>({ start: '', end: '' });
+    const [supervisorFilter, setSupervisorFilter] = useState<string>('ALL');
+    const [locationFilter, setLocationFilter] = useState<string>('ALL');
+
     // Sort State
     const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 
@@ -160,6 +165,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
             window.location.reload();
         }
     };
+
+    // FIX: Shift Lead Redirect Effect (Hoisted)
+    React.useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const statusFilter = urlParams.get('status');
+        if (viewMode === 'approvals' && (!statusFilter || statusFilter === 'ALL')) {
+            navigateToDatabase('STAGING_VERIFICATION_PENDING', 'APPROVALS');
+        }
+    }, [viewMode]);
 
     // --- ADMIN ACTIONS ---
     const handleUnlockSheet = async (e: React.MouseEvent, sheet: SheetData) => {
@@ -640,18 +654,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
         const urlParams = new URLSearchParams(window.location.search);
         const statusFilter = urlParams.get('status');
 
-        // NEW: Date Range & Supervisor Filter State
-        const [dateRange, setDateRange] = useState<{ start: string, end: string }>({ start: '', end: '' });
-        const [supervisorFilter, setSupervisorFilter] = useState<string>('ALL'); // NEW: Supervisor Filter
-        const [locationFilter, setLocationFilter] = useState<string>('ALL'); // NEW: Location Filter
 
-        // SHIFT LEAD TRAP FIX: If in Approvals and NO status, explicitly redirect to PENDING defaults
-        React.useEffect(() => {
-            if (viewMode === 'approvals' && (!statusFilter || statusFilter === 'ALL')) {
-                // This forces the "Invisible Rule" to be VISIBLE in the URL
-                navigateToDatabase('STAGING_VERIFICATION_PENDING', 'APPROVALS');
-            }
-        }, [viewMode, statusFilter]);
 
         if (!isAdmin && !isShiftLead && viewMode !== 'staging-db' && viewMode !== 'loading-db') {
             return (
