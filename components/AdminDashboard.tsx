@@ -826,8 +826,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                         </div>
 
 
+
                         {/* NEW: Database (Workflow) Filter - Replaces Tabs */}
-                        {viewMode !== 'approvals' && !isLockedWorkflow && (
+                        {viewMode !== 'approvals' && (
                             <div className="flex items-center gap-2">
                                 <Database size={18} className="text-slate-500" />
                                 <span className="text-sm font-bold text-slate-700">Database:</span>
