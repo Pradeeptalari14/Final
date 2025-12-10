@@ -11,7 +11,7 @@ import {
     CheckCircle, XCircle, Key, UserPlus, Activity, ClipboardList,
     FileSpreadsheet, Filter, CheckCircle2, History,
     LayoutDashboard, Settings, LogOut, ChevronLeft, ChevronRight,
-    AlertCircle, Clock, Calendar, Edit, ShieldCheck,
+    AlertCircle, Clock, Calendar, Edit, ShieldCheck, AlertTriangle,
     Minimize2, Maximize2, ChevronDown, CheckSquare, AlignJustify,
     Timer, TableProperties, CalendarRange, MapPin, Users
 } from 'lucide-react';
@@ -695,8 +695,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                                     <tr key={inc.id} className="hover:bg-slate-50">
                                         <td className="p-4">
                                             <span className={`px-2 py-1 rounded text-xs font-bold ${inc.priority === 'CRITICAL' ? 'bg-rose-100 text-rose-700' :
-                                                    inc.priority === 'HIGH' ? 'bg-orange-100 text-orange-700' :
-                                                        inc.priority === 'MEDIUM' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700'
+                                                inc.priority === 'HIGH' ? 'bg-orange-100 text-orange-700' :
+                                                    inc.priority === 'MEDIUM' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700'
                                                 }`}>{inc.priority}</span>
                                         </td>
                                         <td className="p-4 font-bold text-slate-700">{inc.type}</td>
