@@ -325,8 +325,7 @@ const App = () => {
             case 'audit':
                 return <AdminDashboard viewMode="audit" onViewSheet={(s) => handleViewSheet(s)} />;
 
-            case 'approvals':
-                return <AdminDashboard viewMode="approvals" onViewSheet={(s) => handleViewSheet(s)} onNavigate={handleNavigate} />;
+
 
             default:
                 return <div>Page Not Found</div>;
