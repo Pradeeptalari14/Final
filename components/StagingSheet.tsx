@@ -329,7 +329,7 @@ export const StagingSheet: React.FC<Props> = ({ existingSheet, onCancel, onLock,
     const printNow = () => window.print();
 
     return (
-        <div className="bg-white shadow-xl shadow-slate-200 rounded-xl pb-24 relative border border-slate-100 flex flex-col min-h-full">
+        <div className="bg-white shadow-xl shadow-slate-200 rounded-xl pb-60 relative border border-slate-100 flex flex-col min-h-full">
             {/* Top Controls (Screen Only) */}
             {!isPreview && (
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 md:p-6 border-b border-slate-100 bg-white print:hidden gap-4">
@@ -352,6 +352,20 @@ export const StagingSheet: React.FC<Props> = ({ existingSheet, onCancel, onLock,
                         <button onClick={togglePreview} className="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-slate-700 transition-colors">
                             <Printer size={16} /> Print Preview
                         </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Rejection Alert */}
+            {!isPreview && existingSheet?.rejectionReason && existingSheet.status === SheetStatus.DRAFT && (
+                <div className="mx-6 mt-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
+                    <div className="bg-red-100 p-2 rounded-lg text-red-600 mt-0.5">
+                        <AlertTriangle size={20} />
+                    </div>
+                    <div>
+                        <h3 className="font-bold text-red-800 text-sm">Supervisor Rejection</h3>
+                        <p className="text-red-700 text-sm mt-1">{existingSheet.rejectionReason}</p>
+                        <p className="text-red-500 text-xs mt-2">Please address the feedback above and re-submit for approval.</p>
                     </div>
                 </div>
             )}
@@ -541,7 +555,7 @@ export const StagingSheet: React.FC<Props> = ({ existingSheet, onCancel, onLock,
                             </h4>
                             <div className="grid sm:grid-cols-3 gap-3">
                                 <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer p-2 hover:bg-purple-50 rounded-lg transition-colors border border-transparent hover:border-purple-100">
-                                    <div className={`w - 5 h - 5 rounded border flex items - center justify - center transition - colors ${stagingChecks.qty ? 'bg-purple-600 border-purple-600 text-white' : 'bg-white border-slate-300'} `}>
+                                    <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${stagingChecks.qty ? 'bg-purple-600 border-purple-600 text-white' : 'bg-white border-slate-300'}`}>
                                         {stagingChecks.qty && <CheckCircle size={12} strokeWidth={4} />}
                                     </div>
                                     <input type="checkbox" className="hidden" checked={stagingChecks.qty} onChange={() => setStagingChecks(prev => ({ ...prev, qty: !prev.qty }))} />
@@ -549,7 +563,7 @@ export const StagingSheet: React.FC<Props> = ({ existingSheet, onCancel, onLock,
                                 </label>
 
                                 <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer p-2 hover:bg-purple-50 rounded-lg transition-colors border border-transparent hover:border-purple-100">
-                                    <div className={`w - 5 h - 5 rounded border flex items - center justify - center transition - colors ${stagingChecks.condition ? 'bg-purple-600 border-purple-600 text-white' : 'bg-white border-slate-300'} `}>
+                                    <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${stagingChecks.condition ? 'bg-purple-600 border-purple-600 text-white' : 'bg-white border-slate-300'}`}>
                                         {stagingChecks.condition && <CheckCircle size={12} strokeWidth={4} />}
                                     </div>
                                     <input type="checkbox" className="hidden" checked={stagingChecks.condition} onChange={() => setStagingChecks(prev => ({ ...prev, condition: !prev.condition }))} />
@@ -557,7 +571,7 @@ export const StagingSheet: React.FC<Props> = ({ existingSheet, onCancel, onLock,
                                 </label>
 
                                 <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer p-2 hover:bg-purple-50 rounded-lg transition-colors border border-transparent hover:border-purple-100">
-                                    <div className={`w - 5 h - 5 rounded border flex items - center justify - center transition - colors ${stagingChecks.sign ? 'bg-purple-600 border-purple-600 text-white' : 'bg-white border-slate-300'} `}>
+                                    <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${stagingChecks.sign ? 'bg-purple-600 border-purple-600 text-white' : 'bg-white border-slate-300'}`}>
                                         {stagingChecks.sign && <CheckCircle size={12} strokeWidth={4} />}
                                     </div>
                                     <input type="checkbox" className="hidden" checked={stagingChecks.sign} onChange={() => setStagingChecks(prev => ({ ...prev, sign: !prev.sign }))} />
@@ -572,7 +586,7 @@ export const StagingSheet: React.FC<Props> = ({ existingSheet, onCancel, onLock,
                                 type="button"
                                 disabled={!Object.values(stagingChecks).every(Boolean)}
                                 onClick={() => handleApprove(true)}
-                                className={`px - 8 py - 2.5 rounded - lg flex items - center gap - 2 font - bold shadow - lg transform transition - all text - sm ${Object.values(stagingChecks).every(Boolean) ? 'bg-purple-600 text-white hover:bg-purple-700 hover:scale-[1.02] active:scale-[0.98] shadow-purple-500/30' : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'} `}
+                                className={`px-8 py-2.5 rounded-lg flex items-center gap-2 font-bold shadow-lg transform transition-all text-sm ${Object.values(stagingChecks).every(Boolean) ? 'bg-purple-600 text-white hover:bg-purple-700 hover:scale-[1.02] active:scale-[0.98] shadow-purple-500/30' : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'}`}
                             >
                                 <Lock size={18} /> Approve & Lock
                             </button>
