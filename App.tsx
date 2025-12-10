@@ -168,10 +168,10 @@ const App = () => {
                 return <AdminDashboard viewMode="database" onViewSheet={(s) => handleViewSheet(s)} onNavigate={handleNavigate} />;
 
             case 'staging-db':
-                return <AdminDashboard viewMode="staging_workflow" onViewSheet={(s) => handleViewSheet(s)} onNavigate={handleNavigate} />;
+                return <AdminDashboard viewMode="staging-db" onViewSheet={(s) => handleViewSheet(s)} onNavigate={handleNavigate} />;
 
             case 'loading-db':
-                return <AdminDashboard viewMode="loading_workflow" onViewSheet={(s) => handleViewSheet(s)} onNavigate={handleNavigate} />;
+                return <AdminDashboard viewMode="loading-db" onViewSheet={(s) => handleViewSheet(s)} onNavigate={handleNavigate} />;
 
             case 'staging-editor':
                 return <StagingSheet

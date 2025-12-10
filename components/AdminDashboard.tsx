@@ -103,6 +103,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
     const [dateRange, setDateRange] = useState<{ start: string, end: string }>({ start: '', end: '' });
     const [supervisorFilter, setSupervisorFilter] = useState<string>('ALL');
     const [locationFilter, setLocationFilter] = useState<string>('ALL');
+    const [urlTick, setUrlTick] = useState(0); // Force re-render on URL change
 
     // Sort State
     const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
@@ -157,6 +158,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
         newUrl.searchParams.delete('workflow'); // CLEANUP: Remove redundant param
 
         window.history.pushState({}, '', newUrl.toString());
+        setUrlTick(prev => prev + 1); // FORCE UPDATE
 
         // Client-Side Navigation
         if (onNavigate) {
