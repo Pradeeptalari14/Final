@@ -107,7 +107,8 @@ export interface SheetData {
 
   // Loading Data (Optional until Locked)
   transporter?: string;
-  loadingDockNo?: string;
+  loadingDockNo?: string; // Correct field name used in StagingSheet
+  loadingDoc?: string; // Kept for legacy compatibility if needed
   loadingStartTime?: string;
   loadingEndTime?: string;
 

@@ -66,6 +66,9 @@ export const LoadingSheet: React.FC<Props> = ({ sheet, onClose, initialPreview =
     const [transporter, setTransporter] = useState(sheet.transporter || '');
     const [loadingDock, setLoadingDock] = useState(sheet.loadingDockNo || '');
     const [shift, setShift] = useState(sheet.shift || 'A');
+    const [destination, setDestination] = useState(sheet.destination || ''); // Added
+    const [supervisorName, setSupervisorName] = useState(sheet.supervisorName || ''); // Added
+    const [empCode, setEmpCode] = useState(sheet.empCode || ''); // Added
     const [startTime, setStartTime] = useState(sheet.loadingStartTime || new Date().toLocaleTimeString('en-US', { hour12: false }));
     const [endTime, setEndTime] = useState(sheet.loadingEndTime || '');
 
@@ -102,6 +105,9 @@ export const LoadingSheet: React.FC<Props> = ({ sheet, onClose, initialPreview =
         setTransporter(sheet.transporter || '');
         setLoadingDock(sheet.loadingDockNo || '');
         setShift(sheet.shift || 'A');
+        setDestination(sheet.destination || '');
+        setSupervisorName(sheet.supervisorName || '');
+        setEmpCode(sheet.empCode || '');
         setStartTime(sheet.loadingStartTime || new Date().toLocaleTimeString('en-US', { hour12: false }));
         setEndTime(sheet.loadingEndTime || '');
 
@@ -296,6 +302,9 @@ export const LoadingSheet: React.FC<Props> = ({ sheet, onClose, initialPreview =
             loadingItems: finalLoadingItems,
             additionalItems: finalAdditionalItems,
             shift,
+            destination, // Added
+            supervisorName, // Added
+            empCode, // Added
             transporter,
             loadingDockNo: loadingDock,
             loadingStartTime: startTime,
@@ -624,6 +633,15 @@ export const LoadingSheet: React.FC<Props> = ({ sheet, onClose, initialPreview =
                     <HeaderField label="Date" icon={Calendar}><div className="font-semibold text-slate-700 text-sm">{currentSheet.date}</div></HeaderField>
                     <HeaderField label="Transporter *" icon={Truck} hasError={errors.includes('transporter')}>
                         <input type="text" value={transporter} onChange={e => { setTransporter(e.target.value); clearError('transporter'); }} disabled={isCompleted} className="w-full bg-transparent text-sm font-medium text-slate-700 outline-none placeholder:text-slate-300" placeholder="Enter Transporter" />
+                    </HeaderField>
+                    <HeaderField label="Destination" icon={MapPin}>
+                        <input type="text" value={destination} onChange={e => setDestination(e.target.value)} disabled={isCompleted} className="w-full bg-transparent text-sm font-medium text-slate-700 outline-none placeholder:text-slate-300" placeholder="Destination" />
+                    </HeaderField>
+                    <HeaderField label="Staging SV Name" icon={User}>
+                        <input type="text" value={supervisorName} onChange={e => setSupervisorName(e.target.value)} disabled={isCompleted} className="w-full bg-transparent text-sm font-medium text-slate-700 outline-none placeholder:text-slate-300" placeholder="Staging Supervisor" />
+                    </HeaderField>
+                    <HeaderField label="Staging SV Emp Code" icon={User}>
+                        <input type="text" value={empCode} onChange={e => setEmpCode(e.target.value)} disabled={isCompleted} className="w-full bg-transparent text-sm font-medium text-slate-700 outline-none placeholder:text-slate-300" placeholder="Staging SV Code" />
                     </HeaderField>
                     <HeaderField label="Loading Dock *" icon={MapPin} hasError={errors.includes('loadingDock')}>
                         <input type="text" value={loadingDock} onChange={e => setLoadingDock(e.target.value)} disabled={isLocked || (!!sheet.loadingDockNo && sheet.loadingDockNo.trim() !== '')} className={`w-full bg-transparent text-sm font-medium text-slate-700 outline-none ${(!sheet.loadingDockNo && !isLocked) ? 'placeholder:text-blue-400' : 'cursor-not-allowed text-slate-500'}`} placeholder={!sheet.loadingDockNo ? "Enter Dock No" : ""} />
