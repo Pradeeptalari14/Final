@@ -107,6 +107,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
     const [dateRange, setDateRange] = useState<{ start: string, end: string }>({ start: '', end: '' });
     const [supervisorFilter, setSupervisorFilter] = useState<string>('ALL');
     const [locationFilter, setLocationFilter] = useState<string>('ALL');
+    const [durationFilter, setDurationFilter] = useState<string>('ALL'); // NEW: Duration Filter
     const [urlTick, setUrlTick] = useState(0); // Force re-render on URL change
 
     // Sort State
@@ -331,12 +332,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                         <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2"><Activity className="text-blue-600" /> Operational Overview</h2>
                         <p className="text-sm text-slate-500">Real-time performance metrics</p>
                     </div>
-                    <button onClick={handleExportExcel} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-bold shadow-lg transition-all"><FileSpreadsheet size={16} /> Export</button>
+                    <button onClick={handleExportExcel} className="bg-green-600 hover:bg-green-700 active:scale-95 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-bold shadow-lg transition-all"><FileSpreadsheet size={16} /> Export</button>
                 </div>
 
                 <div
                     onClick={() => navigateToDatabase('COMPLETED', 'ALL')}
-                    className="bg-white rounded-xl p-6 shadow-sm border border-slate-200 cursor-pointer hover:shadow-md hover:border-green-300 transition-all group relative overflow-hidden"
+                    className="bg-white rounded-xl p-6 shadow-sm border border-slate-200 cursor-pointer hover:shadow-md hover:border-green-300 hover:-translate-y-1 active:scale-95 transition-all duration-200 group relative overflow-hidden"
                 >
                     <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><CheckCircle size={120} className="text-green-500" /></div>
                     <div className="flex items-center justify-between relative z-10">
@@ -361,15 +362,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                                 <div><h3 className="font-bold text-slate-700">Staging Overview</h3><div className="text-xs text-slate-400">{stats.staging.staff} Staff</div></div>
                             </div>
                             <div className="grid grid-cols-3 gap-2"> {/* Changed to 3 cols for Locked */}
-                                <div onClick={() => onNavigate && onNavigate('staging', 'DRAFT')} className="p-3 bg-blue-50/50 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors">
+                                <div onClick={() => onNavigate && onNavigate('staging', 'DRAFT')} className="p-3 bg-blue-50/50 rounded-lg cursor-pointer hover:bg-blue-100 hover:-translate-y-1 active:scale-95 transition-all duration-200">
                                     <span className="text-[10px] text-blue-500 uppercase font-bold block mb-1">Drafts</span>
                                     <span className="text-xl font-bold text-blue-700">{stats.staging.drafts}</span>
                                 </div>
-                                <div onClick={() => onNavigate && onNavigate('staging', 'STAGING_VERIFICATION_PENDING')} className="p-3 bg-yellow-50 rounded-lg cursor-pointer hover:bg-yellow-100 transition-colors">
+                                <div onClick={() => onNavigate && onNavigate('staging', 'STAGING_VERIFICATION_PENDING')} className="p-3 bg-yellow-50 rounded-lg cursor-pointer hover:bg-yellow-100 hover:-translate-y-1 active:scale-95 transition-all duration-200">
                                     <span className="text-[10px] text-yellow-600 uppercase font-bold block mb-1">Pending</span>
                                     <span className="text-xl font-bold text-yellow-700">{stats.staging.pending}</span>
                                 </div>
-                                <div onClick={() => onNavigate && onNavigate('staging', 'LOCKED')} className="p-3 bg-orange-50 rounded-lg cursor-pointer hover:bg-orange-100 transition-colors">
+                                <div onClick={() => onNavigate && onNavigate('staging', 'LOCKED')} className="p-3 bg-orange-50 rounded-lg cursor-pointer hover:bg-orange-100 hover:-translate-y-1 active:scale-95 transition-all duration-200">
                                     <span className="text-[10px] text-orange-600 uppercase font-bold block mb-1">Locked</span>
                                     <span className="text-xl font-bold text-orange-700">{stats.staging.locked}</span>
                                 </div>
@@ -384,14 +385,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                                 <div><h3 className="font-bold text-slate-700">Loading Overview</h3><div className="text-xs text-slate-400">{stats.loading.staff} Staff</div></div>
                             </div>
                             <div className="grid grid-cols-2 gap-3">
-                                <div onClick={() => onNavigate && onNavigate('loading', 'LOCKED')} className="p-2 bg-orange-50 rounded-lg cursor-pointer hover:bg-orange-100 transition-colors flex items-center justify-between group">
+                                <div onClick={() => onNavigate && onNavigate('loading', 'LOCKED')} className="p-2 bg-orange-50 rounded-lg cursor-pointer hover:bg-orange-100 hover:-translate-y-1 active:scale-95 transition-all duration-200 flex items-center justify-between group">
                                     <div>
                                         <span className="text-[10px] text-orange-600 uppercase font-bold block mb-1">Ready to Load</span>
                                         <span className="text-lg font-bold text-orange-700">{stats.loading.locked}</span>
                                     </div>
                                     <Lock className="text-orange-300 group-hover:text-orange-500 transition-colors" size={24} />
                                 </div>
-                                <div onClick={() => onNavigate && onNavigate('loading', 'LOADING_VERIFICATION_PENDING')} className="p-2 bg-yellow-50 rounded-lg cursor-pointer hover:bg-yellow-100 transition-colors flex items-center justify-between group">
+                                <div onClick={() => onNavigate && onNavigate('loading', 'LOADING_VERIFICATION_PENDING')} className="p-2 bg-yellow-50 rounded-lg cursor-pointer hover:bg-yellow-100 hover:-translate-y-1 active:scale-95 transition-all duration-200 flex items-center justify-between group">
                                     <div>
                                         <span className="text-[10px] text-yellow-600 uppercase font-bold block mb-1">Pending</span>
                                         <span className="text-lg font-bold text-yellow-700">{stats.loading.pending}</span>
@@ -409,12 +410,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                                 <div><h3 className="font-bold text-slate-700">Shift Lead</h3><div className="text-xs text-slate-400">{stats.approvals.staff} Leads</div></div>
                             </div>
                             <div className="space-y-3">
-                                <div onClick={() => navigateToDatabase('STAGING_VERIFICATION_PENDING', 'APPROVALS')} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors">
+                                <div onClick={() => {
+                                    const newUrl = new URL(window.location.href);
+                                    newUrl.searchParams.set('view', 'approvals'); // Explicitly go to Sidebar View
+                                    newUrl.searchParams.delete('workflow');
+                                    window.history.pushState({}, '', newUrl.toString());
+                                    setUrlTick(prev => prev + 1);
+                                }} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors">
                                     <span className="text-sm font-bold text-slate-700">Staging</span>
                                     <span className="text-sm text-slate-500">(Pending)</span>
                                     <span className="text-lg font-bold text-blue-700">{stats.approvals.staging}</span>
                                 </div>
-                                <div onClick={() => navigateToDatabase('LOADING_VERIFICATION_PENDING', 'APPROVALS')} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg cursor-pointer hover:bg-orange-100 transition-colors">
+                                <div onClick={() => {
+                                    const newUrl = new URL(window.location.href);
+                                    newUrl.searchParams.set('view', 'approvals'); // Explicitly go to Sidebar View
+                                    newUrl.searchParams.delete('workflow');
+                                    window.history.pushState({}, '', newUrl.toString());
+                                    setUrlTick(prev => prev + 1);
+                                }} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg cursor-pointer hover:bg-orange-100 transition-colors">
                                     <span className="text-sm font-bold text-slate-700">Loading</span>
                                     <span className="text-sm text-slate-500">(Pending)</span>
                                     <span className="text-lg font-bold text-orange-700">{stats.approvals.loading}</span>
@@ -721,6 +734,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                 if (!s.destination || !s.destination.toLowerCase().includes(locationFilter.toLowerCase())) return false;
             }
 
+            // 6. NEW: Duration Filter
+            if (durationFilter !== 'ALL') {
+                if (!s.createdAt || !s.completedAt) return false; // Must be completed to have duration
+                const diff = new Date(s.completedAt).getTime() - new Date(s.createdAt).getTime();
+                const mins = diff / 60000;
+
+                if (durationFilter === 'UNDER_30' && mins >= 30) return false;
+                if (durationFilter === '30_60' && (mins < 30 || mins > 60)) return false;
+                if (durationFilter === 'OVER_60' && mins <= 60) return false;
+                if (durationFilter === 'OVER_120' && mins <= 120) return false;
+            }
+
             return matchesSearch;
         }).sort((a, b) => {
             if (!sortConfig) return 0;
@@ -831,6 +856,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                                 {Array.from(new Set(sheets.map(s => s.destination).filter(Boolean))).sort().map(loc => (
                                     <option key={loc} value={loc}>{loc}</option>
                                 ))}
+                            </select>
+                        </div>
+
+                        {/* NEW: Duration Filter Dropdown */}
+                        <div className="flex items-center gap-2">
+                            <Clock size={18} className="text-slate-500" />
+                            <span className="text-sm font-bold text-slate-700">Duration:</span>
+                            <select
+                                className="p-1.5 text-sm border border-slate-300 rounded hover:border-blue-400 focus:border-blue-500 outline-none bg-white max-w-[150px]"
+                                value={durationFilter}
+                                onChange={e => setDurationFilter(e.target.value)}
+                            >
+                                <option value="ALL">All Durations</option>
+                                <option value="UNDER_30">Under 30 Mins</option>
+                                <option value="30_60">30 Mins - 1 Hour</option>
+                                <option value="OVER_60">Over 1 Hour</option>
+                                <option value="OVER_120">Over 2 Hours</option>
                             </select>
                         </div>
 
@@ -1045,6 +1087,36 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                                             </div>
                                         )
                                     )) : <div className="p-12 text-center text-slate-400 italic">No records found.</div>}
+                                </div>
+                            </div>
+                        </div>
+                        {/* PRINT ONLY: Detailed Filter Flow Legend */}
+                        <div className="hidden print:block mt-8 pt-8 border-t border-slate-300">
+                            <h3 className="font-bold text-slate-800 text-sm uppercase mb-4">Detailed Filter Flow Reference</h3>
+                            <div className="grid grid-cols-3 gap-8 text-xs text-slate-600">
+                                <div>
+                                    <h4 className="font-bold text-blue-600 mb-2">1. Staging Workflow</h4>
+                                    <ul className="space-y-1">
+                                        <li>• <b>Drafts:</b> Initial creation. Editable.</li>
+                                        <li>• <b>Pending:</b> Submitted for Staging Approval.</li>
+                                        <li>• <b>Ready:</b> Approved & Locked. Ready for Loading Team.</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-orange-600 mb-2">2. Loading Workflow</h4>
+                                    <ul className="space-y-1">
+                                        <li>• <b>Ready to Load:</b> Picked up from Staging.</li>
+                                        <li>• <b>Pending:</b> Submitted for Loading Approval.</li>
+                                        <li>• <b>Completed:</b> Finalized. No further edits.</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-purple-600 mb-2">3. Shift Lead Database</h4>
+                                    <ul className="space-y-1">
+                                        <li>• <b>All Approvals:</b> Master list of checks needed.</li>
+                                        <li>• <b>Staging Appr:</b> Drafts waiting for sign-off.</li>
+                                        <li>• <b>Loading Appr:</b> Loads waiting for sign-off.</li>
+                                    </ul>
                                 </div>
                             </div>
                         </div>
