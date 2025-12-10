@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AlertTriangle, X, Send } from 'lucide-react';
-import { IncidentType, IncidentPriority } from '../types';
+import { IncidentType, IncidentPriority, Department } from '../types';
 import { supabase } from '../services/supabaseClient';
 
 interface IncidentModalProps {
@@ -13,6 +13,7 @@ interface IncidentModalProps {
 export const IncidentModal: React.FC<IncidentModalProps> = ({ sheetId, currentUser, onClose, onSuccess }) => {
     const [type, setType] = useState<IncidentType>('OTHER');
     const [priority, setPriority] = useState<IncidentPriority>('MEDIUM');
+    const [assignedDepartment, setAssignedDepartment] = useState<Department | ''>('');
     const [description, setDescription] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -21,6 +22,7 @@ export const IncidentModal: React.FC<IncidentModalProps> = ({ sheetId, currentUs
     React.useEffect(() => {
         setType('OTHER');
         setPriority('MEDIUM');
+        setAssignedDepartment('');
         setDescription('');
         setError(null);
     }, [sheetId]);
@@ -44,6 +46,7 @@ export const IncidentModal: React.FC<IncidentModalProps> = ({ sheetId, currentUs
                     description,
                     priority,
                     status: 'OPEN',
+                    assigned_department: assignedDepartment || null,
                     created_by: currentUser
                 });
 
@@ -105,6 +108,20 @@ export const IncidentModal: React.FC<IncidentModalProps> = ({ sheetId, currentUs
                                 <option value="CRITICAL">Critical</option>
                             </select>
                         </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Assign To Team (Optional)</label>
+                        <select
+                            value={assignedDepartment}
+                            onChange={(e) => setAssignedDepartment(e.target.value as Department)}
+                            className="w-full p-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-rose-500 outline-none"
+                        >
+                            <option value="">-- Select Department --</option>
+                            {Object.values(Department).map(dept => (
+                                <option key={dept} value={dept}>{dept}</option>
+                            ))}
+                        </select>
                     </div>
 
                     <div>

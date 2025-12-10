@@ -7,6 +7,16 @@ export enum Role {
   VIEWER = 'VIEWER'
 }
 
+export enum Department {
+  MAINTENANCE = 'MAINTENANCE',
+  IT = 'IT',
+  HR = 'HR',
+  LOGISTICS = 'LOGISTICS',
+  OPERATIONS = 'OPERATIONS',
+  QUALITY = 'QUALITY',
+  OTHER = 'OTHER'
+}
+
 export enum SheetStatus {
   DRAFT = 'DRAFT',
   STAGING_VERIFICATION_PENDING = 'STAGING_VERIFICATION_PENDING',
@@ -162,5 +172,7 @@ export interface Incident {
   createdBy: string;
   createdAt: string;
   resolvedAt?: string;
+  resolvedAt?: string;
   resolutionNotes?: string;
+  assignedDepartment?: Department;
 }

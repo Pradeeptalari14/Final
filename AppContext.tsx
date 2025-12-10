@@ -25,7 +25,10 @@ interface AppContextType {
     releaseLock: (sheetId: string) => void;
     addNotification: (msg: string) => void;
     markAllRead: () => void;
+    addNotification: (msg: string) => void;
+    markAllRead: () => void;
     fetchIncidents: () => Promise<void>;
+    resetSystemData: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -322,12 +325,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setNotifications(prev => prev.map(n => ({ ...n, read: true })));
     };
 
+    const resetSystemData = async () => {
+        // Safe delete for demo purposes - clear arrays and try DB delete
+        setSheets([]);
+        setIncidents([]);
+        setAuditLogs([]);
+        setNotifications([]);
+
+        try {
+            await supabase.from('sheets').delete().neq('id', '0');
+            await supabase.from('incidents').delete().neq('id', '0');
+            await supabase.from('logs').delete().neq('id', '0');
+            addLog('SYSTEM_RESET', 'All system data has been cleared by Admin.');
+        } catch (e) {
+            console.error("Failed to clear DB", e);
+        }
+    };
+
     return (
         <AppContext.Provider value={{
             currentUser, users, sheets, notifications, auditLogs, incidents, isLoading,
             login, logout, register, approveUser, deleteUser, resetPassword,
             addSheet, updateSheet, deleteSheet, addComment,
-            acquireLock, releaseLock, addNotification, markAllRead, fetchIncidents
+            acquireLock, releaseLock, addNotification, markAllRead, fetchIncidents, resetSystemData
         }}>
             {children}
         </AppContext.Provider>
