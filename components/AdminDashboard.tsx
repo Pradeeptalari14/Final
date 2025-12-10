@@ -778,8 +778,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                                 const matchStatus = incidentStatusFilter === 'ALL' || inc.status === incidentStatusFilter;
                                 // 2. Dept Filter
                                 const matchDept = incidentDeptFilter === 'ALL' || inc.assignedDepartment === incidentDeptFilter;
-                                // 3. Date Filter
-                                const incDate = new Date(inc.createdAt).toISOString().split('T')[0];
+                                // 3. Date Filter (Safe Parsing)
+                                let incDate = '';
+                                try {
+                                    incDate = inc.createdAt ? new Date(inc.createdAt).toISOString().split('T')[0] : '';
+                                } catch (e) { incDate = ''; }
+
                                 const matchStart = !incidentStartDate || incDate >= incidentStartDate;
                                 const matchEnd = !incidentEndDate || incDate <= incidentEndDate;
 
@@ -791,7 +795,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                                     .filter(inc => {
                                         const matchStatus = incidentStatusFilter === 'ALL' || inc.status === incidentStatusFilter;
                                         const matchDept = incidentDeptFilter === 'ALL' || inc.assignedDepartment === incidentDeptFilter;
-                                        const incDate = new Date(inc.createdAt).toISOString().split('T')[0];
+                                        // Safe Parsing
+                                        let incDate = '';
+                                        try {
+                                            incDate = inc.createdAt ? new Date(inc.createdAt).toISOString().split('T')[0] : '';
+                                        } catch (e) { incDate = ''; }
+
                                         const matchStart = !incidentStartDate || incDate >= incidentStartDate;
                                         const matchEnd = !incidentEndDate || incDate <= incidentEndDate;
                                         return matchStatus && matchDept && matchStart && matchEnd;
@@ -811,7 +820,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                                             <td className="p-4 text-slate-600">
                                                 {inc.createdBy}
                                                 <div className="text-[10px] text-slate-400 mt-1">
-                                                    Created: {new Date(inc.createdAt).toLocaleString()}
+                                                    Created: {inc.createdAt && !isNaN(new Date(inc.createdAt).getTime()) ? new Date(inc.createdAt).toLocaleString() : '-'}
                                                     {inc.occurredAt && !isNaN(new Date(inc.occurredAt).getTime()) && (
                                                         <div className="text-rose-600 font-bold bg-rose-50 px-1 rounded w-fit mt-0.5">
                                                             Time: {new Date(inc.occurredAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
