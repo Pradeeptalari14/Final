@@ -166,14 +166,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
         }
     };
 
-    // FIX: Shift Lead Redirect Effect (Hoisted)
-    React.useEffect(() => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const statusFilter = urlParams.get('status');
-        if (viewMode === 'approvals' && (!statusFilter || statusFilter === 'ALL')) {
-            navigateToDatabase('STAGING_VERIFICATION_PENDING', 'APPROVALS');
-        }
-    }, [viewMode]);
+
 
     // --- ADMIN ACTIONS ---
     const handleUnlockSheet = async (e: React.MouseEvent, sheet: SheetData) => {
@@ -680,6 +673,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
             // 1. Primary Filter: Status from URL (Overrules everything if set and not 'ALL')
             if (statusFilter && statusFilter !== 'ALL') {
                 if (s.status !== statusFilter) return false;
+            } else if (viewMode === 'approvals') {
+                // SPECIAL RULE: Shift Leads "Easy View" - If no filter, show ALL Pending items (Staging OR Loading)
+                const isPending = s.status === SheetStatus.STAGING_VERIFICATION_PENDING || s.status === SheetStatus.LOADING_VERIFICATION_PENDING;
+                if (!isPending) return false;
             }
 
             // 2. Scope Filter: Workflow Constraints
@@ -825,47 +822,35 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                                 ))}
                             </select>
                         </div>
+
+
+                        {/* NEW: Database (Workflow) Filter - Replaces Tabs */}
+                        {viewMode !== 'approvals' && !isLockedWorkflow && (
+                            <div className="flex items-center gap-2">
+                                <Database size={18} className="text-slate-500" />
+                                <span className="text-sm font-bold text-slate-700">Database:</span>
+                                <select
+                                    className="p-1.5 text-sm border border-slate-300 rounded hover:border-blue-400 focus:border-blue-500 outline-none bg-white font-bold text-slate-700"
+                                    value={dbWorkflow}
+                                    onChange={(e) => {
+                                        const val = e.target.value as any;
+                                        setDbWorkflow(val);
+                                        navigateToDatabase(val === 'ALL' ? 'ALL' : 'ALL', val);
+                                    }}
+                                >
+                                    <option value="ALL">All Databases</option>
+                                    <option value="STAGING">Staging Workflow</option>
+                                    <option value="LOADING">Loading Workflow</option>
+                                    <option value="APPROVALS">Shift Lead View</option>
+                                </select>
+                            </div>
+                        )}
                     </div>
 
 
 
                     <div className="flex flex-col gap-4 mb-6">
-                        {/* Workflow Context Tabs - Hidden in Shift Lead View */}
-                        {viewMode !== 'approvals' && !isLockedWorkflow && (
-                            <div className="flex p-1 bg-slate-100 rounded-lg w-fit">
-                                <button
-                                    onClick={() => { setDbWorkflow('ALL'); navigateToDatabase('ALL'); }}
-                                    className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${dbWorkflow === 'ALL' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                                >
-                                    All Sheets
-                                </button>
-                                {/* NEW: PENDING Filter for ALL */}
-                                <button
-                                    onClick={() => navigateToDatabase('PENDING', 'ALL')}
-                                    className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${statusFilter === 'PENDING' ? 'bg-white text-yellow-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                                >
-                                    Pending (All)
-                                </button>
-                                <button
-                                    onClick={() => { setDbWorkflow('STAGING'); navigateToDatabase('ALL', 'STAGING'); }}
-                                    className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${dbWorkflow === 'STAGING' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                                >
-                                    Staging Workflow
-                                </button>
-                                <button
-                                    onClick={() => { setDbWorkflow('LOADING'); navigateToDatabase('ALL', 'LOADING'); }}
-                                    className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${dbWorkflow === 'LOADING' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                                >
-                                    Loading Workflow
-                                </button>
-                                <button
-                                    onClick={() => { setDbWorkflow('APPROVALS'); navigateToDatabase('ALL', 'APPROVALS'); }}
-                                    className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${dbWorkflow === 'APPROVALS' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                                >
-                                    Shift Lead Workflow
-                                </button>
-                            </div>
-                        )}
+
 
                         {/* Status Filters based on Workflow */}
                         <div className="flex items-center gap-2 overflow-x-auto">
@@ -894,6 +879,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                             {/* SHIFT LEAD DEDICATED FILTERS */}
                             {(viewMode === 'approvals' || dbWorkflow === 'APPROVALS') && (
                                 <div className="flex items-center gap-2 overflow-x-auto">
+                                    <button onClick={() => navigateToDatabase('ALL', 'APPROVALS')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${!statusFilter || statusFilter === 'ALL' ? 'bg-purple-100 text-purple-700 border-purple-200' : 'bg-white text-slate-500 border-slate-200'}`}><Filter size={12} /> All Approvals</button>
                                     <button onClick={() => navigateToDatabase('STAGING_VERIFICATION_PENDING', 'APPROVALS')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${statusFilter === 'STAGING_VERIFICATION_PENDING' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300'}`}><ClipboardList size={12} /> Staging Approval</button>
                                     <button onClick={() => navigateToDatabase('LOADING_VERIFICATION_PENDING', 'APPROVALS')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${statusFilter === 'LOADING_VERIFICATION_PENDING' ? 'bg-orange-600 text-white border-orange-600' : 'bg-white text-slate-500 border-slate-200 hover:border-orange-300'}`}><Truck size={12} /> Loading Approval</button>
                                 </div>
@@ -1051,8 +1037,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
+                </div >
+            </div >
         );
     }
 
