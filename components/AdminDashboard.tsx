@@ -2,8 +2,14 @@ import React, { useState, useMemo } from 'react';
 import { useApp } from '../AppContext';
 import { Role, SheetStatus, SheetData } from '../types';
 
-import {
-    Check, X, Clipboard, Truck, Users as UserIcon, Trash2, Database,
+import { Icons } from './icons';
+import * as XLSX from 'xlsx';
+import { WIDGET_COMPONENTS } from './widgets/WidgetMap';
+import { getWidgetMeta } from './widgets/WidgetMetadata';
+import { AddWidgetModal } from './widgets/AddWidgetModal';
+
+const {
+    Check, X, Clipboard, Truck, Users: UserIcon, Trash2, Database,
     FileText, Search, Plus, ArrowUpDown, Download, Printer, Lock, LockOpen, Edit3, Eye, ShieldAlert,
     CheckCircle, XCircle, Key, UserPlus, Activity, ClipboardList,
     FileSpreadsheet, Filter, CheckCircle2, History,
@@ -11,11 +17,7 @@ import {
     AlertCircle, Clock, Calendar, Edit, ShieldCheck, AlertTriangle,
     Minimize2, Maximize2, ChevronDown, CheckSquare, AlignJustify,
     Timer, TableProperties, CalendarRange, MapPin, User
-} from 'lucide-react';
-import * as XLSX from 'xlsx';
-import { WIDGET_COMPONENTS } from './widgets/WidgetMap';
-import { getWidgetMeta } from './widgets/WidgetMetadata';
-import { AddWidgetModal } from './widgets/AddWidgetModal';
+} = Icons;
 
 // --- CONFIGURATION: VIEW FILTERS ---
 // Defines which statuses are visible in each workflow view.
