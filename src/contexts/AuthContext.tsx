@@ -16,8 +16,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setSession(session);
+        // Safe session fetching with error handling
+        supabase.auth.getSession().then(({ data, error }) => {
+            if (error) {
+                console.error("AuthCheck Failed:", error.message);
+            }
+            // Even if error, data.session might be null, which is fine
+            setSession(data?.session ?? null);
+            setLoading(false);
+        }).catch(err => {
+            console.error("Unexpected Auth Error:", err);
             setLoading(false);
         });
 
