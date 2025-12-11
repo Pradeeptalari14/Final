@@ -67,7 +67,7 @@ export default function LoginPage() {
                             <ShieldCheck size={32} />
                         </div>
                         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Unicharm Operations</h1>
-                        <p className="text-slate-500 text-sm">Secure Access Portal</p>
+                        <p className="text-slate-500 text-sm">Secure Access Portal v9.1</p>
                     </div>
 
                     <form onSubmit={handleLogin} className="space-y-6">
