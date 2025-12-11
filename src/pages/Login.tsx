@@ -41,7 +41,19 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4">
+        <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden p-4">
+            {/* Background Image */}
+            <div
+                className="absolute inset-0 z-0"
+                style={{
+                    backgroundImage: "url('/login-bg.png')",
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                }}
+            />
+            {/* Overlay for readability */}
+            <div className="absolute inset-0 bg-slate-950/60 z-0 backdrop-blur-[2px]" />
+
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -50,9 +62,9 @@ export default function LoginPage() {
             >
                 {/* Glass Card */}
                 <div className="absolute inset-0 bg-blue-500/10 blur-3xl rounded-full" />
-                <div className="relative bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl">
+                <div className="relative bg-slate-900/70 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl">
                     <div className="flex flex-col items-center mb-8 space-y-2">
-                        <div className="p-3 bg-blue-500/20 rounded-xl text-blue-400 mb-2">
+                        <div className="p-3 bg-white/10 rounded-xl text-white mb-2">
                             <ShieldCheck size={32} />
                         </div>
                         <h1 className="text-2xl font-bold text-white tracking-tight">Unicharm Operations</h1>
