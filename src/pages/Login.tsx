@@ -46,7 +46,7 @@ export default function LoginPage() {
             <div
                 className="absolute inset-0 z-0"
                 style={{
-                    backgroundImage: "url('/login-bg.png')",
+                    backgroundImage: "url('/bg-v2.png')",
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                 }}
