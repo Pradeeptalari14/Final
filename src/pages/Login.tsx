@@ -41,7 +41,7 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden p-4">
+        <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden p-4 bg-gradient-to-br from-slate-100 to-slate-200">
             {/* Background Image */}
             <div
                 className="absolute inset-0 z-0"
