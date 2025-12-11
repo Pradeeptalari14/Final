@@ -13,7 +13,7 @@ import {
     LayoutDashboard, Settings, LogOut, ChevronLeft, ChevronRight,
     AlertCircle, Clock, Calendar, Edit, ShieldCheck, AlertTriangle,
     Minimize2, Maximize2, ChevronDown, CheckSquare, AlignJustify,
-    Timer, TableProperties, CalendarRange, MapPin, Users
+    Timer, TableProperties, CalendarRange, MapPin, User
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { widgetRegistry, getWidgetDefinition } from './widgets/WidgetRegistry';
@@ -45,7 +45,7 @@ interface ViewConfig {
 
 // Forced HMR Rebuild v3
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onViewSheet, onNavigate, initialSearch = '' }) => {
-    const { users, approveUser, deleteUser, sheets, deleteSheet, register, resetPassword, currentUser, isLoading, updateSheet, resetSystemData } = useApp();
+    const { users, approveUser, deleteUser, sheets, deleteSheet, register, resetPassword, currentUser, isLoading, updateSheet, resetSystemData, auditLogs } = useApp();
 
     const [searchTerm, setSearchTerm] = useState(initialSearch);
     const [filterRole, setFilterRole] = useState<Role | 'ALL'>('ALL');
@@ -113,6 +113,122 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
 
     // Sort State
     const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+
+    // --- HOISTED STATE & LOGIC FOR DATABASE VIEW ---
+    const urlParams = new URLSearchParams(window.location.search);
+    const statusFilter = urlParams.get('status');
+
+    // 1. Optimize Filter Logic with useMemo (Hoisted)
+    const filteredSheets = useMemo(() => {
+        // Only run logic if needed, but hook must run. 
+        // We can just run it always, it's cheap enough or we can check viewMode inside but useMemo still runs.
+        // Let's run it.
+        return sheets.filter(s => {
+            const term = searchTerm.toLowerCase();
+            const matchesSearch =
+                (s.id.toLowerCase().includes(term)) ||
+                (s.supervisorName?.toLowerCase().includes(term)) ||
+                (s.loadingSvName?.toLowerCase().includes(term)) ||
+                (s.completedBy && s.completedBy.toLowerCase().includes(term)) ||
+                (s.driverName && s.driverName.toLowerCase().includes(term)) ||
+                (s.vehicleNo && s.vehicleNo.toLowerCase().includes(term)) ||
+                (s.destination && s.destination.toLowerCase().includes(term));
+
+            // 1. Primary Filter: Status from URL (Overrules everything if set and not 'ALL')
+            if (statusFilter && statusFilter !== 'ALL') {
+                if (s.status !== statusFilter) return false;
+            } else if (viewMode === 'approvals') {
+                // SPECIAL RULE: Shift Leads "Easy View" - If no filter, show ALL Pending items (Staging OR Loading)
+                const isPending = s.status === SheetStatus.STAGING_VERIFICATION_PENDING || s.status === SheetStatus.LOADING_VERIFICATION_PENDING;
+                if (!isPending) return false;
+            }
+
+            // 2. Scope Filter: Workflow Constraints
+            // Does this view have a strict list of allowed statuses?
+            const allowedStatuses = VIEW_SCOPES[viewMode];
+            if (allowedStatuses) {
+                if (!allowedStatuses.includes(s.status)) return false;
+            }
+
+            // 3. Date Range Filter
+            if (dateRange.start) {
+                const sheetDate = new Date(s.date).getTime();
+                const startDate = new Date(dateRange.start).getTime();
+                if (sheetDate < startDate) return false;
+            }
+            if (dateRange.end) {
+                const sheetDate = new Date(s.date).getTime();
+                const endDate = new Date(dateRange.end).getTime();
+                if (sheetDate > endDate) return false;
+            }
+
+            // 4. Supervisor Filter
+            if (supervisorFilter !== 'ALL') {
+                const svName = resolveUserName(s.supervisorName, s.createdBy)?.toLowerCase() || '';
+                const ldgName = resolveUserName(s.loadingSvName, s.completedBy)?.toLowerCase() || '';
+                if (!svName.includes(supervisorFilter.toLowerCase()) && !ldgName.includes(supervisorFilter.toLowerCase())) return false;
+            }
+
+            // 5. Location Filter
+            if (locationFilter !== 'ALL') {
+                if (!s.destination || !s.destination.toLowerCase().includes(locationFilter.toLowerCase())) return false;
+            }
+
+            // 6. NEW: Duration Filter
+            if (durationFilter !== 'ALL') {
+                if (!s.createdAt || !s.completedAt) return false; // Must be completed to have duration
+                const diff = new Date(s.completedAt).getTime() - new Date(s.createdAt).getTime();
+                const mins = diff / 60000;
+
+                if (durationFilter === 'UNDER_30' && mins >= 30) return false;
+                if (durationFilter === '30_60' && (mins < 30 || mins > 60)) return false;
+                if (durationFilter === 'OVER_60' && mins <= 60) return false;
+                if (durationFilter === 'OVER_120' && mins <= 120) return false;
+            }
+
+            return matchesSearch;
+        }).sort((a, b) => {
+            if (!sortConfig) return 0;
+            const { key, direction } = sortConfig;
+            let valA: any = a[key as keyof SheetData];
+            let valB: any = b[key as keyof SheetData];
+
+            if (key === 'supervisorName') valA = resolveUserName(a.supervisorName, a.createdBy) || '';
+            if (key === 'supervisorName') valB = resolveUserName(b.supervisorName, b.createdBy) || '';
+            if (key === 'loadingSvName') valA = resolveUserName(a.loadingSvName, a.completedBy) || '';
+            if (key === 'loadingSvName') valB = resolveUserName(b.loadingSvName, b.completedBy) || '';
+
+            if (key === 'date' || key.includes('Time') || key.includes('At')) {
+                const dA = new Date(valA).getTime();
+                const dB = new Date(valB).getTime();
+                return direction === 'asc' ? dA - dB : dB - dA;
+            }
+
+            if (typeof valA === 'string' && typeof valB === 'string') {
+                return direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            }
+            if (valA < valB) return direction === 'asc' ? -1 : 1;
+            if (valA > valB) return direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }, [sheets, searchTerm, statusFilter, viewMode, dateRange, supervisorFilter, locationFilter, durationFilter, sortConfig]);
+
+    // 2. Dynamic Option Generation (Memoized)
+    // Ensures dropdowns include historical values from Sheets, not just current Users
+    const uniqueSupervisors = useMemo(() => {
+        const names = new Set<string>();
+        sheets.forEach(s => {
+            const sv = resolveUserName(s.supervisorName, s.createdBy);
+            if (sv) names.add(sv);
+            const ldg = resolveUserName(s.loadingSvName, s.completedBy);
+            if (ldg) names.add(ldg);
+        });
+        return Array.from(names).sort();
+    }, [sheets]);
+
+    const uniqueLocations = useMemo(() => {
+        return Array.from(new Set(sheets.map(s => s.destination).filter(Boolean))).sort();
+    }, [sheets]);
 
     const handleSort = (key: string) => {
         let direction: 'asc' | 'desc' = 'asc';
@@ -589,7 +705,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
     }
     // --- VIEW 3: AUDIT LOGS ---
     if (viewMode === 'audit') {
-        const { auditLogs } = useApp();
         const filteredLogs = auditLogs.filter(log =>
             log.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
             log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -657,129 +772,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
         const isAdmin = currentUser?.role === Role.ADMIN;
         const isShiftLead = currentUser?.role === Role.SHIFT_LEAD;
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const statusFilter = urlParams.get('status');
 
-
-
-        if (!isAdmin && !isShiftLead && viewMode !== 'staging-db' && viewMode !== 'loading-db') {
-            return (
-                <div className="flex flex-col items-center justify-center p-12 h-96 text-slate-400">
-                    <ShieldAlert size={48} className="mb-4 text-slate-300" />
-                    <h3 className="text-lg font-bold">Access Denied</h3>
-                    <p className="text-sm">You do not have permission to view the database.</p>
-                </div>
-            );
-        }
-
-        // 1. Optimize Filter Logic with useMemo
-        const filteredSheets = useMemo(() => {
-            return sheets.filter(s => {
-                const term = searchTerm.toLowerCase();
-                const matchesSearch =
-                    (s.id.toLowerCase().includes(term)) ||
-                    (s.supervisorName?.toLowerCase().includes(term)) ||
-                    (s.loadingSvName?.toLowerCase().includes(term)) ||
-                    (s.completedBy && s.completedBy.toLowerCase().includes(term)) ||
-                    (s.driverName && s.driverName.toLowerCase().includes(term)) ||
-                    (s.vehicleNo && s.vehicleNo.toLowerCase().includes(term)) ||
-                    (s.destination && s.destination.toLowerCase().includes(term));
-
-                // 1. Primary Filter: Status from URL (Overrules everything if set and not 'ALL')
-                if (statusFilter && statusFilter !== 'ALL') {
-                    if (s.status !== statusFilter) return false;
-                } else if (viewMode === 'approvals') {
-                    // SPECIAL RULE: Shift Leads "Easy View" - If no filter, show ALL Pending items (Staging OR Loading)
-                    const isPending = s.status === SheetStatus.STAGING_VERIFICATION_PENDING || s.status === SheetStatus.LOADING_VERIFICATION_PENDING;
-                    if (!isPending) return false;
-                }
-
-                // 2. Scope Filter: Workflow Constraints
-                // Does this view have a strict list of allowed statuses?
-                const allowedStatuses = VIEW_SCOPES[viewMode];
-                if (allowedStatuses) {
-                    if (!allowedStatuses.includes(s.status)) return false;
-                }
-
-                // 3. Date Range Filter
-                if (dateRange.start) {
-                    const sheetDate = new Date(s.date).getTime();
-                    const startDate = new Date(dateRange.start).getTime();
-                    if (sheetDate < startDate) return false;
-                }
-                if (dateRange.end) {
-                    const sheetDate = new Date(s.date).getTime();
-                    const endDate = new Date(dateRange.end).getTime();
-                    if (sheetDate > endDate) return false;
-                }
-
-                // 4. Supervisor Filter
-                if (supervisorFilter !== 'ALL') {
-                    const svName = resolveUserName(s.supervisorName, s.createdBy)?.toLowerCase() || '';
-                    const ldgName = resolveUserName(s.loadingSvName, s.completedBy)?.toLowerCase() || '';
-                    if (!svName.includes(supervisorFilter.toLowerCase()) && !ldgName.includes(supervisorFilter.toLowerCase())) return false;
-                }
-
-                // 5. Location Filter
-                if (locationFilter !== 'ALL') {
-                    if (!s.destination || !s.destination.toLowerCase().includes(locationFilter.toLowerCase())) return false;
-                }
-
-                // 6. NEW: Duration Filter
-                if (durationFilter !== 'ALL') {
-                    if (!s.createdAt || !s.completedAt) return false; // Must be completed to have duration
-                    const diff = new Date(s.completedAt).getTime() - new Date(s.createdAt).getTime();
-                    const mins = diff / 60000;
-
-                    if (durationFilter === 'UNDER_30' && mins >= 30) return false;
-                    if (durationFilter === '30_60' && (mins < 30 || mins > 60)) return false;
-                    if (durationFilter === 'OVER_60' && mins <= 60) return false;
-                    if (durationFilter === 'OVER_120' && mins <= 120) return false;
-                }
-
-                return matchesSearch;
-            }).sort((a, b) => {
-                if (!sortConfig) return 0;
-                const { key, direction } = sortConfig;
-                let valA: any = a[key as keyof SheetData];
-                let valB: any = b[key as keyof SheetData];
-
-                if (key === 'supervisorName') valA = resolveUserName(a.supervisorName, a.createdBy) || '';
-                if (key === 'supervisorName') valB = resolveUserName(b.supervisorName, b.createdBy) || '';
-                if (key === 'loadingSvName') valA = resolveUserName(a.loadingSvName, a.completedBy) || '';
-                if (key === 'loadingSvName') valB = resolveUserName(b.loadingSvName, b.completedBy) || '';
-
-                if (key === 'date' || key.includes('Time') || key.includes('At')) {
-                    const dA = new Date(valA).getTime();
-                    const dB = new Date(valB).getTime();
-                    return direction === 'asc' ? dA - dB : dB - dA;
-                }
-
-                if (typeof valA === 'string' && typeof valB === 'string') {
-                    return direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
-                }
-                if (valA < valB) return direction === 'asc' ? -1 : 1;
-                if (valA > valB) return direction === 'asc' ? 1 : -1;
-                return 0;
-            });
-        }, [sheets, searchTerm, statusFilter, viewMode, dateRange, supervisorFilter, locationFilter, durationFilter, sortConfig]);
-
-        // 2. Dynamic Option Generation (Memoized)
-        // Ensures dropdowns include historical values from Sheets, not just current Users
-        const uniqueSupervisors = useMemo(() => {
-            const names = new Set<string>();
-            sheets.forEach(s => {
-                const sv = resolveUserName(s.supervisorName, s.createdBy);
-                if (sv) names.add(sv);
-                const ldg = resolveUserName(s.loadingSvName, s.completedBy);
-                if (ldg) names.add(ldg);
-            });
-            return Array.from(names).sort();
-        }, [sheets]);
-
-        const uniqueLocations = useMemo(() => {
-            return Array.from(new Set(sheets.map(s => s.destination).filter(Boolean))).sort();
-        }, [sheets]);
 
         return (
             <div className="space-y-6">
@@ -899,7 +892,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ viewMode, onView
 
                         {/* Placeholder for Future Supervisor Filter -> ACTIVATED */}
                         <div className="flex items-center gap-2">
-                            <Users size={18} className="text-slate-500" />
+                            <UserIcon size={18} className="text-slate-500" />
                             <span className="text-sm font-bold text-slate-700">Supervisor:</span>
                             <select
                                 className="p-1.5 text-sm border border-slate-300 rounded hover:border-blue-400 focus:border-blue-500 outline-none bg-white"
