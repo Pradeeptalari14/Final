@@ -51,49 +51,48 @@ export default function LoginPage() {
                     backgroundPosition: 'center',
                 }}
             />
-            {/* Overlay for readability */}
-            <div className="absolute inset-0 bg-slate-950/60 z-0 backdrop-blur-[2px]" />
+            {/* Overlay - lighter for white theme */}
+            <div className="absolute inset-0 bg-slate-900/40 z-0 backdrop-blur-[2px]" />
 
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
-                className="w-full max-w-md relative"
+                className="w-full max-w-md relative z-10"
             >
-                {/* Glass Card */}
-                <div className="absolute inset-0 bg-blue-500/10 blur-3xl rounded-full" />
-                <div className="relative bg-slate-900/70 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl">
+                {/* Premium White Card */}
+                <div className="relative bg-white/95 backdrop-blur-xl border border-white/20 rounded-2xl p-8 shadow-2xl">
                     <div className="flex flex-col items-center mb-8 space-y-2">
-                        <div className="p-3 bg-white/10 rounded-xl text-white mb-2">
+                        <div className="p-3 bg-blue-600/10 rounded-xl text-blue-600 mb-2">
                             <ShieldCheck size={32} />
                         </div>
-                        <h1 className="text-2xl font-bold text-white tracking-tight">Unicharm Operations</h1>
-                        <p className="text-slate-400 text-sm">Secure Access Portal</p>
+                        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Unicharm Operations</h1>
+                        <p className="text-slate-500 text-sm">Secure Access Portal</p>
                     </div>
 
                     <form onSubmit={handleLogin} className="space-y-6">
                         {error && (
-                            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2 text-red-400 text-sm">
+                            <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-600 text-sm">
                                 <AlertCircle size={16} /> {error}
                             </div>
                         )}
                         <div className="space-y-2">
-                            <label className="text-xs font-medium text-slate-300 uppercase tracking-wider">Email or Username</label>
+                            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Email or Username</label>
                             <input
                                 type="text"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="w-full bg-slate-950/50 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all font-medium"
                                 placeholder="Enter your credentials..."
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-xs font-medium text-slate-300 uppercase tracking-wider">Password</label>
+                            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Password</label>
                             <input
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full bg-slate-950/50 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all font-medium"
                                 placeholder="••••••••"
                             />
                         </div>
@@ -101,7 +100,7 @@ export default function LoginPage() {
                         <button
                             disabled={isLoading}
                             className={cn(
-                                "w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium rounded-lg transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2",
+                                "w-full py-3 px-4 bg-gradient-to-r from-blue-700 to-indigo-700 hover:from-blue-800 hover:to-indigo-800 text-white font-bold rounded-lg transition-all shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2",
                                 isLoading && "opacity-80 cursor-wait"
                             )}
                         >
