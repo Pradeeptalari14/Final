@@ -100,10 +100,10 @@ export default function DashboardOverview() {
                 s.status === SheetStatus.LOADING_VERIFICATION_PENDING
             ).length;
             const stagingApprCount = relevantSheets.filter(s => s.status === SheetStatus.DRAFT || s.status === SheetStatus.STAGING_VERIFICATION_PENDING).length;
-            const loadingApprCount = relevantSheets.filter(s => s.status === SheetStatus.LOCKED || s.status === SheetStatus.LOADING_VERIFICATION_PENDING).length;
+            const loadingApprCount = relevantSheets.filter(s => s.status === SheetStatus.LOADING_VERIFICATION_PENDING).length;
             const completedCount = relevantSheets.filter(s => s.status === SheetStatus.COMPLETED).length;
             const stagingRejCount = relevantSheets.filter(s => s.status === SheetStatus.DRAFT && isRejected(s)).length;
-            const loadingRejCount = relevantSheets.filter(s => (s.status === SheetStatus.LOCKED || s.status === SheetStatus.LOADING_VERIFICATION_PENDING) && isRejected(s)).length;
+            const loadingRejCount = relevantSheets.filter(s => (s.status === SheetStatus.LOADING_VERIFICATION_PENDING) && isRejected(s)).length;
             const allDoneCount = relevantSheets.filter(s => s.status === SheetStatus.COMPLETED).length;
 
             return [

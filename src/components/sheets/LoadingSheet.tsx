@@ -802,7 +802,7 @@ export default function LoadingSheet() {
                             <thead><tr className="bg-slate-50 text-slate-500"><th className="p-2 text-left border-r w-8">Sr.no</th><th className="p-2 text-left border-r min-w-[120px]">SKU Name</th>{Array.from({ length: 10 }).map((_, i) => <th key={i} className="p-2 text-center border-r w-8">{i + 1}</th>)}<th className="p-2 text-center w-12">Total</th></tr></thead>
                             <tbody>
                                 {currentSheet.additionalItems?.map((item) => (
-                                    <tr key={item.id} className="border-t border-slate-100"><td className="p-2 text-center border-r text-slate-900 font-bold">{item.id}</td><td className="p-0 border-r"><input type="text" className="w-full p-2 outline-none text-slate-900 font-medium" placeholder="SKU Name" value={item.skuName} onChange={e => handleAdditionalChange(item.id, 'skuName', e.target.value)} disabled={isCompleted} /></td>{item.counts.map((c, idx) => (<td key={idx} className="p-0 border-r"><input type="number" className="w-full p-2 text-center outline-none text-slate-900 font-medium" value={c || ''} onChange={e => handleAdditionalChange(item.id, 'count', e.target.value, idx)} disabled={isCompleted} /></td>))}<td className="p-2 text-center font-bold text-slate-900">{item.total}</td></tr>
+                                    <tr key={item.id} className="border-t border-slate-100"><td className="p-2 text-center border-r text-slate-900 font-bold">{item.id}</td><td className="p-0 border-r"><input type="text" className="w-full p-2 outline-none text-slate-900 font-medium" placeholder="SKU Name" value={item.skuName} onChange={e => handleAdditionalChange(item.id, 'skuName', e.target.value)} disabled={isLocked} /></td>{item.counts.map((c, idx) => (<td key={idx} className="p-0 border-r"><input type="number" className="w-full p-2 text-center outline-none text-slate-900 font-medium" value={c || ''} onChange={e => handleAdditionalChange(item.id, 'count', e.target.value, idx)} disabled={isLocked} /></td>))}<td className="p-2 text-center font-bold text-slate-900">{item.total}</td></tr>
                                 ))}
                             </tbody>
                             <tfoot>
@@ -848,7 +848,7 @@ export default function LoadingSheet() {
                             ))}
                         </div>
 
-                        <textarea className="w-full h-24 p-3 border border-slate-300 rounded-lg text-sm outline-none bg-white focus:ring-2 focus:ring-amber-500/20" placeholder="Enter other remarks regarding shortage/excess..." value={remarks} onChange={e => setRemarks(e.target.value)} disabled={isCompleted}></textarea>
+                        <textarea className="w-full h-24 p-3 border border-slate-300 rounded-lg text-sm outline-none bg-white focus:ring-2 focus:ring-amber-500/20" placeholder="Enter other remarks regarding shortage/excess..." value={remarks} onChange={e => setRemarks(e.target.value)} disabled={isLocked}></textarea>
                     </div>
                 </div>
 
@@ -864,10 +864,10 @@ export default function LoadingSheet() {
 
                 <div className="p-6 border-t border-slate-200">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <HeaderField label="Supervisor Name" icon={User}><input type="text" value={svName} onChange={e => setSvName(e.target.value)} disabled={isCompleted} className="w-full text-sm outline-none" /></HeaderField>
-                        <HeaderField label="Supervisor Sign" icon={FileCheck}><input type="text" value={svSign} onChange={e => setSvSign(e.target.value)} disabled={isCompleted} className="w-full text-sm outline-none font-script text-lg" placeholder="Sign" /></HeaderField>
-                        <HeaderField label="SL Sign" icon={FileCheck}><input type="text" value={slSign} onChange={e => setSlSign(e.target.value)} disabled={isCompleted} className="w-full text-sm outline-none font-script text-lg" placeholder="Sign" /></HeaderField>
-                        <HeaderField label="DEO Sign" icon={FileCheck}><input type="text" value={deoSign} onChange={e => setDeoSign(e.target.value)} disabled={isCompleted} className="w-full text-sm outline-none font-script text-lg" placeholder="Sign" /></HeaderField>
+                        <HeaderField label="Supervisor Name" icon={User}><input type="text" value={svName} onChange={e => setSvName(e.target.value)} disabled={isLocked} className="w-full text-sm outline-none" /></HeaderField>
+                        <HeaderField label="Supervisor Sign" icon={FileCheck}><input type="text" value={svSign} onChange={e => setSvSign(e.target.value)} disabled={isLocked} className="w-full text-sm outline-none font-script text-lg" placeholder="Sign" /></HeaderField>
+                        <HeaderField label="SL Sign" icon={FileCheck}><input type="text" value={slSign} onChange={e => setSlSign(e.target.value)} disabled={isLocked} className="w-full text-sm outline-none font-script text-lg" placeholder="Sign" /></HeaderField>
+                        <HeaderField label="DEO Sign" icon={FileCheck}><input type="text" value={deoSign} onChange={e => setDeoSign(e.target.value)} disabled={isLocked} className="w-full text-sm outline-none font-script text-lg" placeholder="Sign" /></HeaderField>
                     </div>
                 </div>
 
