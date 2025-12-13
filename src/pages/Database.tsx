@@ -1,15 +1,17 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useData } from "@/contexts/DataContext";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Filter, RefreshCw, Download } from "lucide-react";
+import { Plus, Search, Filter, RefreshCw, Download, X } from "lucide-react";
 import { SheetStatus } from "@/types";
 import * as XLSX from 'xlsx';
 
 export default function DatabasePage() {
     const { sheets, loading, refreshSheets, loadMoreArchived } = useData();
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const activeFilter = searchParams.get('filter');
 
     if (loading) return <div className="p-8 text-slate-400">Loading Database...</div>;
 
@@ -23,8 +25,37 @@ export default function DatabasePage() {
         }
     };
 
+    // Filter Logic
+    const filteredSheets = sheets.filter(sheet => {
+        if (!activeFilter) return true;
+
+        // Exact Status Match
+        if (Object.values(SheetStatus).includes(activeFilter as SheetStatus)) {
+            return sheet.status === activeFilter;
+        }
+
+        // Custom Filters for Shift Lead Dashboard
+        if (activeFilter === 'REJECTED_STAGING') {
+            return (sheet.status === SheetStatus.DRAFT || sheet.status === SheetStatus.STAGING_VERIFICATION_PENDING) &&
+                sheet.rejectionReason && sheet.rejectionReason.trim() !== '';
+        }
+        if (activeFilter === 'REJECTED_LOADING') {
+            return (sheet.status === SheetStatus.LOCKED || sheet.status === SheetStatus.LOADING_VERIFICATION_PENDING) &&
+                sheet.rejectionReason && sheet.rejectionReason.trim() !== '';
+        }
+
+        // Add more custom filters as needed (e.g., READY, LOCKED for Admin if not handled by status)
+        if (activeFilter === 'READY') return sheet.status === SheetStatus.LOCKED;
+
+        return true;
+    });
+
+    const clearFilter = () => {
+        setSearchParams({});
+    };
+
     const handleExport = () => {
-        const exportData = sheets.map(sheet => ({
+        const exportData = filteredSheets.map(sheet => ({
             ID: sheet.id,
             Date: new Date(sheet.date).toLocaleDateString(),
             Supervisor: sheet.supervisorName,
@@ -43,8 +74,15 @@ export default function DatabasePage() {
     return (
         <div className="p-8 space-y-6">
             <div className="flex items-center justify-between">
-                <h2 className="text-3xl font-bold text-white tracking-tight">Database</h2>
-                <p className="text-slate-400">Manage staging and loading sheets.</p>
+                <div>
+                    <h2 className="text-3xl font-bold text-white tracking-tight">Database</h2>
+                    <p className="text-slate-400">Manage staging and loading sheets.</p>
+                </div>
+                {activeFilter && (
+                    <Button variant="ghost" onClick={clearFilter} className="text-red-400 hover:text-red-300 hover:bg-red-900/10 gap-2">
+                        <X size={16} /> Clear Filter
+                    </Button>
+                )}
             </div>
             <div className="flex gap-2">
                 <Button variant="outline" size="icon" onClick={() => refreshSheets()} className="border-white/10 text-slate-400 hover:text-white">
@@ -86,26 +124,48 @@ export default function DatabasePage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {sheets.length === 0 ? (
+                        {filteredSheets.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={6} className="text-center h-24 text-slate-500">
-                                    No sheets found.
+                                    No sheets found matching filter.
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            sheets.map((sheet) => (
-                                <TableRow key={sheet.id}>
+                            filteredSheets.map((sheet) => (
+                                <TableRow
+                                    key={sheet.id}
+                                    className="cursor-pointer hover:bg-white/5"
+                                    onClick={() => {
+                                        const isStaging = sheet.status === SheetStatus.DRAFT || sheet.status === SheetStatus.STAGING_VERIFICATION_PENDING;
+                                        navigate(isStaging ? `/sheets/staging/${sheet.id}` : `/sheets/loading/${sheet.id}`);
+                                    }}
+                                >
                                     <TableCell className="font-medium text-white">{sheet.id}</TableCell>
                                     <TableCell>{sheet.supervisorName}</TableCell>
                                     <TableCell>{sheet.destination}</TableCell>
                                     <TableCell>{new Date(sheet.date).toLocaleDateString()}</TableCell>
                                     <TableCell>
-                                        <Badge variant={getStatusVariant(sheet.status)}>
-                                            {sheet.status.replace(/_/g, ' ')}
-                                        </Badge>
+                                        <div className="flex items-center gap-2">
+                                            <Badge variant={getStatusVariant(sheet.status)}>
+                                                {sheet.status.replace(/_/g, ' ')}
+                                            </Badge>
+                                            {sheet.rejectionReason && (
+                                                <Badge variant="destructive" className="text-[10px] px-1.5 py-0.5">REJECTED</Badge>
+                                            )}
+                                        </div>
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        <Button variant="ghost" size="sm">View</Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                const isStaging = sheet.status === SheetStatus.DRAFT || sheet.status === SheetStatus.STAGING_VERIFICATION_PENDING;
+                                                navigate(isStaging ? `/sheets/staging/${sheet.id}` : `/sheets/loading/${sheet.id}`);
+                                            }}
+                                        >
+                                            View
+                                        </Button>
                                     </TableCell>
                                 </TableRow>
                             ))

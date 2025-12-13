@@ -6,10 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
-import { UserPlus, Save, Loader2 } from 'lucide-react';
+import { Save, Loader2, Plus } from 'lucide-react';
 
 export default function SettingsPage() {
-    const { devRole, setDevRole, refreshUsers, users } = useData();
+    const { devRole, setDevRole, refreshUsers, users, settings, updateSettings } = useData();
     const { addToast } = useToast();
 
     // Add User Form State
@@ -19,7 +19,7 @@ export default function SettingsPage() {
         username: '',
         email: '',
         password: '',
-        role: Role.VIEWER
+        role: Role.STAGING_SUPERVISOR
     });
 
     const handleAddUser = async (e: React.FormEvent) => {
@@ -33,17 +33,14 @@ export default function SettingsPage() {
             }
 
             // 1. Create User in Supabase Auth (Simulated or Real)
-            // Note: In a real app, we'd use supabase.auth.admin.createUser but that requires service role key
-            // For now, we are just storing in 'users' table as per the existing lightweight auth pattern
-
             const userData = {
                 id: crypto.randomUUID(),
                 username: newUser.username,
                 email: newUser.email,
-                fullName: newUser.username, // Defaulting full name to username for simplicity
+                fullName: newUser.username,
                 role: newUser.role,
                 isApproved: true,
-                password: newUser.password // Legacy password for simple auth
+                password: newUser.password
             };
 
             const { error } = await supabase.from('users').insert({
@@ -56,7 +53,7 @@ export default function SettingsPage() {
             addToast('success', `User ${newUser.username} created successfully!`);
             await refreshUsers();
             setIsAddingUser(false);
-            setNewUser({ username: '', email: '', password: '', role: Role.VIEWER });
+            setNewUser({ username: '', email: '', password: '', role: Role.STAGING_SUPERVISOR });
 
         } catch (error: any) {
             addToast('error', error.message || "Failed to create user");
@@ -69,41 +66,173 @@ export default function SettingsPage() {
         <div className="p-8 space-y-6 pb-20">
             <h2 className="text-3xl font-bold text-white tracking-tight">Settings</h2>
 
+            {/* PERSONALIZATION SECTION */}
             <Card className="border-white/5 bg-slate-900/40">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                        Developer Tools <Badge variant="warning">Debug Mode</Badge>
+                        Personalization <Badge variant="secondary" className="bg-blue-500/10 text-blue-400 border-blue-500/20">New</Badge>
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+
+                    {/* Theme & Accent */}
+                    <div className="space-y-3">
+                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">Appearance</label>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="bg-slate-950/30 p-4 rounded-lg border border-white/5 flex items-center justify-between">
+                                <div>
+                                    <div className="text-sm text-slate-200 font-medium">Theme Mode</div>
+                                    <div className="text-xs text-slate-500">Light or Dark interface</div>
+                                </div>
+                                <div className="flex bg-slate-900 p-1 rounded-lg border border-white/5">
+                                    <button
+                                        onClick={() => updateSettings({ theme: 'light' })}
+                                        className={`px-3 py-1.5 rounded-md text-xs transition-all ${settings?.theme === 'light' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                                    >Light</button>
+                                    <button
+                                        onClick={() => updateSettings({ theme: 'dark' })}
+                                        className={`px-3 py-1.5 rounded-md text-xs transition-all ${settings?.theme === 'dark' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                                    >Dark</button>
+                                </div>
+                            </div>
+
+                            <div className="bg-slate-950/30 p-4 rounded-lg border border-white/5 flex items-center justify-between">
+                                <div>
+                                    <div className="text-sm text-slate-200 font-medium">Accent Color</div>
+                                    <div className="text-xs text-slate-500">Primary highlight color</div>
+                                </div>
+                                <div className="flex gap-2">
+                                    {['blue', 'emerald', 'purple'].map((color) => (
+                                        <button
+                                            key={color}
+                                            onClick={() => updateSettings({ accentColor: color as any })}
+                                            className={`w-8 h-8 rounded-full border-2 transition-all ${settings?.accentColor === color ? 'border-white scale-110' : 'border-transparent hover:scale-105'}`}
+                                            style={{ backgroundColor: color === 'blue' ? '#3b82f6' : color === 'emerald' ? '#10b981' : '#a855f7' }}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* View Options */}
+                    <div className="space-y-3">
+                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">View Options</label>
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                            {/* Density */}
+                            <div className="bg-slate-950/30 p-4 rounded-lg border border-white/5">
+                                <div className="mb-3">
+                                    <div className="text-sm text-slate-200 font-medium">Density</div>
+                                    <div className="text-xs text-slate-500">Spacing in tables/lists</div>
+                                </div>
+                                <div className="flex bg-slate-900 p-1 rounded-lg border border-white/5 w-full">
+                                    <button
+                                        onClick={() => updateSettings({ density: 'compact' })}
+                                        className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.density === 'compact' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                                    >Compact</button>
+                                    <button
+                                        onClick={() => updateSettings({ density: 'comfortable' })}
+                                        className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.density === 'comfortable' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                                    >Comfy</button>
+                                </div>
+                            </div>
+
+                            {/* Font Size */}
+                            <div className="bg-slate-950/30 p-4 rounded-lg border border-white/5">
+                                <div className="mb-3">
+                                    <div className="text-sm text-slate-200 font-medium">Text Size</div>
+                                    <div className="text-xs text-slate-500">Global font scaling</div>
+                                </div>
+                                <div className="flex bg-slate-900 p-1 rounded-lg border border-white/5 w-full">
+                                    <button
+                                        onClick={() => updateSettings({ fontSize: 'small' })}
+                                        className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.fontSize === 'small' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                                    >A-</button>
+                                    <button
+                                        onClick={() => updateSettings({ fontSize: 'medium' })}
+                                        className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.fontSize === 'medium' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                                    >A</button>
+                                    <button
+                                        onClick={() => updateSettings({ fontSize: 'large' })}
+                                        className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.fontSize === 'large' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                                    >A+</button>
+                                </div>
+                            </div>
+
+                            {/* Sidebar */}
+                            <div className="bg-slate-950/30 p-4 rounded-lg border border-white/5">
+                                <div className="mb-3">
+                                    <div className="text-sm text-slate-200 font-medium">Sidebar</div>
+                                    <div className="text-xs text-slate-500">Default menu state</div>
+                                </div>
+                                <div className="flex bg-slate-900 p-1 rounded-lg border border-white/5 w-full">
+                                    <button
+                                        onClick={() => updateSettings({ sidebarCollapsed: false })}
+                                        className={`flex-1 py-1.5 rounded-md text-xs transition-all ${!settings?.sidebarCollapsed ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                                    >Expanded</button>
+                                    <button
+                                        onClick={() => updateSettings({ sidebarCollapsed: true })}
+                                        className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.sidebarCollapsed ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                                    >Collapsed</button>
+                                </div>
+                            </div>
+
+                            {/* Default Tab */}
+                            <div className="bg-slate-950/30 p-4 rounded-lg border border-white/5">
+                                <div className="mb-3">
+                                    <div className="text-sm text-slate-200 font-medium">Default Tab</div>
+                                    <div className="text-xs text-slate-500">Admin landing page</div>
+                                </div>
+                                <select
+                                    className="w-full bg-slate-900 border border-white/5 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    value={settings?.defaultTab || 'staging_db'}
+                                    onChange={(e) => updateSettings({ defaultTab: e.target.value })}
+                                >
+                                    <option value="staging_db">Staging</option>
+                                    <option value="loading_db">Loading</option>
+                                    <option value="shift_lead_db">Shift Lead</option>
+                                    <option value="user_management">Users</option>
+                                </select>
+                            </div>
+
+                        </div>
+                    </div>
+
+                </CardContent>
+            </Card>
+
+            {/* DEVELOPER TOOLS (Compacted) */}
+            <Card className="border-white/5 bg-slate-900/40 opacity-75 hover:opacity-100 transition-opacity">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-sm uppercase tracking-wider text-slate-500">
+                        Developer Tools
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <p className="text-slate-400">
-                        Since user management is currently simplified, you can simulate different roles here to test role-based permissions (like Shift Lead approval).
+                    <p className="text-xs text-slate-400">
+                        Simulate roles to verify permissions across the app.
                     </p>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                         {Object.values(Role).map((role) => (
                             <button
                                 key={role}
                                 onClick={() => setDevRole(role)}
                                 className={`
-                                    p-4 rounded-lg border text-left transition-all
+                                    p-3 rounded-lg border text-left transition-all text-xs
                                     ${devRole === role
-                                        ? 'bg-blue-600/20 border-blue-500 text-blue-200 shadow-[0_0_15px_rgba(59,130,246,0.2)]'
+                                        ? 'bg-blue-600/20 border-blue-500 text-blue-200 shadow-sm'
                                         : 'bg-slate-950/50 border-white/5 text-slate-400 hover:bg-white/5 hover:border-white/10'
                                     }
                                 `}
                             >
                                 <div className="font-semibold">{role.replace(/_/g, ' ')}</div>
-                                <div className="text-xs mt-1 opacity-70">
-                                    {role === Role.SHIFT_LEAD ? 'Can approve Staging Sheets' :
-                                        role === Role.LOADING_SUPERVISOR ? 'Can verify Loading Sheets' : 'Standard Access'}
-                                </div>
                             </button>
                         ))}
                     </div>
                 </CardContent>
             </Card>
 
+            {/* ADMIN AREA: USER MANAGEMENT */}
             {(devRole === Role.ADMIN) && (
                 <Card className="border-emerald-500/20 bg-emerald-950/10">
                     <CardHeader className="flex flex-row items-center justify-between">
@@ -113,7 +242,7 @@ export default function SettingsPage() {
                             size="sm"
                             className="bg-emerald-600 hover:bg-emerald-500 text-white"
                         >
-                            <UserPlus size={16} className="mr-2" />
+                            <Plus size={16} className="mr-2" />
                             {isAddingUser ? 'Cancel' : 'Add User'}
                         </Button>
                     </CardHeader>

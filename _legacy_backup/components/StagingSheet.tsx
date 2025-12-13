@@ -173,7 +173,8 @@ export const StagingSheet: React.FC<Props> = ({ existingSheet, onCancel, onLock,
                 return { ...item, casesPerPlt: c, fullPlt: f, loose: l, ttlCases: (c * f) + l };
             });
 
-            const sheetId = existingSheet?.id || `SH - ${Date.now()} `;
+            // Fixed ID logic to prevent duplicates
+            const sheetId = existingSheet?.id || `SH-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
             if (lock) {
                 const hasLock = acquireLock(sheetId);

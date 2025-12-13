@@ -14,16 +14,66 @@ interface DataContextType {
     updateSheet: (sheet: SheetData) => Promise<void>;
     devRole: string | null;
     setDevRole: (role: string) => void;
+    shift: string;
+    setShift: (shift: string) => void;
+    currentUser: User | null;
+    setCurrentUser: (user: User | null) => void;
+    resetAllData: () => Promise<void>;
+    settings: AppSettings;
+    updateSettings: (newSettings: Partial<AppSettings>) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
+
+const defaultSettings: AppSettings = {
+    theme: 'dark',
+    accentColor: 'blue',
+    density: 'comfortable',
+    sidebarCollapsed: false,
+    fontSize: 'medium',
+    defaultTab: 'dashboard'
+};
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
     const [sheets, setSheets] = useState<SheetData[]>([]);
     const [users, setUsers] = useState<User[]>([]);
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(true);
-    const [devRole, setDevRole] = useState<string | null>('STAGING_SUPERVISOR'); // Default for dev
+    const [devRole, setDevRole] = useState<string | null>(null); // Default null to force login
+    const [shift, setShift] = useState<string>('A');
+
+    // Settings State
+    const [settings, setSettings] = useState<AppSettings>(() => {
+        const saved = localStorage.getItem('appSettings');
+        return saved ? JSON.parse(saved) : defaultSettings;
+    });
+
+    const updateSettings = (newSettings: Partial<AppSettings>) => {
+        setSettings(prev => {
+            const updated = { ...prev, ...newSettings };
+            localStorage.setItem('appSettings', JSON.stringify(updated));
+            return updated;
+        });
+    };
+
+    // Apply Theme & Font Size Side Effects
+    useEffect(() => {
+        const root = window.document.documentElement;
+
+        // Theme
+        if (settings.theme === 'light') {
+            root.classList.add('light');
+        } else {
+            root.classList.remove('light');
+        }
+
+        // Accent Color
+        root.setAttribute('data-accent', settings.accentColor);
+
+        // Font Size (via CSS variable or class)
+        root.style.fontSize = settings.fontSize === 'small' ? '14px' : settings.fontSize === 'large' ? '18px' : '16px';
+
+    }, [settings.theme, settings.fontSize, settings.accentColor]);
 
     const [archivedPage, setArchivedPage] = useState(0);
     const PAGE_SIZE = 50;
@@ -92,24 +142,54 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
     const addSheet = async (sheet: SheetData) => {
         const { error } = await supabase.from('sheets').insert({ id: sheet.id, data: sheet });
-        if (!error) {
-            setSheets(prev => [sheet, ...prev]);
-        }
+        if (error) throw error;
+        setSheets(prev => [sheet, ...prev]);
     };
 
     const updateSheet = async (sheet: SheetData) => {
         const { error } = await supabase.from('sheets').update({ data: sheet }).eq('id', sheet.id);
-        if (!error) {
-            setSheets(prev => prev.map(s => s.id === sheet.id ? sheet : s));
-        }
+        if (error) throw error;
+        setSheets(prev => prev.map(s => s.id === sheet.id ? sheet : s));
+    };
+
+    const resetAllData = async () => {
+        // Danger: Delete ALL sheets
+        const { error } = await supabase.from('sheets').delete().neq('id', '00000000-0000-0000-0000-000000000000'); // Delete everything where ID is not empty UUID
+        if (error) throw error;
+        setSheets([]);
     };
 
     useEffect(() => {
         Promise.all([refreshSheets(), refreshUsers()]).then(() => setLoading(false));
     }, []);
 
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+    // Sync currentUser with devRole changes (e.g. from Settings > Developer Tools)
+    useEffect(() => {
+        if (devRole) {
+            if (!currentUser || currentUser.role !== devRole) {
+                setCurrentUser({
+                    id: 'dev-switch-' + Date.now(),
+                    username: 'Simulated ' + devRole,
+                    role: devRole as any,
+                    isApproved: true,
+                    fullName: 'Simulated User',
+                    email: 'dev@unicharm.com',
+                    password: ''
+                });
+            }
+        }
+    }, [devRole]);
+
+    // ...
+
     return (
-        <DataContext.Provider value={{ sheets, users, notifications, loading, refreshSheets, loadMoreArchived, refreshUsers, addSheet, updateSheet, devRole, setDevRole }}>
+        <DataContext.Provider value={{
+            sheets, users, notifications, loading, refreshSheets, loadMoreArchived, refreshUsers, addSheet, updateSheet,
+            devRole, setDevRole, shift, setShift, currentUser, setCurrentUser, resetAllData,
+            settings, updateSettings
+        }}>
             {children}
         </DataContext.Provider>
     );

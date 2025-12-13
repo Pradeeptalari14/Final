@@ -1,21 +1,31 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Database, Settings, LogOut, Menu, Shield } from 'lucide-react';
+import { LayoutDashboard, Database, Settings, Menu, Shield, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useData } from '@/contexts/DataContext';
+import { Role } from '@/types';
 
 export default function RootLayout() {
-    const [collapsed, setCollapsed] = useState(false);
-    const { session, loading, signOut } = useAuth();
+    const { devRole, setDevRole, currentUser, settings, updateSettings } = useData();
     const navigate = useNavigate();
 
+    const collapsed = settings.sidebarCollapsed;
+
     useEffect(() => {
-        if (!loading && !session) {
+        if (!devRole) {
             navigate('/login');
         }
-    }, [session, loading, navigate]);
+    }, [devRole, navigate]);
 
-    if (loading) return <div className="h-screen w-full flex items-center justify-center bg-slate-950 text-slate-400">Loading...</div>;
+    const handleSignOut = () => {
+        setDevRole(null as any); // Force null to trigger redirect
+    };
+
+    // Determine Admin Label based on Role
+    const adminLabel = currentUser?.role === Role.SHIFT_LEAD ? "Shift Lead"
+        : currentUser?.role === Role.STAGING_SUPERVISOR ? "Staging"
+            : currentUser?.role === Role.LOADING_SUPERVISOR ? "Loading"
+                : "Admin";
 
     return (
         <div className="flex h-screen w-full bg-slate-950 text-slate-200 overflow-hidden font-sans selection:bg-blue-500/30 print:h-auto print:overflow-visible">
@@ -26,8 +36,8 @@ export default function RootLayout() {
             )}>
                 <div className="h-16 flex items-center px-6 border-b border-white/5">
                     <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-xl">
-                            U
+                        <div className="h-10 w-10 flex items-center justify-center">
+                            <img src="/unicharm-logo.png" alt="Logo" className="w-full h-full object-contain" />
                         </div>
                         {!collapsed && <span className="font-bold text-lg tracking-tight text-white">Unicharm</span>}
                     </div>
@@ -36,12 +46,12 @@ export default function RootLayout() {
                 <nav className="flex-1 p-4 space-y-2">
                     <NavItem to="/" icon={LayoutDashboard} label="Dashboard" collapsed={collapsed} />
                     <NavItem to="/database" icon={Database} label="Database" collapsed={collapsed} />
-                    <NavItem to="/admin" icon={Shield} label="Admin" collapsed={collapsed} />
+                    <NavItem to="/admin" icon={Shield} label={adminLabel} collapsed={collapsed} />
                     <NavItem to="/settings" icon={Settings} label="Settings" collapsed={collapsed} />
                 </nav>
 
                 <div className="p-4 border-t border-white/5">
-                    <button onClick={signOut} className="flex items-center gap-3 w-full p-3 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+                    <button onClick={handleSignOut} className="flex items-center gap-3 w-full p-3 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all">
                         <LogOut size={20} />
                         {!collapsed && <span className="font-medium">Sign Out</span>}
                     </button>
@@ -52,12 +62,12 @@ export default function RootLayout() {
             <main className="flex-1 relative overflow-hidden flex flex-col print:h-auto print:overflow-visible">
                 {/* Header */}
                 <header className="h-16 border-b border-white/5 bg-slate-900/50 backdrop-blur flex items-center justify-between px-8 print:hidden">
-                    <button onClick={() => setCollapsed(!collapsed)} className="p-2 -ml-2 text-slate-400 hover:text-white transition-colors">
+                    <button onClick={() => updateSettings({ sidebarCollapsed: !collapsed })} className="p-2 -ml-2 text-slate-400 hover:text-white transition-colors">
                         <Menu size={20} />
                     </button>
                     <div className="flex items-center gap-4">
-                        <div className="h-8 w-8 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center text-xs font-bold text-white">
-                            {session?.user.email?.[0].toUpperCase()}
+                        <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center overflow-hidden">
+                            <img src="/unicharm-logo.png" alt="Profile" className="w-full h-full object-contain p-1" />
                         </div>
                     </div>
                 </header>

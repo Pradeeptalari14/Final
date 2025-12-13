@@ -2,8 +2,7 @@ export enum Role {
     ADMIN = 'ADMIN',
     STAGING_SUPERVISOR = 'STAGING_SUPERVISOR',
     LOADING_SUPERVISOR = 'LOADING_SUPERVISOR',
-    SHIFT_LEAD = 'SHIFT_LEAD',
-    VIEWER = 'VIEWER'
+    SHIFT_LEAD = 'SHIFT_LEAD'
 }
 
 export enum SheetStatus {
@@ -48,6 +47,21 @@ export interface LoadingItemData {
     balance: number;
 }
 
+export interface AdditionalItem {
+    id: number;
+    skuName: string;
+    counts: number[];
+    total: number;
+}
+
+export interface HistoryLog {
+    id: string;
+    actor: string;
+    action: string;
+    timestamp: string;
+    details: string;
+}
+
 export interface SheetData {
     id: string;
     status: SheetStatus;
@@ -72,13 +86,35 @@ export interface SheetData {
     regSerialNo?: string; // Container No
     driverName?: string;
     loadingItems?: LoadingItemData[];
+    additionalItems?: AdditionalItem[];
+
+    // Detailed Loading Info
+    loadingStartTime?: string;
+    loadingEndTime?: string;
+    pickingBy?: string;
+    pickingCrosscheckedBy?: string;
 
     // Signatures / Audit
+    loadingSvName?: string;
+    loadingSupervisorSign?: string;
+    slSign?: string;
+    deoSign?: string;
+
+    // Approval Metadata
+    loadingApprovedBy?: string;
+    loadingApprovedAt?: string;
+    rejectionReason?: string;
+
     createdBy: string;
     createdAt: string;
     updatedAt?: string;
+    lockedBy?: string;
+    lockedAt?: string;
+    completedBy?: string;
+    completedAt?: string;
 
-    // ... other fields as needed
+    capturedImages?: string[];
+    history?: HistoryLog[];
     comments?: Comment[];
 }
 
@@ -94,4 +130,18 @@ export interface Notification {
     message: string;
     read: boolean;
     timestamp: string;
+}
+
+export type Theme = 'light' | 'dark';
+export type AccentColor = 'blue' | 'emerald' | 'purple';
+export type Density = 'compact' | 'comfortable';
+export type FontSize = 'small' | 'medium' | 'large';
+
+export interface AppSettings {
+    theme: Theme;
+    accentColor: AccentColor;
+    density: Density;
+    sidebarCollapsed: boolean;
+    fontSize: FontSize;
+    defaultTab: string;
 }
