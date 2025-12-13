@@ -173,7 +173,7 @@ export default function LoadingSheet() {
             .map(item => ({
                 skuSrNo: item.srNo,
                 cells: [],
-                looseInput: 0,
+                looseInput: undefined,
                 total: 0,
                 balance: item.ttlCases
             }));
@@ -245,14 +245,14 @@ export default function LoadingSheet() {
 
     const handleLooseChange = (skuSrNo: number, val: string) => {
         if (!currentSheet) return;
-        const value = val === '' ? 0 : parseInt(val);
-        if (isNaN(value)) return;
+        const value = val === '' ? undefined : parseInt(val);
+        if (value !== undefined && isNaN(value)) return;
         const stagingItem = currentSheet.stagingItems.find(s => s.srNo === skuSrNo);
 
         const updatedLoadingItems = (currentSheet.loadingItems || []).map(li => {
             if (li.skuSrNo !== skuSrNo) return li;
             const cellSum = li.cells.reduce((acc, c) => acc + c.value, 0);
-            const total = cellSum + value;
+            const total = cellSum + (value || 0);
             const totalCases = stagingItem?.ttlCases || 0;
             const balance = totalCases - total;
             return { ...li, looseInput: value, total, balance };

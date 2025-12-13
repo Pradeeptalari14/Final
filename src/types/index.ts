@@ -42,7 +42,7 @@ export interface LoadingCell {
 export interface LoadingItemData {
     skuSrNo: number;
     cells: LoadingCell[];
-    looseInput: number;
+    looseInput?: number;
     total: number;
     balance: number;
 }
