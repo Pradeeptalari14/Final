@@ -84,7 +84,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         const { data: activeData, error: activeError } = await supabase
             .from('sheets')
             .select('*')
-            .textSearch('data', `'COMPLETED'`, { config: 'english', type: 'plain' }) // Negation is hard in textSearch, trying filter
             .neq('data->>status', 'COMPLETED')
             .order('created_at', { ascending: false });
 
