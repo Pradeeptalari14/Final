@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
-import { Save, Loader2, Users, Database, Activity, Trash2, CheckCircle, XCircle, Search, KeyRound, X, Printer, FileText, Truck, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { Save, Loader2, Users, Database, Activity, Trash2, CheckCircle, XCircle, Search, KeyRound, X, Printer, FileText, Truck, ShieldCheck, AlertTriangle, UserPlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
