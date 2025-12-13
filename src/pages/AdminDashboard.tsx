@@ -131,7 +131,7 @@ export default function AdminDashboard() {
         }
         else if (activeTab === 'shift_lead_db') {
             if (subFilter === 'STAGING_APPROVALS') return relevantSheets.filter(s => s.status === SheetStatus.DRAFT || s.status === SheetStatus.STAGING_VERIFICATION_PENDING);
-            if (subFilter === 'LOADING_APPROVALS') return relevantSheets.filter(s => s.status === SheetStatus.LOCKED || s.status === SheetStatus.LOADING_VERIFICATION_PENDING);
+            if (subFilter === 'LOADING_APPROVALS') return relevantSheets.filter(s => s.status === SheetStatus.LOADING_VERIFICATION_PENDING);
             if (subFilter === 'COMPLETED') return relevantSheets.filter(s => s.status === SheetStatus.COMPLETED);
 
             if (subFilter === 'STAGING_REJECTED') return relevantSheets.filter(s => s.status === SheetStatus.DRAFT && isRejected(s));
