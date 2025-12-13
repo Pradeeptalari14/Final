@@ -107,10 +107,10 @@ export default function SettingsPage() {
 
     return (
         <div className="p-8 space-y-6 pb-20">
-            <h2 className="text-3xl font-bold text-white tracking-tight">Settings</h2>
+            <h2 className="text-3xl font-bold text-foreground tracking-tight">Settings</h2>
 
             {/* PERSONALIZATION SECTION */}
-            <Card className="border-white/5 bg-slate-900/40">
+            <Card className="border-border bg-card/40">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         Personalization <Badge variant="secondary" className="bg-blue-500/10 text-blue-400 border-blue-500/20">New</Badge>
@@ -122,29 +122,29 @@ export default function SettingsPage() {
                     <div className="space-y-3">
                         <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">Appearance</label>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="bg-slate-950/30 p-4 rounded-lg border border-white/5 flex items-center justify-between">
+                            <div className="bg-card p-4 rounded-lg border border-border flex items-center justify-between">
                                 <div>
-                                    <div className="text-sm text-slate-200 font-medium">Theme Mode</div>
-                                    <div className="text-xs text-slate-500">Light or Dark interface</div>
+                                    <div className="text-sm text-foreground font-medium">Theme Mode</div>
+                                    <div className="text-xs text-muted-foreground">Light or Dark interface</div>
                                 </div>
-                                <div className="flex bg-slate-900 p-1 rounded-lg border border-white/5">
+                                <div className="flex bg-muted p-1 rounded-lg border border-border">
                                     <button
                                         type="button"
                                         onClick={() => updateSettings({ theme: 'light' })}
-                                        className={`px-3 py-1.5 rounded-md text-xs transition-all ${settings?.theme === 'light' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                                        className={`px-3 py-1.5 rounded-md text-xs transition-all ${settings?.theme === 'light' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                                     >Light</button>
                                     <button
                                         type="button"
                                         onClick={() => updateSettings({ theme: 'dark' })}
-                                        className={`px-3 py-1.5 rounded-md text-xs transition-all ${settings?.theme === 'dark' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                                        className={`px-3 py-1.5 rounded-md text-xs transition-all ${settings?.theme === 'dark' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                                     >Dark</button>
                                 </div>
                             </div>
 
-                            <div className="bg-slate-950/30 p-4 rounded-lg border border-white/5 flex items-center justify-between">
+                            <div className="bg-card p-4 rounded-lg border border-border flex items-center justify-between">
                                 <div>
-                                    <div className="text-sm text-slate-200 font-medium">Accent Color</div>
-                                    <div className="text-xs text-slate-500">Primary highlight color</div>
+                                    <div className="text-sm text-foreground font-medium">Accent Color</div>
+                                    <div className="text-xs text-muted-foreground">Primary highlight color</div>
                                 </div>
                                 <div className="flex gap-2">
                                     {['blue', 'emerald', 'purple'].map((color) => (
@@ -152,7 +152,7 @@ export default function SettingsPage() {
                                             key={color}
                                             type="button"
                                             onClick={() => updateSettings({ accentColor: color as any })}
-                                            className={`w-8 h-8 rounded-full border-2 transition-all ${settings?.accentColor === color ? 'border-white scale-110' : 'border-transparent hover:scale-105'}`}
+                                            className={`w-8 h-8 rounded-full border-2 transition-all ${settings?.accentColor === color ? 'border-primary scale-110' : 'border-transparent hover:scale-105'}`}
                                             style={{ backgroundColor: color === 'blue' ? '#3b82f6' : color === 'emerald' ? '#10b981' : '#a855f7' }}
                                         />
                                     ))}
@@ -166,78 +166,78 @@ export default function SettingsPage() {
                         <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">View Options</label>
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                             {/* Density */}
-                            <div className="bg-slate-950/30 p-4 rounded-lg border border-white/5">
+                            <div className="bg-card p-4 rounded-lg border border-border">
                                 <div className="mb-3">
-                                    <div className="text-sm text-slate-200 font-medium">Density</div>
-                                    <div className="text-xs text-slate-500">Spacing in tables/lists</div>
+                                    <div className="text-sm text-foreground font-medium">Density</div>
+                                    <div className="text-xs text-muted-foreground">Spacing in tables/lists</div>
                                 </div>
-                                <div className="flex bg-slate-900 p-1 rounded-lg border border-white/5 w-full">
+                                <div className="flex bg-muted p-1 rounded-lg border border-border w-full">
                                     <button
                                         type="button"
                                         onClick={() => updateSettings({ density: 'compact' })}
-                                        className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.density === 'compact' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                                        className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.density === 'compact' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                                     >Compact</button>
                                     <button
                                         type="button"
                                         onClick={() => updateSettings({ density: 'comfortable' })}
-                                        className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.density === 'comfortable' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                                        className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.density === 'comfortable' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                                     >Comfy</button>
                                 </div>
                             </div>
 
                             {/* Font Size */}
-                            <div className="bg-slate-950/30 p-4 rounded-lg border border-white/5">
+                            <div className="bg-card p-4 rounded-lg border border-border">
                                 <div className="mb-3">
-                                    <div className="text-sm text-slate-200 font-medium">Text Size</div>
-                                    <div className="text-xs text-slate-500">Global font scaling</div>
+                                    <div className="text-sm text-foreground font-medium">Text Size</div>
+                                    <div className="text-xs text-muted-foreground">Global font scaling</div>
                                 </div>
-                                <div className="flex bg-slate-900 p-1 rounded-lg border border-white/5 w-full">
+                                <div className="flex bg-muted p-1 rounded-lg border border-border w-full">
                                     <button
                                         type="button"
                                         onClick={() => updateSettings({ fontSize: 'small' })}
-                                        className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.fontSize === 'small' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                                        className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.fontSize === 'small' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                                     >A-</button>
                                     <button
                                         type="button"
                                         onClick={() => updateSettings({ fontSize: 'medium' })}
-                                        className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.fontSize === 'medium' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                                        className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.fontSize === 'medium' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                                     >A</button>
                                     <button
                                         type="button"
                                         onClick={() => updateSettings({ fontSize: 'large' })}
-                                        className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.fontSize === 'large' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                                        className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.fontSize === 'large' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                                     >A+</button>
                                 </div>
                             </div>
 
                             {/* Sidebar */}
-                            <div className="bg-slate-950/30 p-4 rounded-lg border border-white/5">
+                            <div className="bg-card p-4 rounded-lg border border-border">
                                 <div className="mb-3">
-                                    <div className="text-sm text-slate-200 font-medium">Sidebar</div>
-                                    <div className="text-xs text-slate-500">Default menu state</div>
+                                    <div className="text-sm text-foreground font-medium">Sidebar</div>
+                                    <div className="text-xs text-muted-foreground">Default menu state</div>
                                 </div>
-                                <div className="flex bg-slate-900 p-1 rounded-lg border border-white/5 w-full">
+                                <div className="flex bg-muted p-1 rounded-lg border border-border w-full">
                                     <button
                                         type="button"
                                         onClick={() => updateSettings({ sidebarCollapsed: false })}
-                                        className={`flex-1 py-1.5 rounded-md text-xs transition-all ${!settings?.sidebarCollapsed ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                                        className={`flex-1 py-1.5 rounded-md text-xs transition-all ${!settings?.sidebarCollapsed ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                                     >Expanded</button>
                                     <button
                                         type="button"
                                         onClick={() => updateSettings({ sidebarCollapsed: true })}
-                                        className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.sidebarCollapsed ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                                        className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.sidebarCollapsed ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                                     >Collapsed</button>
                                 </div>
                             </div>
 
                             {/* Default Tab */}
-                            <div className="bg-slate-950/30 p-4 rounded-lg border border-white/5">
+                            <div className="bg-card p-4 rounded-lg border border-border">
                                 <div className="mb-3">
-                                    <div className="text-sm text-slate-200 font-medium">Default Tab</div>
-                                    <div className="text-xs text-slate-500">Admin landing page</div>
+                                    <div className="text-sm text-foreground font-medium">Default Tab</div>
+                                    <div className="text-xs text-muted-foreground">Admin landing page</div>
                                 </div>
                                 <select
-                                    className="w-full bg-slate-900 border border-white/5 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    className="w-full bg-muted border border-border rounded-lg px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                                     value={settings?.defaultTab || 'staging_db'}
                                     onChange={(e) => updateSettings({ defaultTab: e.target.value })}
                                 >

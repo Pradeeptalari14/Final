@@ -408,13 +408,13 @@ export default function AdminDashboard() {
                 <table className="w-full text-left text-sm">
                     <thead>
                         <tr className="bg-slate-950/50 text-slate-500 border-b border-white/5">
-                            <th className="py-3 pl-4 font-medium">Sheet ID</th>
-                            <th className="py-3 font-medium">Supervisor</th>
-                            <th className="py-3 font-medium">Shift / Dest</th>
-                            <th className="py-3 font-medium">Duration</th>
-                            <th className="py-3 font-medium">Date</th>
-                            <th className="py-3 font-medium">Status</th>
-                            <th className="py-3 pr-4 text-right">Action</th>
+                            <th className={`pl-4 font-medium ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>Sheet ID</th>
+                            <th className={`font-medium ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>Supervisor</th>
+                            <th className={`font-medium ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>Shift / Dest</th>
+                            <th className={`font-medium ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>Duration</th>
+                            <th className={`font-medium ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>Date</th>
+                            <th className={`font-medium ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>Status</th>
+                            <th className={`pr-4 text-right ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>Action</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
@@ -427,18 +427,18 @@ export default function AdminDashboard() {
                                     : `/sheets/staging/${sheet.id}`;
                                 navigate(target);
                             }}>
-                                <td className="py-3 pl-4 text-blue-400 font-mono text-xs">#{sheet.id.slice(0, 8)}</td>
-                                <td className="py-3 text-slate-200">
+                                <td className={`pl-4 text-blue-400 font-mono text-xs ${settings.density === 'compact' ? 'py-1' : 'py-3'}`}>#{sheet.id.slice(0, 8)}</td>
+                                <td className={`text-slate-200 ${settings.density === 'compact' ? 'py-1' : 'py-3'}`}>
                                     {sheet.supervisorName}
                                     <div className="text-xs text-slate-500">{sheet.empCode}</div>
                                 </td>
-                                <td className="py-3 text-xs text-slate-400">
+                                <td className={`text-xs text-slate-400 ${settings.density === 'compact' ? 'py-1' : 'py-3'}`}>
                                     {sheet.shift}
                                     <div className="text-xs text-slate-500">{sheet.destination || sheet.loadingDoc || '-'}</div>
                                 </td>
-                                <td className="py-3 text-xs text-slate-400 font-mono">{getDuration(sheet)}</td>
-                                <td className="py-3 text-slate-400">{new Date(sheet.date).toLocaleDateString()}</td>
-                                <td className="py-3">
+                                <td className={`text-xs text-slate-400 font-mono ${settings.density === 'compact' ? 'py-1' : 'py-3'}`}>{getDuration(sheet)}</td>
+                                <td className={`text-slate-400 ${settings.density === 'compact' ? 'py-1' : 'py-3'}`}>{new Date(sheet.date).toLocaleDateString()}</td>
+                                <td className={`${settings.density === 'compact' ? 'py-1' : 'py-3'}`}>
                                     <Badge variant="outline" className={`
                                         ${sheet.status === SheetStatus.COMPLETED ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' :
                                             sheet.status.includes('REJECTED') || (sheet.comments && sheet.comments.length > 0 && sheet.status === SheetStatus.DRAFT) ? 'text-red-400 border-red-500/30 bg-red-500/10' :
@@ -448,7 +448,7 @@ export default function AdminDashboard() {
                                         {sheet.status.replace(/_/g, ' ')}
                                     </Badge>
                                 </td>
-                                <td className="py-3 pr-4 text-right flex justify-end gap-2">
+                                <td className={`pr-4 text-right flex justify-end gap-2 ${settings.density === 'compact' ? 'py-1' : 'py-3'}`}>
                                     {currentUser?.role === Role.ADMIN && (
                                         <Button
                                             variant="ghost"
@@ -546,13 +546,13 @@ export default function AdminDashboard() {
                 <table className="w-full text-left text-sm">
                     <thead>
                         <tr className="bg-slate-950/50 text-slate-500 border-b border-white/5">
-                            <th className="py-3 pl-4 font-medium">Sheet ID</th>
-                            <th className="py-3 font-medium">Supervisor</th>
-                            <th className="py-3 font-medium">Shift / Dest</th>
-                            <th className="py-3 font-medium">Duration</th>
-                            <th className="py-3 font-medium">Date</th>
-                            <th className="py-3 font-medium">Status</th>
-                            <th className="py-3 pr-4 text-right font-medium">Actions</th>
+                            <th className={`pl-4 font-medium ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>Sheet ID</th>
+                            <th className={`font-medium ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>Supervisor</th>
+                            <th className={`font-medium ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>Shift / Dest</th>
+                            <th className={`font-medium ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>Duration</th>
+                            <th className={`font-medium ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>Date</th>
+                            <th className={`font-medium ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>Status</th>
+                            <th className={`pr-4 text-right font-medium ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>Actions</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
@@ -565,15 +565,15 @@ export default function AdminDashboard() {
                                     : `/sheets/staging/${sheet.id}`;
                                 navigate(target);
                             }}>
-                                <td className="py-3 pl-4 text-slate-300 font-mono text-xs">{sheet.id.slice(0, 8)}...</td>
-                                <td className="py-3 text-slate-200">{sheet.supervisorName}</td>
-                                <td className="py-3 text-slate-400">
+                                <td className={`pl-4 text-slate-300 font-mono text-xs ${settings.density === 'compact' ? 'py-1' : 'py-3'}`}>{sheet.id.slice(0, 8)}...</td>
+                                <td className={`text-slate-200 ${settings.density === 'compact' ? 'py-1' : 'py-3'}`}>{sheet.supervisorName}</td>
+                                <td className={`text-slate-400 ${settings.density === 'compact' ? 'py-1' : 'py-3'}`}>
                                     <Badge variant="secondary" className="bg-slate-800 text-slate-400">{sheet.shift}</Badge>
                                     <div className="text-xs text-slate-500 mt-1">{sheet.destination || '-'}</div>
                                 </td>
-                                <td className="py-3 text-xs text-slate-400 font-mono">{getDuration(sheet)}</td>
-                                <td className="py-3 text-slate-500">{new Date(sheet.date).toLocaleDateString()}</td>
-                                <td className="py-3">
+                                <td className={`text-xs text-slate-400 font-mono ${settings.density === 'compact' ? 'py-1' : 'py-3'}`}>{getDuration(sheet)}</td>
+                                <td className={`text-slate-500 ${settings.density === 'compact' ? 'py-1' : 'py-3'}`}>{new Date(sheet.date).toLocaleDateString()}</td>
+                                <td className={`${settings.density === 'compact' ? 'py-1' : 'py-3'}`}>
                                     <Badge variant="outline" className={`
                                         ${sheet.status === SheetStatus.COMPLETED ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' :
                                             sheet.status === SheetStatus.LOCKED ? 'text-purple-400 border-purple-500/30 bg-purple-500/10' :
@@ -582,7 +582,7 @@ export default function AdminDashboard() {
                                         {sheet.status?.replace(/_/g, ' ')}
                                     </Badge>
                                 </td>
-                                <td className="py-3 pr-4 text-right flex justify-end gap-2">
+                                <td className={`pr-4 text-right flex justify-end gap-2 ${settings.density === 'compact' ? 'py-1' : 'py-3'}`}>
                                     {currentUser?.role === Role.ADMIN && (
                                         <Button
                                             variant="ghost"

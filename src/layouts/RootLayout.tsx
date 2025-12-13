@@ -28,18 +28,18 @@ export default function RootLayout() {
                 : "Admin";
 
     return (
-        <div className="flex h-screen w-full bg-slate-950 text-slate-200 overflow-hidden font-sans selection:bg-blue-500/30 print:h-auto print:overflow-visible">
+        <div className="flex h-screen w-full bg-background text-foreground overflow-hidden font-sans selection:bg-primary/30 print:h-auto print:overflow-visible transition-colors duration-300">
             {/* Sidebar */}
             <aside className={cn(
-                "relative z-20 flex flex-col border-r border-white/5 bg-slate-900/80 backdrop-blur-xl transition-all duration-300 print:hidden",
+                "relative z-20 flex flex-col border-r border-border bg-card/80 backdrop-blur-xl transition-all duration-300 print:hidden",
                 collapsed ? "w-20" : "w-64"
             )}>
-                <div className="h-16 flex items-center px-6 border-b border-white/5">
+                <div className="h-16 flex items-center px-6 border-b border-border">
                     <div className="flex items-center gap-3">
                         <div className="h-10 w-10 flex items-center justify-center">
                             <img src="/unicharm-logo.png" alt="Logo" className="w-full h-full object-contain" />
                         </div>
-                        {!collapsed && <span className="font-bold text-lg tracking-tight text-white">Unicharm</span>}
+                        {!collapsed && <span className="font-bold text-lg tracking-tight text-foreground">Unicharm</span>}
                     </div>
                 </div>
 
@@ -50,8 +50,8 @@ export default function RootLayout() {
                     <NavItem to="/settings" icon={Settings} label="Settings" collapsed={collapsed} />
                 </nav>
 
-                <div className="p-4 border-t border-white/5">
-                    <button onClick={handleSignOut} className="flex items-center gap-3 w-full p-3 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+                <div className="p-4 border-t border-border">
+                    <button onClick={handleSignOut} className="flex items-center gap-3 w-full p-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/10 transition-all">
                         <LogOut size={20} />
                         {!collapsed && <span className="font-medium">Sign Out</span>}
                     </button>
@@ -61,8 +61,8 @@ export default function RootLayout() {
             {/* Main Content */}
             <main className="flex-1 relative overflow-hidden flex flex-col print:h-auto print:overflow-visible">
                 {/* Header */}
-                <header className="h-16 border-b border-white/5 bg-slate-900/50 backdrop-blur flex items-center justify-between px-8 print:hidden">
-                    <button onClick={() => updateSettings({ sidebarCollapsed: !collapsed })} className="p-2 -ml-2 text-slate-400 hover:text-white transition-colors">
+                <header className="h-16 border-b border-border bg-background/50 backdrop-blur flex items-center justify-between px-8 print:hidden">
+                    <button onClick={() => updateSettings({ sidebarCollapsed: !collapsed })} className="p-2 -ml-2 text-muted-foreground hover:text-foreground transition-colors">
                         <Menu size={20} />
                     </button>
                     <div className="flex items-center gap-4">
@@ -88,8 +88,8 @@ function NavItem({ to, icon: Icon, label, collapsed }: { to: string, icon: React
             className={({ isActive }) => cn(
                 "flex items-center gap-3 p-3 rounded-xl transition-all duration-200 group",
                 isActive
-                    ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
-                    : "text-slate-400 hover:text-white hover:bg-white/5"
+                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/10"
             )}
         >
             <Icon size={20} className={cn("transition-transform group-hover:scale-110", collapsed && "mx-auto")} />
