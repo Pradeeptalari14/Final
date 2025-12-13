@@ -75,7 +75,7 @@ export default function AdminDashboard() {
         if (currentUser?.role !== Role.ADMIN) {
             relevantSheets = relevantSheets.filter(sheet => {
                 if (currentUser?.role === Role.STAGING_SUPERVISOR) {
-                    return sheet.supervisorName === currentUser.username;
+                    return sheet.supervisorName === currentUser.username || sheet.supervisorName === currentUser.fullName;
                 }
                 if (currentUser?.role === Role.LOADING_SUPERVISOR) {
                     return sheet.status === SheetStatus.LOCKED ||
