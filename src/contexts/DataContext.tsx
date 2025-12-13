@@ -44,14 +44,23 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
     // Settings State
     const [settings, setSettings] = useState<AppSettings>(() => {
-        const saved = localStorage.getItem('appSettings');
-        return saved ? JSON.parse(saved) : defaultSettings;
+        try {
+            const saved = localStorage.getItem('appSettings');
+            return saved ? JSON.parse(saved) : defaultSettings;
+        } catch (e) {
+            console.error('Failed to load settings:', e);
+            return defaultSettings;
+        }
     });
 
     const updateSettings = (newSettings: Partial<AppSettings>) => {
         setSettings(prev => {
             const updated = { ...prev, ...newSettings };
-            localStorage.setItem('appSettings', JSON.stringify(updated));
+            try {
+                localStorage.setItem('appSettings', JSON.stringify(updated));
+            } catch (e) {
+                console.error('Failed to save settings:', e);
+            }
             return updated;
         });
     };

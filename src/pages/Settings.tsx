@@ -12,9 +12,10 @@ export default function SettingsPage() {
     const { devRole, setDevRole, refreshUsers, users, settings, updateSettings } = useData();
     const { addToast } = useToast();
 
-    // Add User Form State
+    // Add/Edit User Form State
     const [isAddingUser, setIsAddingUser] = useState(false);
     const [newUserLoading, setNewUserLoading] = useState(false);
+    const [editingUserId, setEditingUserId] = useState<string | null>(null);
     const [newUser, setNewUser] = useState({
         username: '',
         email: '',
@@ -22,41 +23,83 @@ export default function SettingsPage() {
         role: Role.STAGING_SUPERVISOR
     });
 
-    const handleAddUser = async (e: React.FormEvent) => {
+    const handleEditUser = (user: any) => {
+        setNewUser({
+            username: user.username,
+            email: user.email || '',
+            password: '', // Don't show existing password
+            role: user.role
+        });
+        setEditingUserId(user.id);
+        setIsAddingUser(true);
+    };
+
+    const handleDeleteUser = async (userId: string, username: string) => {
+        if (!window.confirm(`Are you sure you want to delete user "${username}"? This action cannot be undone.`)) return;
+
+        try {
+            const { error } = await supabase.from('users').delete().eq('id', userId);
+            if (error) throw error;
+            addToast('success', `User ${username} deleted successfully.`);
+            await refreshUsers();
+        } catch (error: any) {
+            addToast('error', error.message || "Failed to delete user");
+        }
+    };
+
+    const handleSaveUser = async (e: React.FormEvent) => {
         e.preventDefault();
         setNewUserLoading(true);
 
         try {
             // Validate
-            if (!newUser.username || !newUser.password) {
-                throw new Error("Username and Password are required.");
+            if (!newUser.username) {
+                throw new Error("Username is required.");
+            }
+            if (!editingUserId && !newUser.password) {
+                throw new Error("Password is required for new users.");
             }
 
-            // 1. Create User in Supabase Auth (Simulated or Real)
             const userData = {
-                id: crypto.randomUUID(),
                 username: newUser.username,
                 email: newUser.email,
-                fullName: newUser.username,
+                fullName: newUser.username, // Default to username for now
                 role: newUser.role,
                 isApproved: true,
-                password: newUser.password
+                ...(newUser.password ? { password: newUser.password } : {}) // Only update password if provided
             };
 
-            const { error } = await supabase.from('users').insert({
-                id: userData.id,
-                data: userData
-            });
+            if (editingUserId) {
+                // UPDATE Existing User
+                const existing = users.find(u => u.id === editingUserId);
+                const updatedData = { ...existing, ...userData };
 
-            if (error) throw error;
+                const { error } = await supabase.from('users').update({
+                    data: updatedData
+                }).eq('id', editingUserId);
 
-            addToast('success', `User ${newUser.username} created successfully!`);
+                if (error) throw error;
+                addToast('success', `User ${newUser.username} updated successfully!`);
+
+            } else {
+                // CREATE New User
+                const newId = crypto.randomUUID();
+                const fullData = { ...userData, id: newId, password: newUser.password }; // Ensure password is set
+                const { error } = await supabase.from('users').insert({
+                    id: newId,
+                    data: fullData
+                });
+                if (error) throw error;
+                addToast('success', `User ${newUser.username} created successfully!`);
+            }
+
             await refreshUsers();
             setIsAddingUser(false);
+            setEditingUserId(null);
             setNewUser({ username: '', email: '', password: '', role: Role.STAGING_SUPERVISOR });
 
         } catch (error: any) {
-            addToast('error', error.message || "Failed to create user");
+            addToast('error', error.message || "Failed to save user");
         } finally {
             setNewUserLoading(false);
         }
@@ -86,10 +129,12 @@ export default function SettingsPage() {
                                 </div>
                                 <div className="flex bg-slate-900 p-1 rounded-lg border border-white/5">
                                     <button
+                                        type="button"
                                         onClick={() => updateSettings({ theme: 'light' })}
                                         className={`px-3 py-1.5 rounded-md text-xs transition-all ${settings?.theme === 'light' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-white'}`}
                                     >Light</button>
                                     <button
+                                        type="button"
                                         onClick={() => updateSettings({ theme: 'dark' })}
                                         className={`px-3 py-1.5 rounded-md text-xs transition-all ${settings?.theme === 'dark' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
                                     >Dark</button>
@@ -105,6 +150,7 @@ export default function SettingsPage() {
                                     {['blue', 'emerald', 'purple'].map((color) => (
                                         <button
                                             key={color}
+                                            type="button"
                                             onClick={() => updateSettings({ accentColor: color as any })}
                                             className={`w-8 h-8 rounded-full border-2 transition-all ${settings?.accentColor === color ? 'border-white scale-110' : 'border-transparent hover:scale-105'}`}
                                             style={{ backgroundColor: color === 'blue' ? '#3b82f6' : color === 'emerald' ? '#10b981' : '#a855f7' }}
@@ -127,10 +173,12 @@ export default function SettingsPage() {
                                 </div>
                                 <div className="flex bg-slate-900 p-1 rounded-lg border border-white/5 w-full">
                                     <button
+                                        type="button"
                                         onClick={() => updateSettings({ density: 'compact' })}
                                         className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.density === 'compact' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
                                     >Compact</button>
                                     <button
+                                        type="button"
                                         onClick={() => updateSettings({ density: 'comfortable' })}
                                         className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.density === 'comfortable' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
                                     >Comfy</button>
@@ -145,14 +193,17 @@ export default function SettingsPage() {
                                 </div>
                                 <div className="flex bg-slate-900 p-1 rounded-lg border border-white/5 w-full">
                                     <button
+                                        type="button"
                                         onClick={() => updateSettings({ fontSize: 'small' })}
                                         className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.fontSize === 'small' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
                                     >A-</button>
                                     <button
+                                        type="button"
                                         onClick={() => updateSettings({ fontSize: 'medium' })}
                                         className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.fontSize === 'medium' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
                                     >A</button>
                                     <button
+                                        type="button"
                                         onClick={() => updateSettings({ fontSize: 'large' })}
                                         className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.fontSize === 'large' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
                                     >A+</button>
@@ -167,10 +218,12 @@ export default function SettingsPage() {
                                 </div>
                                 <div className="flex bg-slate-900 p-1 rounded-lg border border-white/5 w-full">
                                     <button
+                                        type="button"
                                         onClick={() => updateSettings({ sidebarCollapsed: false })}
                                         className={`flex-1 py-1.5 rounded-md text-xs transition-all ${!settings?.sidebarCollapsed ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
                                     >Expanded</button>
                                     <button
+                                        type="button"
                                         onClick={() => updateSettings({ sidebarCollapsed: true })}
                                         className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.sidebarCollapsed ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
                                     >Collapsed</button>
@@ -238,7 +291,13 @@ export default function SettingsPage() {
                     <CardHeader className="flex flex-row items-center justify-between">
                         <CardTitle className="text-emerald-400">Admin Area: User Management</CardTitle>
                         <Button
-                            onClick={() => setIsAddingUser(!isAddingUser)}
+                            onClick={() => {
+                                setIsAddingUser(!isAddingUser);
+                                if (!isAddingUser) {
+                                    setEditingUserId(null); // Reset edit state if opening new form
+                                    setNewUser({ username: '', email: '', password: '', role: Role.STAGING_SUPERVISOR });
+                                }
+                            }}
                             size="sm"
                             className="bg-emerald-600 hover:bg-emerald-500 text-white"
                         >
@@ -248,11 +307,11 @@ export default function SettingsPage() {
                     </CardHeader>
                     <CardContent className="space-y-6">
 
-                        {/* Add User Form */}
+                        {/* Add/Edit User Form */}
                         {isAddingUser && (
                             <div className="bg-emerald-950/20 border border-emerald-500/20 p-4 rounded-lg animate-in fade-in slide-in-from-top-2">
-                                <h4 className="text-sm font-semibold text-emerald-200 mb-4">Create New User</h4>
-                                <form onSubmit={handleAddUser} className="space-y-4">
+                                <h4 className="text-sm font-semibold text-emerald-200 mb-4">{editingUserId ? 'Edit User' : 'Create New User'}</h4>
+                                <form onSubmit={handleSaveUser} className="space-y-4">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <label className="text-xs font-medium text-slate-400">Username</label>
@@ -275,10 +334,10 @@ export default function SettingsPage() {
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-xs font-medium text-slate-400">Password</label>
+                                            <label className="text-xs font-medium text-slate-400">Password {editingUserId && '(Leave blank to keep current)'}</label>
                                             <input
                                                 type="password"
-                                                required
+                                                required={!editingUserId}
                                                 value={newUser.password}
                                                 onChange={e => setNewUser({ ...newUser, password: e.target.value })}
                                                 className="w-full bg-slate-950 border border-white/10 rounded px-3 py-2 text-white"
@@ -301,7 +360,7 @@ export default function SettingsPage() {
                                     <div className="flex justify-end">
                                         <Button type="submit" disabled={newUserLoading} className="bg-emerald-600 hover:bg-emerald-500">
                                             {newUserLoading ? <Loader2 className="animate-spin mr-2" size={16} /> : <Save className="mr-2" size={16} />}
-                                            Save User
+                                            {editingUserId ? 'Update User' : 'Save User'}
                                         </Button>
                                     </div>
                                 </form>
@@ -328,13 +387,23 @@ export default function SettingsPage() {
                                             <td className="py-3 text-slate-400">{user.email || '-'}</td>
                                             <td className="py-3"><Badge variant="outline" className="text-xs border-white/10">{user.role}</Badge></td>
                                             <td className="py-3"><span className="text-emerald-400 text-xs">Active</span></td>
-                                            <td className="py-3 text-right pr-2">
+                                            <td className="py-3 text-right pr-2 space-x-2">
                                                 <button
-                                                    className="text-slate-500 hover:text-white transition-colors text-xs"
-                                                    onClick={() => addToast('info', 'Edit User feature coming soon')}
+                                                    type="button"
+                                                    className="text-blue-400 hover:text-blue-300 transition-colors text-xs font-medium"
+                                                    onClick={() => handleEditUser(user)}
                                                 >
                                                     Edit
                                                 </button>
+                                                {user.username !== 'admin' && (
+                                                    <button
+                                                        type="button"
+                                                        className="text-red-500 hover:text-red-400 transition-colors text-xs font-medium"
+                                                        onClick={() => handleDeleteUser(user.id, user.username)}
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                )}
                                             </td>
                                         </tr>
                                     ))}
