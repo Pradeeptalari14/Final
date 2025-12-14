@@ -304,7 +304,7 @@ export default function AdminDashboard() {
 
     const toggleUserStatus = async (user: any) => {
         try {
-            console.log(`[RCA] Toggling status for User ID: ${user.id} (Current: ${user.isApproved})`);
+            // console.log(`[RCA] Toggling status for User ID: ${user.id} (Current: ${user.isApproved})`);
 
             const updatedUser = { ...user, isApproved: !user.isApproved };
 

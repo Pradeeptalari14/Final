@@ -18,7 +18,6 @@ interface DataContextType {
     setShift: (shift: string) => void;
     currentUser: User | null;
     setCurrentUser: (user: User | null) => void;
-    resetAllData: () => Promise<void>;
     settings: AppSettings;
     updateSettings: (newSettings: Partial<AppSettings>) => void;
 }
@@ -162,52 +161,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         setSheets(prev => prev.map(s => s.id === sheet.id ? sheet : s));
     };
 
-    const resetAllData = async () => {
-        // Danger: Delete ALL sheets
-        const { error: sheetsError } = await supabase.from('sheets').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-        if (sheetsError) {
-            console.error("Failed to clear sheets:", sheetsError);
-            throw sheetsError;
-        }
-
-        // Danger: Delete ALL Non-Admin Users
-        // We fetch first to filter, as RLS might be tricky with bulk delete
-        const { data: usersToDelete, error: fetchError } = await supabase
-            .from('users')
-            .select('id, data')
-            .neq('data->>role', 'ADMIN');
-
-        if (fetchError) {
-            alert("Error fetching users: " + fetchError.message);
-            throw fetchError;
-        }
-
-        alert(`Debug: Found ${usersToDelete?.length || 0} non-admin users to delete.`);
-
-        if (usersToDelete && usersToDelete.length > 0) {
-            console.log(`Resetting: Deleting ${usersToDelete.length} non-admin users...`);
-            // const idsToDelete = usersToDelete.map(u => u.id); // Optimized out for RLS check
-            const idsToDelete = usersToDelete.map((u: User) => u.id);
-            const { error: deleteError, count } = await supabase.from('users').delete({ count: 'exact' }).in('id', idsToDelete);
-
-            if (deleteError) {
-                console.error("Failed to delete users:", deleteError);
-                throw deleteError;
-            }
-            console.log(`Resetting: Successfully deleted ${count} users.`);
-
-            // Critical RLS Check
-            if (count === 0 && idsToDelete.length > 0) {
-                const msg = "Database deleted 0 users despite finding them. Row Level Security is blocking this. You are likely signed in as a user who does not have 'Delete' permissions.";
-                console.error(msg);
-                throw new Error(msg);
-            }
-        }
-
-        setSheets([]);
-        await refreshUsers();
-    };
-
     useEffect(() => {
         Promise.all([refreshSheets(), refreshUsers()]).then(() => setLoading(false));
     }, []);
@@ -237,7 +190,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     return (
         <DataContext.Provider value={{
             sheets, users, notifications, loading, refreshSheets, loadMoreArchived, refreshUsers, addSheet, updateSheet,
-            devRole, setDevRole, shift, setShift, currentUser, setCurrentUser, resetAllData,
+            devRole, setDevRole, shift, setShift, currentUser, setCurrentUser,
             settings, updateSettings
         }}>
             {children}
