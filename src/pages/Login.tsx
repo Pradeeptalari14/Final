@@ -102,7 +102,7 @@ export default function LoginPage() {
                     transition={{ duration: 0.5, ease: "circOut" }}
                     // Increased transparency: bg-black/40 instead of brown/80
                     // Removed overflow-y-auto to enforce fit
-                    className="w-full md:w-[450px] h-full bg-black/40 backdrop-blur-xl border-l border-white/10 shadow-2xl flex flex-col justify-center px-10 relative"
+                    className="w-full md:w-[450px] h-full bg-black/40 backdrop-blur-xl border-l border-white/10 shadow-2xl flex flex-col justify-center px-6 md:px-10 relative"
                 >
                     {/* Decorative Top Accent - Thinner */}
                     <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-500/50 via-orange-400/50 to-amber-300/50" />

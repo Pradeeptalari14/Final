@@ -180,7 +180,7 @@ export default function DashboardOverview() {
                 // ADMIN LAYOUT
                 <div className="flex flex-col gap-4">
                     {/* Row 1: Operations Columns (Now 4 Columns) */}
-                    <div className={`grid gap-4 grid-cols-1 md:grid-cols-4`}>
+                    <div className={`grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-4`}>
                         <StageColumn
                             title="Staging"
                             color="border-slate-200 dark:border-white/10"
