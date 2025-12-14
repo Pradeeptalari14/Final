@@ -59,6 +59,18 @@ export default function LoadingSheet() {
         }
     }, [id, sheets]);
 
+    // FAIL-SAFE REDIRECT: Staging Supervisors should NEVER see Loading Sheet unless COMPLETED
+    useEffect(() => {
+        if (!currentSheet || !currentUser) return;
+
+        const isStagingUser = currentUser.role === Role.STAGING_SUPERVISOR;
+        // If it's Locked (Approved) or Pending Verification, Staging SV should see Staging Sheet
+        // Only if COMPLETED can they see this Loading Sheet (as a final record)
+        if (isStagingUser && (currentSheet.status === SheetStatus.LOCKED || currentSheet.status === SheetStatus.LOADING_VERIFICATION_PENDING)) {
+            navigate(`/sheets/staging/${currentSheet.id}`, { replace: true });
+        }
+    }, [currentSheet, currentUser, navigate]);
+
 
     // --- LEGACY STATE ---
     // Controls to hide Submit / Show Print after completion
