@@ -750,7 +750,7 @@ export default function LoadingSheet() {
                     <div className="w-full lg:w-2/3 bg-white flex flex-col">
                         <div className="p-4 border-b border-slate-200 flex justify-between items-center"><div className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2"><Box size={14} /> LOADING SHEET</div></div>
                         <div className="overflow-x-auto flex-1 custom-scrollbar">
-                            <table className="w-full min-w-[800px] text-xs border-collapse">
+                            <table className="w-full text-xs border-collapse">
                                 <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
                                     <tr>
                                         <th className="p-3 text-center w-12 sticky left-0 bg-slate-50 z-20 border-r border-slate-200">Sr.No</th>

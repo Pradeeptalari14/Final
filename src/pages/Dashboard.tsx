@@ -58,7 +58,7 @@ export default function DashboardOverview() {
                 return [
                     { label: 'Total Staging', count: stagingActiveCount, link: '/admin?tab=staging_db', color: 'bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold' },
                     { label: 'Draft', count: draftCount, link: '/admin?tab=staging_db&filter=DRAFT', color: 'bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-400 font-bold' },
-                    { label: 'Locked / Pending', count: lockedCount, link: '/admin?tab=staging_db&filter=LOCKED', color: 'bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 text-blue-900 dark:text-blue-400 font-bold' },
+                    { label: 'Locked', count: lockedCount, link: '/admin?tab=staging_db&filter=LOCKED', color: 'bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 text-blue-900 dark:text-blue-400 font-bold' },
                     { label: 'Completed', count: completedCount, link: '/admin?tab=staging_db&filter=COMPLETED', color: 'bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold' },
                     { label: 'Rejected', count: rejectedCount, link: '/admin?tab=staging_db&filter=REJECTED', color: 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold' }
                 ];

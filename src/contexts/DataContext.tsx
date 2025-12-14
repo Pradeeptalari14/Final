@@ -118,6 +118,37 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
+    // Real-time Subscription
+    useEffect(() => {
+        const channel = supabase
+            .channel('public:sheets')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'sheets' },
+                (payload) => {
+                    console.log('Realtime update:', payload);
+                    if (payload.eventType === 'INSERT') {
+                        const newSheet = { ...payload.new.data, id: payload.new.id, status: payload.new.data.status || 'DRAFT' } as SheetData;
+                        setSheets(prev => {
+                            // Avoid duplicates
+                            if (prev.find(s => s.id === newSheet.id)) return prev;
+                            return [newSheet, ...prev];
+                        });
+                    } else if (payload.eventType === 'UPDATE') {
+                        const updatedSheet = { ...payload.new.data, id: payload.new.id, status: payload.new.data.status || 'DRAFT' } as SheetData;
+                        setSheets(prev => prev.map(s => s.id === updatedSheet.id ? updatedSheet : s));
+                    } else if (payload.eventType === 'DELETE') {
+                        setSheets(prev => prev.filter(s => s.id !== payload.old.id));
+                    }
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, []);
+
     const loadMoreArchived = async () => {
         const nextPage = archivedPage + 1;
         const from = nextPage * PAGE_SIZE;

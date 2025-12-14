@@ -548,7 +548,8 @@ export default function AdminDashboard() {
                             <tr><td colSpan={7} className="py-8 text-center text-slate-500">No sheets found for this filter.</td></tr>
                         ) : filteredSheets.map(sheet => (
                             <tr key={sheet.id} className="group hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => {
-                                const target = (sheet.status === SheetStatus.COMPLETED || sheet.status === SheetStatus.LOADING_VERIFICATION_PENDING || sheet.status === SheetStatus.LOCKED)
+                                const isStagingUser = currentUser?.role === Role.STAGING_SUPERVISOR;
+                                const target = ((sheet.status === SheetStatus.COMPLETED || sheet.status === SheetStatus.LOADING_VERIFICATION_PENDING || sheet.status === SheetStatus.LOCKED) && !isStagingUser)
                                     ? `/sheets/loading/${sheet.id}`
                                     : `/sheets/staging/${sheet.id}`;
                                 navigate(target);
@@ -725,7 +726,8 @@ export default function AdminDashboard() {
                                         className="h-8 w-8 p-0 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            const target = (sheet.status === SheetStatus.COMPLETED || sheet.status === SheetStatus.LOADING_VERIFICATION_PENDING || sheet.status === SheetStatus.LOCKED)
+                                            const isStagingUser = currentUser?.role === Role.STAGING_SUPERVISOR;
+                                            const target = ((sheet.status === SheetStatus.COMPLETED || sheet.status === SheetStatus.LOADING_VERIFICATION_PENDING || sheet.status === SheetStatus.LOCKED) && !isStagingUser)
                                                 ? `/sheets/loading/${sheet.id}`
                                                 : `/sheets/staging/${sheet.id}`;
                                             navigate(target);
@@ -740,7 +742,8 @@ export default function AdminDashboard() {
                                         className="h-8 text-xs hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            const target = (sheet.status === SheetStatus.COMPLETED || sheet.status === SheetStatus.LOADING_VERIFICATION_PENDING || sheet.status === SheetStatus.LOCKED)
+                                            const isStagingUser = currentUser?.role === Role.STAGING_SUPERVISOR;
+                                            const target = ((sheet.status === SheetStatus.COMPLETED || sheet.status === SheetStatus.LOADING_VERIFICATION_PENDING || sheet.status === SheetStatus.LOCKED) && !isStagingUser)
                                                 ? `/sheets/loading/${sheet.id}`
                                                 : `/sheets/staging/${sheet.id}`;
                                             navigate(target);
