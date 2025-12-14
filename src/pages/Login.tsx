@@ -74,7 +74,7 @@ export default function LoginPage() {
 
     return (
         <div className="relative h-screen w-full font-sans overflow-hidden">
-            <RegisterModal isOpen={showRegister} onClose={() => setShowRegister(false)} />
+            <RegisterModal isOpen={showRegister} onClose={() => setShowRegister(false)} initialRole={formData.role} />
 
             {/* Background Image - Full Screen Cover */}
             <div

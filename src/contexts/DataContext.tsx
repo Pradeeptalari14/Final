@@ -167,11 +167,23 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
     const [currentUser, setCurrentUser] = useState<User | null>(null);
 
+    // Load User from LocalStorage on mount
+    useEffect(() => {
+        try {
+            const savedUser = localStorage.getItem('currentUser');
+            if (savedUser) {
+                setCurrentUser(JSON.parse(savedUser));
+            }
+        } catch (e) {
+            console.error("Failed to load user session", e);
+        }
+    }, []);
+
     // Sync currentUser with devRole changes (e.g. from Settings > Developer Tools)
     useEffect(() => {
         if (devRole) {
             if (!currentUser || currentUser.role !== devRole) {
-                setCurrentUser({
+                const devUser = {
                     id: 'dev-switch-' + Date.now(),
                     username: 'Simulated ' + devRole,
                     role: devRole as any,
@@ -180,10 +192,21 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                     email: 'dev@unicharm.com',
                     empCode: 'DEV',
                     password: ''
-                });
+                };
+                setCurrentUser(devUser);
+                localStorage.setItem('currentUser', JSON.stringify(devUser));
             }
         }
     }, [devRole]);
+
+    // Save User to LocalStorage on Change
+    useEffect(() => {
+        if (currentUser) {
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        } else {
+            localStorage.removeItem('currentUser');
+        }
+    }, [currentUser]);
 
     // ...
 

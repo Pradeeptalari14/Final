@@ -8,9 +8,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface RegisterModalProps {
     isOpen: boolean;
     onClose: () => void;
+    initialRole?: Role;
 }
 
-export default function RegisterModal({ isOpen, onClose }: RegisterModalProps) {
+export default function RegisterModal({ isOpen, onClose, initialRole }: RegisterModalProps) {
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [success, setSuccess] = useState(false);
@@ -18,7 +19,7 @@ export default function RegisterModal({ isOpen, onClose }: RegisterModalProps) {
         username: '',
         password: '',
         confirmPassword: '',
-        role: Role.STAGING_SUPERVISOR,
+        role: initialRole || Role.STAGING_SUPERVISOR,
         fullName: '',
         email: '',
         empCode: ''
@@ -69,7 +70,7 @@ export default function RegisterModal({ isOpen, onClose }: RegisterModalProps) {
                     username: '',
                     password: '',
                     confirmPassword: '',
-                    role: Role.STAGING_SUPERVISOR,
+                    role: initialRole || Role.STAGING_SUPERVISOR,
                     fullName: '',
                     email: '',
                     empCode: ''
