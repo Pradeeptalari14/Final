@@ -108,7 +108,7 @@ export default function AdminDashboard() {
                 if (currentUser?.role === Role.LOADING_SUPERVISOR) {
                     return sheet.status === SheetStatus.LOCKED ||
                         sheet.status === SheetStatus.LOADING_VERIFICATION_PENDING ||
-                        (sheet.status === SheetStatus.COMPLETED && activeTab === 'database'); // Allow seeing history in generic DB view
+                        (sheet.status === SheetStatus.COMPLETED && (activeTab === 'database' || activeTab === 'loading_db')); // Allow seeing history in generic DB view AND loading view
                 }
                 if (currentUser?.role === Role.SHIFT_LEAD) {
                     return sheet.status !== SheetStatus.DRAFT;
@@ -603,9 +603,14 @@ export default function AdminDashboard() {
                                         className="h-8 w-8 p-0 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            const target = (sheet.status === SheetStatus.COMPLETED || sheet.status === SheetStatus.LOADING_VERIFICATION_PENDING || sheet.status === SheetStatus.LOCKED)
-                                                ? `/sheets/loading/${sheet.id}`
-                                                : `/sheets/staging/${sheet.id}`;
+                                            e.stopPropagation();
+                                            const isStagingUser = currentUser?.role === Role.STAGING_SUPERVISOR;
+                                            let target = `/sheets/staging/${sheet.id}`;
+                                            if (sheet.status === SheetStatus.COMPLETED) {
+                                                target = `/sheets/loading/${sheet.id}`;
+                                            } else if ((sheet.status === SheetStatus.LOADING_VERIFICATION_PENDING || sheet.status === SheetStatus.LOCKED) && !isStagingUser) {
+                                                target = `/sheets/loading/${sheet.id}`;
+                                            }
                                             navigate(target);
                                         }}
                                         title="View & Print"
@@ -618,9 +623,14 @@ export default function AdminDashboard() {
                                         className="h-8 text-xs hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            const target = (sheet.status === SheetStatus.COMPLETED || sheet.status === SheetStatus.LOADING_VERIFICATION_PENDING || sheet.status === SheetStatus.LOCKED)
-                                                ? `/sheets/loading/${sheet.id}`
-                                                : `/sheets/staging/${sheet.id}`;
+                                            e.stopPropagation();
+                                            const isStagingUser = currentUser?.role === Role.STAGING_SUPERVISOR;
+                                            let target = `/sheets/staging/${sheet.id}`;
+                                            if (sheet.status === SheetStatus.COMPLETED) {
+                                                target = `/sheets/loading/${sheet.id}`;
+                                            } else if ((sheet.status === SheetStatus.LOADING_VERIFICATION_PENDING || sheet.status === SheetStatus.LOCKED) && !isStagingUser) {
+                                                target = `/sheets/loading/${sheet.id}`;
+                                            }
                                             navigate(target);
                                         }}
                                     >
@@ -690,9 +700,13 @@ export default function AdminDashboard() {
                             <tr><td colSpan={7} className="py-8 text-center text-slate-500">No sheets found matching filters.</td></tr>
                         ) : filteredSheets.map((sheet) => (
                             <tr key={sheet.id} className="group hover:bg-slate-50 dark:hover:bg-white/5 transition-colors cursor-pointer" onClick={() => {
-                                const target = (sheet.status === SheetStatus.COMPLETED || sheet.status === SheetStatus.LOADING_VERIFICATION_PENDING || sheet.status === SheetStatus.LOCKED)
-                                    ? `/sheets/loading/${sheet.id}`
-                                    : `/sheets/staging/${sheet.id}`;
+                                const isStagingUser = currentUser?.role === Role.STAGING_SUPERVISOR;
+                                let target = `/sheets/staging/${sheet.id}`;
+                                if (sheet.status === SheetStatus.COMPLETED) {
+                                    target = `/sheets/loading/${sheet.id}`;
+                                } else if ((sheet.status === SheetStatus.LOADING_VERIFICATION_PENDING || sheet.status === SheetStatus.LOCKED) && !isStagingUser) {
+                                    target = `/sheets/loading/${sheet.id}`;
+                                }
                                 navigate(target);
                             }}>
                                 <td className={`pl-4 text-slate-700 dark:text-slate-300 font-mono text-xs ${settings.density === 'compact' ? 'py-1' : 'py-3'}`}>{sheet.id.slice(0, 8)}...</td>
@@ -733,10 +747,14 @@ export default function AdminDashboard() {
                                         className="h-8 w-8 p-0 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
                                         onClick={(e) => {
                                             e.stopPropagation();
+                                            e.stopPropagation();
                                             const isStagingUser = currentUser?.role === Role.STAGING_SUPERVISOR;
-                                            const target = ((sheet.status === SheetStatus.COMPLETED || sheet.status === SheetStatus.LOADING_VERIFICATION_PENDING || sheet.status === SheetStatus.LOCKED) && !isStagingUser)
-                                                ? `/sheets/loading/${sheet.id}`
-                                                : `/sheets/staging/${sheet.id}`;
+                                            let target = `/sheets/staging/${sheet.id}`;
+                                            if (sheet.status === SheetStatus.COMPLETED) {
+                                                target = `/sheets/loading/${sheet.id}`;
+                                            } else if ((sheet.status === SheetStatus.LOADING_VERIFICATION_PENDING || sheet.status === SheetStatus.LOCKED) && !isStagingUser) {
+                                                target = `/sheets/loading/${sheet.id}`;
+                                            }
                                             navigate(target);
                                         }}
                                         title="View & Print"
