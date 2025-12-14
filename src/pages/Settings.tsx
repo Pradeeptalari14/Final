@@ -1,123 +1,27 @@
-import { useState } from 'react';
 import { useData } from "@/contexts/DataContext";
-import { useToast } from "@/contexts/ToastContext";
 import { Role } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { supabase } from "@/lib/supabase";
-import { Save, Loader2, Plus, RefreshCw } from 'lucide-react';
+
 
 export default function SettingsPage() {
-    const { devRole, setDevRole, refreshUsers, users, settings, updateSettings } = useData();
-    const { addToast } = useToast();
+    const { devRole, setDevRole, settings, updateSettings } = useData();
+
 
     // Add/Edit User Form State
-    const [isAddingUser, setIsAddingUser] = useState(false);
-    const [newUserLoading, setNewUserLoading] = useState(false);
-    const [editingUserId, setEditingUserId] = useState<string | null>(null);
-    const [newUser, setNewUser] = useState({
-        username: '',
-        email: '',
-        password: '',
-        role: Role.STAGING_SUPERVISOR
-    });
 
-    const handleEditUser = (user: any) => {
-        setNewUser({
-            username: user.username,
-            email: user.email || '',
-            password: '', // Don't show existing password
-            role: user.role
-        });
-        setEditingUserId(user.id);
-        setIsAddingUser(true);
-    };
+    // State cleaned
 
-    const handleDeleteUser = async (userId: string, username: string) => {
-        if (!window.confirm(`Are you sure you want to delete user "${username}"? This action cannot be undone.`)) return;
 
-        try {
-            const { error } = await supabase.from('users').delete().eq('id', userId);
-            if (error) throw error;
-            addToast('success', `User ${username} deleted successfully.`);
-            await refreshUsers();
-        } catch (error: any) {
-            addToast('error', error.message || "Failed to delete user");
-        }
-    };
 
-    const handleApproveUser = async (userId: string, username: string) => {
-        try {
-            const { error } = await supabase.from('users').update({
-                data: { ...users.find(u => u.id === userId), isApproved: true }
-            }).eq('id', userId);
 
-            if (error) throw error;
-            addToast('success', `User ${username} approved successfully.`);
-            await refreshUsers();
-        } catch (error: any) {
-            addToast('error', error.message || "Failed to approve user");
-        }
-    };
 
-    const handleSaveUser = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setNewUserLoading(true);
 
-        try {
-            // Validate
-            if (!newUser.username) {
-                throw new Error("Username is required.");
-            }
-            if (!editingUserId && !newUser.password) {
-                throw new Error("Password is required for new users.");
-            }
 
-            const userData = {
-                username: newUser.username,
-                email: newUser.email,
-                fullName: newUser.username, // Default to username for now
-                role: newUser.role,
-                isApproved: true,
-                ...(newUser.password ? { password: newUser.password } : {}) // Only update password if provided
-            };
 
-            if (editingUserId) {
-                // UPDATE Existing User
-                const existing = users.find(u => u.id === editingUserId);
-                const updatedData = { ...existing, ...userData };
 
-                const { error } = await supabase.from('users').update({
-                    data: updatedData
-                }).eq('id', editingUserId);
 
-                if (error) throw error;
-                addToast('success', `User ${newUser.username} updated successfully!`);
 
-            } else {
-                // CREATE New User
-                const newId = crypto.randomUUID();
-                const fullData = { ...userData, id: newId, password: newUser.password }; // Ensure password is set
-                const { error } = await supabase.from('users').insert({
-                    id: newId,
-                    data: fullData
-                });
-                if (error) throw error;
-                addToast('success', `User ${newUser.username} created successfully!`);
-            }
-
-            await refreshUsers();
-            setIsAddingUser(false);
-            setEditingUserId(null);
-            setNewUser({ username: '', email: '', password: '', role: Role.STAGING_SUPERVISOR });
-
-        } catch (error: any) {
-            addToast('error', error.message || "Failed to save user");
-        } finally {
-            setNewUserLoading(false);
-        }
-    };
 
     return (
         <div className="p-8 space-y-6 pb-20">

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Role } from '@/types';
 import { supabase } from '@/lib/supabase';
-import { Loader2, User, X, CheckCircle, Eye, EyeOff } from 'lucide-react';
+import { Loader2, X, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface RegisterModalProps {

@@ -186,7 +186,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
         if (usersToDelete && usersToDelete.length > 0) {
             console.log(`Resetting: Deleting ${usersToDelete.length} non-admin users...`);
-            const idsToDelete = usersToDelete.map(u => u.id);
+            // const idsToDelete = usersToDelete.map(u => u.id); // Optimized out for RLS check
+            const idsToDelete = usersToDelete.map((u: User) => u.id);
             const { error: deleteError, count } = await supabase.from('users').delete({ count: 'exact' }).in('id', idsToDelete);
 
             if (deleteError) {

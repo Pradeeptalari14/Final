@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Save, Plus, Printer, Calendar, MapPin, User, FileText, UserCheck, Truck, ClipboardList, AlertTriangle, Loader2, CheckCircle, Lock, Trash2 } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Printer, Calendar, UserCheck, Truck, Lock, ClipboardList, CheckCircle, AlertTriangle, Loader2, FileText, User, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -23,7 +23,7 @@ export default function StagingSheet() {
     const { session } = useAuth();
 
     // Determine effective role
-    const currentRole = devRole || currentUser?.role;
+    const currentRole = (devRole || currentUser?.role) as Role | undefined;
 
     const [formData, setFormData] = useState<Partial<SheetData>>({
         shift: shift || 'A',
@@ -406,7 +406,7 @@ export default function StagingSheet() {
     );
 }
 
-function VerificationFooter({ formData, setFormData, onSave, currentRole }: { formData: Partial<SheetData>, setFormData: any, onSave: () => void, currentRole: Role | undefined }) {
+function VerificationFooter({ formData, setFormData, onSave, currentRole }: { formData: Partial<SheetData>, setFormData: any, onSave: (data: any) => void, currentRole: Role | undefined }) {
     const isShiftLead = currentRole === Role.SHIFT_LEAD || currentRole === Role.ADMIN;
     const isPending = formData.status === SheetStatus.STAGING_VERIFICATION_PENDING;
 
