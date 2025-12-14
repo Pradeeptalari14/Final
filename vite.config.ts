@@ -6,30 +6,30 @@ import path from 'path';
 export default defineConfig({
   plugins: [
     react(),
-    VitePWA({
-      registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
-      manifest: {
-        name: 'Unicharm Operations',
-        short_name: 'UnicharmOps',
-        description: 'Unicharm Operations Management System',
-        theme_color: '#0f172a',
-        background_color: '#0f172a',
-        display: 'standalone',
-        icons: [
-          {
-            src: 'login-logo.png',
-            sizes: '192x192',
-            type: 'image/png'
-          },
-          {
-            src: 'login-logo.png',
-            sizes: '512x512',
-            type: 'image/png'
-          }
-        ]
-      }
-    })
+    // VitePWA({
+    //   registerType: 'autoUpdate',
+    //   includeAssets: ['login-logo.png', 'unicharm-logo.png'],
+    //   manifest: {
+    //     name: 'Unicharm Operations',
+    //     short_name: 'UnicharmOps',
+    //     description: 'Unicharm Operations Management System',
+    //     theme_color: '#0f172a',
+    //     background_color: '#0f172a',
+    //     display: 'standalone',
+    //     icons: [
+    //       {
+    //         src: 'login-logo.png',
+    //         sizes: '192x192',
+    //         type: 'image/png'
+    //       },
+    //       {
+    //         src: 'login-logo.png',
+    //         sizes: '512x512',
+    //         type: 'image/png'
+    //       }
+    //     ]
+    //   }
+    // })
   ],
   resolve: {
     alias: {

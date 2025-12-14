@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
-import { Save, Loader2, Plus } from 'lucide-react';
+import { Save, Loader2, Plus, RefreshCw } from 'lucide-react';
 
 export default function SettingsPage() {
     const { devRole, setDevRole, refreshUsers, users, settings, updateSettings } = useData();
@@ -44,6 +44,20 @@ export default function SettingsPage() {
             await refreshUsers();
         } catch (error: any) {
             addToast('error', error.message || "Failed to delete user");
+        }
+    };
+
+    const handleApproveUser = async (userId: string, username: string) => {
+        try {
+            const { error } = await supabase.from('users').update({
+                data: { ...users.find(u => u.id === userId), isApproved: true }
+            }).eq('id', userId);
+
+            if (error) throw error;
+            addToast('success', `User ${username} approved successfully.`);
+            await refreshUsers();
+        } catch (error: any) {
+            addToast('error', error.message || "Failed to approve user");
         }
     };
 
@@ -120,7 +134,7 @@ export default function SettingsPage() {
 
                     {/* Theme & Accent */}
                     <div className="space-y-3">
-                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">Appearance</label>
+                        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Appearance</label>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="bg-card p-4 rounded-lg border border-border flex items-center justify-between">
                                 <div>
@@ -131,12 +145,12 @@ export default function SettingsPage() {
                                     <button
                                         type="button"
                                         onClick={() => updateSettings({ theme: 'light' })}
-                                        className={`px-3 py-1.5 rounded-md text-xs transition-all ${settings?.theme === 'light' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                                        className={`px-3 py-1.5 rounded-md text-xs transition-all ${settings?.theme === 'light' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                                     >Light</button>
                                     <button
                                         type="button"
                                         onClick={() => updateSettings({ theme: 'dark' })}
-                                        className={`px-3 py-1.5 rounded-md text-xs transition-all ${settings?.theme === 'dark' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                                        className={`px-3 py-1.5 rounded-md text-xs transition-all ${settings?.theme === 'dark' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                                     >Dark</button>
                                 </div>
                             </div>
@@ -163,7 +177,7 @@ export default function SettingsPage() {
 
                     {/* View Options */}
                     <div className="space-y-3">
-                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">View Options</label>
+                        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">View Options</label>
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                             {/* Density */}
                             <div className="bg-card p-4 rounded-lg border border-border">
@@ -175,12 +189,12 @@ export default function SettingsPage() {
                                     <button
                                         type="button"
                                         onClick={() => updateSettings({ density: 'compact' })}
-                                        className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.density === 'compact' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                                        className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.density === 'compact' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                                     >Compact</button>
                                     <button
                                         type="button"
                                         onClick={() => updateSettings({ density: 'comfortable' })}
-                                        className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.density === 'comfortable' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                                        className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.density === 'comfortable' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                                     >Comfy</button>
                                 </div>
                             </div>
@@ -195,17 +209,17 @@ export default function SettingsPage() {
                                     <button
                                         type="button"
                                         onClick={() => updateSettings({ fontSize: 'small' })}
-                                        className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.fontSize === 'small' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                                        className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.fontSize === 'small' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                                     >A-</button>
                                     <button
                                         type="button"
                                         onClick={() => updateSettings({ fontSize: 'medium' })}
-                                        className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.fontSize === 'medium' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                                        className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.fontSize === 'medium' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                                     >A</button>
                                     <button
                                         type="button"
                                         onClick={() => updateSettings({ fontSize: 'large' })}
-                                        className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.fontSize === 'large' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                                        className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.fontSize === 'large' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                                     >A+</button>
                                 </div>
                             </div>
@@ -220,12 +234,12 @@ export default function SettingsPage() {
                                     <button
                                         type="button"
                                         onClick={() => updateSettings({ sidebarCollapsed: false })}
-                                        className={`flex-1 py-1.5 rounded-md text-xs transition-all ${!settings?.sidebarCollapsed ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                                        className={`flex-1 py-1.5 rounded-md text-xs transition-all ${!settings?.sidebarCollapsed ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                                     >Expanded</button>
                                     <button
                                         type="button"
                                         onClick={() => updateSettings({ sidebarCollapsed: true })}
-                                        className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.sidebarCollapsed ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                                        className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.sidebarCollapsed ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                                     >Collapsed</button>
                                 </div>
                             </div>
@@ -255,14 +269,14 @@ export default function SettingsPage() {
             </Card>
 
             {/* DEVELOPER TOOLS (Compacted) */}
-            <Card className="border-white/5 bg-slate-900/40 opacity-75 hover:opacity-100 transition-opacity">
+            <Card className="border-border bg-card opacity-75 hover:opacity-100 transition-opacity">
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-sm uppercase tracking-wider text-slate-500">
+                    <CardTitle className="flex items-center gap-2 text-sm uppercase tracking-wider text-muted-foreground">
                         Developer Tools
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-muted-foreground">
                         Simulate roles to verify permissions across the app.
                     </p>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -273,8 +287,8 @@ export default function SettingsPage() {
                                 className={`
                                     p-3 rounded-lg border text-left transition-all text-xs
                                     ${devRole === role
-                                        ? 'bg-blue-600/20 border-blue-500 text-blue-200 shadow-sm'
-                                        : 'bg-slate-950/50 border-white/5 text-slate-400 hover:bg-white/5 hover:border-white/10'
+                                        ? 'bg-primary/20 border-primary text-primary shadow-sm'
+                                        : 'bg-background border-border text-muted-foreground hover:bg-muted hover:border-border'
                                     }
                                 `}
                             >
@@ -285,134 +299,7 @@ export default function SettingsPage() {
                 </CardContent>
             </Card>
 
-            {/* ADMIN AREA: USER MANAGEMENT */}
-            {(devRole === Role.ADMIN) && (
-                <Card className="border-emerald-500/20 bg-emerald-950/10">
-                    <CardHeader className="flex flex-row items-center justify-between">
-                        <CardTitle className="text-emerald-400">Admin Area: User Management</CardTitle>
-                        <Button
-                            onClick={() => {
-                                setIsAddingUser(!isAddingUser);
-                                if (!isAddingUser) {
-                                    setEditingUserId(null); // Reset edit state if opening new form
-                                    setNewUser({ username: '', email: '', password: '', role: Role.STAGING_SUPERVISOR });
-                                }
-                            }}
-                            size="sm"
-                            className="bg-emerald-600 hover:bg-emerald-500 text-white"
-                        >
-                            <Plus size={16} className="mr-2" />
-                            {isAddingUser ? 'Cancel' : 'Add User'}
-                        </Button>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-
-                        {/* Add/Edit User Form */}
-                        {isAddingUser && (
-                            <div className="bg-emerald-950/20 border border-emerald-500/20 p-4 rounded-lg animate-in fade-in slide-in-from-top-2">
-                                <h4 className="text-sm font-semibold text-emerald-200 mb-4">{editingUserId ? 'Edit User' : 'Create New User'}</h4>
-                                <form onSubmit={handleSaveUser} className="space-y-4">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <label className="text-xs font-medium text-slate-400">Username</label>
-                                            <input
-                                                required
-                                                value={newUser.username}
-                                                onChange={e => setNewUser({ ...newUser, username: e.target.value })}
-                                                className="w-full bg-slate-950 border border-white/10 rounded px-3 py-2 text-white"
-                                                placeholder="jdoe"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-xs font-medium text-slate-400">Email</label>
-                                            <input
-                                                type="email"
-                                                value={newUser.email}
-                                                onChange={e => setNewUser({ ...newUser, email: e.target.value })}
-                                                className="w-full bg-slate-950 border border-white/10 rounded px-3 py-2 text-white"
-                                                placeholder="jdoe@unicharm.com"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-xs font-medium text-slate-400">Password {editingUserId && '(Leave blank to keep current)'}</label>
-                                            <input
-                                                type="password"
-                                                required={!editingUserId}
-                                                value={newUser.password}
-                                                onChange={e => setNewUser({ ...newUser, password: e.target.value })}
-                                                className="w-full bg-slate-950 border border-white/10 rounded px-3 py-2 text-white"
-                                                placeholder="••••••••"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-xs font-medium text-slate-400">Role</label>
-                                            <select
-                                                value={newUser.role}
-                                                onChange={e => setNewUser({ ...newUser, role: e.target.value as Role })}
-                                                className="w-full bg-slate-950 border border-white/10 rounded px-3 py-2 text-white"
-                                            >
-                                                {Object.values(Role).map(r => (
-                                                    <option key={r} value={r}>{r}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div className="flex justify-end">
-                                        <Button type="submit" disabled={newUserLoading} className="bg-emerald-600 hover:bg-emerald-500">
-                                            {newUserLoading ? <Loader2 className="animate-spin mr-2" size={16} /> : <Save className="mr-2" size={16} />}
-                                            {editingUserId ? 'Update User' : 'Save User'}
-                                        </Button>
-                                    </div>
-                                </form>
-                            </div>
-                        )}
-
-                        <div className="bg-slate-900/50 rounded-lg p-4 border border-white/5">
-                            <table className="w-full text-left text-sm">
-                                <thead>
-                                    <tr className="text-slate-500 border-b border-white/5">
-                                        <th className="pb-2 pl-2">User</th>
-                                        <th className="pb-2">Email</th>
-                                        <th className="pb-2">Role</th>
-                                        <th className="pb-2">Status</th>
-                                        <th className="pb-2 text-right pr-2">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-white/5">
-                                    {users.length === 0 ? (
-                                        <tr><td colSpan={5} className="py-4 text-center text-slate-500">No users found.</td></tr>
-                                    ) : users.map((user) => (
-                                        <tr key={user.id} className="group hover:bg-white/5 transition-colors">
-                                            <td className="py-3 pl-2 font-medium text-slate-200">{user.username}</td>
-                                            <td className="py-3 text-slate-400">{user.email || '-'}</td>
-                                            <td className="py-3"><Badge variant="outline" className="text-xs border-white/10">{user.role}</Badge></td>
-                                            <td className="py-3"><span className="text-emerald-400 text-xs">Active</span></td>
-                                            <td className="py-3 text-right pr-2 space-x-2">
-                                                <button
-                                                    type="button"
-                                                    className="text-blue-400 hover:text-blue-300 transition-colors text-xs font-medium"
-                                                    onClick={() => handleEditUser(user)}
-                                                >
-                                                    Edit
-                                                </button>
-                                                {user.username !== 'admin' && (
-                                                    <button
-                                                        type="button"
-                                                        className="text-red-500 hover:text-red-400 transition-colors text-xs font-medium"
-                                                        onClick={() => handleDeleteUser(user.id, user.username)}
-                                                    >
-                                                        Delete
-                                                    </button>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
+            {/* ADMIN AREA: USER MANAGEMENT - REMOVED AS PER REQUEST (Now in Dashboard) */}
         </div>
     );
 }

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Role } from '@/types';
+import { supabase } from '@/lib/supabase';
 import { Eye, EyeOff, Loader2, ArrowLeft, User } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -21,13 +22,46 @@ export default function RegisterPage() {
         e.preventDefault();
         setLoading(true);
 
-        // Simulate registration process
-        setTimeout(() => {
+        if (formData.password !== formData.confirmPassword) {
+            alert("Passwords do not match");
             setLoading(false);
-            // In a real app, this would call an API
-            alert("Registration successful! Please login.");
+            return;
+        }
+
+        try {
+            // Check if user exists
+            const { data: existing } = await supabase.from('users').select('*').eq('data->>username', formData.username).single();
+            if (existing) {
+                throw new Error("Username already taken");
+            }
+
+            const newId = crypto.randomUUID();
+            const newUser = {
+                id: newId,
+                username: formData.username,
+                password: formData.password,
+                role: formData.role,
+                fullName: formData.username,
+                email: '',
+                isApproved: false // Require Admin Approval
+            };
+
+            const { error } = await supabase.from('users').insert({
+                id: newId,
+                data: newUser
+            });
+
+            if (error) throw error;
+
+            alert("Registration successful! Waiting for Admin Approval.");
             navigate('/login');
-        }, 1500);
+
+        } catch (error: any) {
+            console.error(error);
+            alert(error.message || "Registration failed");
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -61,7 +95,7 @@ export default function RegisterPage() {
                         className="w-full max-w-[420px]"
                     >
                         {/* Consistent Styling with Login */}
-                        <div className="relative bg-black/30 backdrop-blur-md border border-white/20 rounded-3xl p-8 shadow-2xl overflow-hidden ring-1 ring-white/10">
+                        <div className="relative bg-card/60 backdrop-blur-md border border-border rounded-3xl p-8 shadow-2xl overflow-hidden ring-1 ring-border/20">
 
                             {/* Decor header line */}
                             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-400 via-purple-400 to-emerald-400 opacity-90" />
@@ -71,38 +105,38 @@ export default function RegisterPage() {
                                 <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-600/80 to-pink-600/80 shadow-lg shadow-purple-500/20 mb-4 ring-2 ring-white/20">
                                     <User className="w-7 h-7 text-white" />
                                 </div>
-                                <h1 className="text-2xl font-bold text-white tracking-tight mb-1 drop-shadow-md">Create Account</h1>
-                                <p className="text-white/80 text-sm font-medium">Join Unicharm Operations</p>
+                                <h1 className="text-2xl font-bold text-foreground tracking-tight mb-1 drop-shadow-md">Create Account</h1>
+                                <p className="text-muted-foreground text-sm font-medium">Join Unicharm Operations</p>
                             </div>
 
                             <form onSubmit={handleRegister} className="space-y-4">
                                 <div className="space-y-1">
-                                    <label className="text-xs font-bold text-white/90 ml-1 uppercase tracking-wider shadow-sm">Username</label>
+                                    <label className="text-xs font-bold text-muted-foreground ml-1 uppercase tracking-wider shadow-sm">Username</label>
                                     <input
                                         type="text"
                                         placeholder="Choose a username"
                                         value={formData.username}
                                         onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                                        className="w-full h-11 bg-black/40 border border-white/20 rounded-xl px-4 text-white placeholder-white/50 focus:outline-none focus:border-purple-400 focus:bg-black/60 transition-all text-sm backdrop-blur-sm"
+                                        className="w-full h-11 bg-background/50 border border-input rounded-xl px-4 text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary focus:bg-background/80 transition-all text-sm backdrop-blur-sm"
                                         required
                                     />
                                 </div>
 
                                 <div className="space-y-1 relative">
-                                    <label className="text-xs font-bold text-white/90 ml-1 uppercase tracking-wider shadow-sm">Password</label>
+                                    <label className="text-xs font-bold text-muted-foreground ml-1 uppercase tracking-wider shadow-sm">Password</label>
                                     <div className="relative">
                                         <input
                                             type={showPassword ? "text" : "password"}
                                             placeholder="Create a password"
                                             value={formData.password}
                                             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                            className="w-full h-11 bg-black/40 border border-white/20 rounded-xl px-4 pr-12 text-white placeholder-white/50 focus:outline-none focus:border-purple-400 focus:bg-black/60 transition-all text-sm backdrop-blur-sm"
+                                            className="w-full h-11 bg-background/50 border border-input rounded-xl px-4 pr-12 text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary focus:bg-background/80 transition-all text-sm backdrop-blur-sm"
                                             required
                                         />
                                         <button
                                             type="button"
                                             onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/20 transition-colors"
                                         >
                                             {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                                         </button>
@@ -110,32 +144,32 @@ export default function RegisterPage() {
                                 </div>
 
                                 <div className="space-y-1 relative">
-                                    <label className="text-xs font-bold text-white/90 ml-1 uppercase tracking-wider shadow-sm">Confirm Password</label>
+                                    <label className="text-xs font-bold text-muted-foreground ml-1 uppercase tracking-wider shadow-sm">Confirm Password</label>
                                     <input
                                         type="password"
                                         placeholder="Confirm password"
                                         value={formData.confirmPassword}
                                         onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                                        className="w-full h-11 bg-black/40 border border-white/20 rounded-xl px-4 text-white placeholder-white/50 focus:outline-none focus:border-purple-400 focus:bg-black/60 transition-all text-sm backdrop-blur-sm"
+                                        className="w-full h-11 bg-background/50 border border-input rounded-xl px-4 text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary focus:bg-background/80 transition-all text-sm backdrop-blur-sm"
                                         required
                                     />
                                 </div>
 
                                 <div className="space-y-1">
-                                    <label className="text-xs font-bold text-white/90 ml-1 uppercase tracking-wider shadow-sm">Role Request</label>
+                                    <label className="text-xs font-bold text-muted-foreground ml-1 uppercase tracking-wider shadow-sm">Role Request</label>
                                     <div className="relative">
                                         <select
                                             value={formData.role}
                                             onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
-                                            className="w-full h-11 bg-black/40 border border-white/20 rounded-xl px-4 text-white focus:outline-none focus:border-purple-400 focus:bg-black/60 transition-all text-sm appearance-none cursor-pointer backdrop-blur-sm"
+                                            className="w-full h-11 bg-background/50 border border-input rounded-xl px-4 text-foreground focus:outline-none focus:border-primary focus:bg-background/80 transition-all text-sm appearance-none cursor-pointer backdrop-blur-sm"
                                         >
                                             {Object.values(Role).map(role => (
-                                                <option key={role} value={role} className="bg-slate-900 text-white py-2">
+                                                <option key={role} value={role} className="bg-popover text-popover-foreground py-2">
                                                     {role.replace(/_/g, ' ')}
                                                 </option>
                                             ))}
                                         </select>
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-white/70">
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground">
                                             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
                                                 <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                                             </svg>
@@ -152,10 +186,10 @@ export default function RegisterPage() {
                                 </Button>
                             </form>
 
-                            <div className="mt-6 pt-4 border-t border-white/10 text-center">
+                            <div className="mt-6 pt-4 border-t border-border/20 text-center">
                                 <button
                                     onClick={() => navigate('/login')}
-                                    className="text-white/70 hover:text-white transition-colors flex items-center justify-center gap-2 w-full text-sm group"
+                                    className="text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center gap-2 w-full text-sm group"
                                 >
                                     <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
                                     Back to Login

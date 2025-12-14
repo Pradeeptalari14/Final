@@ -1,7 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useData } from '@/contexts/DataContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { SheetData, SheetStatus, LoadingItemData, AdditionalItem, Role, StagingItem } from '@/types'; // Added StagingItem
+import { SheetData, SheetStatus, Role } from '@/types'; // Added StagingItem
 import { useNavigate, useParams } from 'react-router-dom';
 import {
     Camera,
@@ -20,9 +19,9 @@ import {
     Container,
     Plus,
     AlertTriangle,
-    XCircle,
     Image as ImageIcon
 } from 'lucide-react';
+
 
 // --- Extracted Helper Components ---
 const HeaderField = ({ label, icon: Icon, hasError, children }: any) => (
@@ -731,7 +730,7 @@ export default function LoadingSheet() {
                                     <tr><th className="p-3 text-left w-8">Sr.No</th><th className="p-3 text-left">SKU Name</th><th className="p-3 text-center w-10">Cs/P</th><th className="p-3 text-center w-10">Full</th><th className="p-3 text-center w-10">Lse</th><th className="p-3 text-center w-12 bg-slate-100">TTL</th></tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
-                                    {displayedStagingItems.map((item, idx) => (
+                                    {displayedStagingItems.map((item, _idx) => (
                                         <tr key={item.srNo}>
                                             <td className="p-3 text-center font-bold">{item.srNo}</td>
                                             <td className="p-3 truncate max-w-[120px]" title={item.skuName}>{item.skuName}</td>

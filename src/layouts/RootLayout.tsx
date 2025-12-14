@@ -1,7 +1,7 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Database, Settings, Menu, Shield, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { Role } from '@/types';
 
@@ -28,7 +28,7 @@ export default function RootLayout() {
                 : "Admin";
 
     return (
-        <div className="flex h-screen w-full bg-background text-foreground overflow-hidden font-sans selection:bg-primary/30 print:h-auto print:overflow-visible transition-colors duration-300">
+        <div className="flex h-screen w-full bg-slate-50 dark:bg-background text-foreground overflow-hidden font-sans selection:bg-primary/30 print:h-auto print:overflow-visible transition-colors duration-300">
             {/* Sidebar */}
             <aside className={cn(
                 "relative z-20 flex flex-col border-r border-border bg-card/80 backdrop-blur-xl transition-all duration-300 print:hidden",

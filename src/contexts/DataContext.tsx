@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { SheetData, User, Notification, SheetStatus } from '@/types';
+import { SheetData, User, Notification, AppSettings } from '@/types';
 
 interface DataContextType {
     sheets: SheetData[];
@@ -26,7 +26,7 @@ interface DataContextType {
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 const defaultSettings: AppSettings = {
-    theme: 'dark',
+    theme: 'light',
     accentColor: 'blue',
     density: 'comfortable',
     sidebarCollapsed: false,
@@ -37,7 +37,7 @@ const defaultSettings: AppSettings = {
 export function DataProvider({ children }: { children: React.ReactNode }) {
     const [sheets, setSheets] = useState<SheetData[]>([]);
     const [users, setUsers] = useState<User[]>([]);
-    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [notifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(true);
     const [devRole, setDevRole] = useState<string | null>(null); // Default null to force login
     const [shift, setShift] = useState<string>('A');
@@ -54,7 +54,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     });
 
     const updateSettings = (newSettings: Partial<AppSettings>) => {
-        setSettings(prev => {
+        setSettings((prev: AppSettings) => {
             const updated = { ...prev, ...newSettings };
             try {
                 localStorage.setItem('appSettings', JSON.stringify(updated));
@@ -72,8 +72,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         // Theme
         if (settings.theme === 'light') {
             root.classList.add('light');
+            root.classList.remove('dark');
         } else {
             root.classList.remove('light');
+            root.classList.add('dark');
         }
 
         // Accent Color
@@ -105,8 +107,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             .range(0, PAGE_SIZE - 1);
 
         if (!activeError && !archivedError) {
-            const active = (activeData || []).map(d => ({ ...d.data, id: d.id, status: d.data.status || 'DRAFT' })) as SheetData[];
-            const archived = (archivedData || []).map(d => ({ ...d.data, id: d.id, status: d.data.status || 'DRAFT' })) as SheetData[];
+            const active = (activeData || []).map((d: any) => ({ ...d.data, id: d.id, status: d.data.status || 'DRAFT' })) as SheetData[];
+            const archived = (archivedData || []).map((d: any) => ({ ...d.data, id: d.id, status: d.data.status || 'DRAFT' })) as SheetData[];
 
             // Combine strict unique set just in case
             const combined = [...active, ...archived];
@@ -130,8 +132,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             .range(from, to);
 
         if (data && !error && data.length > 0) {
-            const newArchived = data.map(d => ({ ...d.data, id: d.id, status: d.data.status || 'DRAFT' })) as SheetData[];
-            setSheets(prev => {
+            const newArchived = data.map((d: any) => ({ ...d.data, id: d.id, status: d.data.status || 'DRAFT' })) as SheetData[];
+            setSheets((prev: SheetData[]) => {
                 const combined = [...prev, ...newArchived];
                 const uniqueMap = new Map(combined.map(s => [s.id, s]));
                 return Array.from(uniqueMap.values());
@@ -143,7 +145,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const refreshUsers = async () => {
         const { data } = await supabase.from('users').select('*');
         if (data) {
-            const mappedUsers = data.filter(d => d.data).map(d => d.data as User);
+            const mappedUsers = data.filter((d: any) => d.data && !d.data.isDeleted).map((d: any) => ({ ...d.data, id: d.id }) as User);
             setUsers(mappedUsers);
         }
     };
@@ -162,9 +164,47 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
     const resetAllData = async () => {
         // Danger: Delete ALL sheets
-        const { error } = await supabase.from('sheets').delete().neq('id', '00000000-0000-0000-0000-000000000000'); // Delete everything where ID is not empty UUID
-        if (error) throw error;
+        const { error: sheetsError } = await supabase.from('sheets').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        if (sheetsError) {
+            console.error("Failed to clear sheets:", sheetsError);
+            throw sheetsError;
+        }
+
+        // Danger: Delete ALL Non-Admin Users
+        // We fetch first to filter, as RLS might be tricky with bulk delete
+        const { data: usersToDelete, error: fetchError } = await supabase
+            .from('users')
+            .select('id, data')
+            .neq('data->>role', 'ADMIN');
+
+        if (fetchError) {
+            alert("Error fetching users: " + fetchError.message);
+            throw fetchError;
+        }
+
+        alert(`Debug: Found ${usersToDelete?.length || 0} non-admin users to delete.`);
+
+        if (usersToDelete && usersToDelete.length > 0) {
+            console.log(`Resetting: Deleting ${usersToDelete.length} non-admin users...`);
+            const idsToDelete = usersToDelete.map(u => u.id);
+            const { error: deleteError, count } = await supabase.from('users').delete({ count: 'exact' }).in('id', idsToDelete);
+
+            if (deleteError) {
+                console.error("Failed to delete users:", deleteError);
+                throw deleteError;
+            }
+            console.log(`Resetting: Successfully deleted ${count} users.`);
+
+            // Critical RLS Check
+            if (count === 0 && idsToDelete.length > 0) {
+                const msg = "Database deleted 0 users despite finding them. Row Level Security is blocking this. You are likely signed in as a user who does not have 'Delete' permissions.";
+                console.error(msg);
+                throw new Error(msg);
+            }
+        }
+
         setSheets([]);
+        await refreshUsers();
     };
 
     useEffect(() => {
@@ -184,6 +224,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                     isApproved: true,
                     fullName: 'Simulated User',
                     email: 'dev@unicharm.com',
+                    empCode: 'DEV',
                     password: ''
                 });
             }

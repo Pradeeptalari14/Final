@@ -75,8 +75,8 @@ export default function DatabasePage() {
         <div className="p-8 space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-3xl font-bold text-white tracking-tight">Database</h2>
-                    <p className="text-slate-400">Manage staging and loading sheets.</p>
+                    <h2 className="text-3xl font-bold text-foreground tracking-tight">Database</h2>
+                    <p className="text-muted-foreground">Manage staging and loading sheets.</p>
                 </div>
                 {activeFilter && (
                     <Button variant="ghost" onClick={clearFilter} className="text-red-400 hover:text-red-300 hover:bg-red-900/10 gap-2">
@@ -85,10 +85,10 @@ export default function DatabasePage() {
                 )}
             </div>
             <div className="flex gap-2">
-                <Button variant="outline" size="icon" onClick={() => refreshSheets()} className="border-white/10 text-slate-400 hover:text-white">
+                <Button variant="outline" size="icon" onClick={() => refreshSheets()} className="border-border text-muted-foreground hover:text-foreground">
                     <RefreshCw size={16} />
                 </Button>
-                <Button variant="outline" onClick={handleExport} className="gap-2 border-white/10 text-green-400 hover:text-green-300 hover:bg-green-500/10">
+                <Button variant="outline" onClick={handleExport} className="gap-2 border-border text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10">
                     <Download size={16} /> Export
                 </Button>
                 <Button onClick={() => navigate('/sheets/staging/new')} className="gap-2 bg-blue-600 hover:bg-blue-500">
@@ -100,9 +100,9 @@ export default function DatabasePage() {
             {/* Filters */}
             <div className="flex gap-4">
                 <div className="relative flex-1 max-w-sm">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
                     <input
-                        className="w-full bg-slate-900/50 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                        className="w-full bg-background border border-input rounded-lg pl-10 pr-4 py-2 text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                         placeholder="Search sheets..."
                     />
                 </div>
@@ -111,16 +111,16 @@ export default function DatabasePage() {
                 </Button>
             </div>
 
-            <div className="rounded-xl border border-white/5 overflow-hidden">
+            <div className="rounded-xl border border-border overflow-hidden">
                 <Table>
-                    <TableHeader className="bg-slate-900/50">
+                    <TableHeader className="bg-muted/50">
                         <TableRow className="hover:bg-transparent">
-                            <TableHead>ID</TableHead>
-                            <TableHead>Supervisor</TableHead>
-                            <TableHead>Destination</TableHead>
-                            <TableHead>Date</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
+                            <TableHead className="text-foreground font-bold">ID</TableHead>
+                            <TableHead className="text-foreground font-bold">Supervisor</TableHead>
+                            <TableHead className="text-foreground font-bold">Destination</TableHead>
+                            <TableHead className="text-foreground font-bold">Date</TableHead>
+                            <TableHead className="text-foreground font-bold">Status</TableHead>
+                            <TableHead className="text-right text-foreground font-bold">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -140,7 +140,7 @@ export default function DatabasePage() {
                                         navigate(isStaging ? `/sheets/staging/${sheet.id}` : `/sheets/loading/${sheet.id}`);
                                     }}
                                 >
-                                    <TableCell className="font-medium text-white">{sheet.id}</TableCell>
+                                    <TableCell className="font-medium text-foreground">{sheet.id}</TableCell>
                                     <TableCell>{sheet.supervisorName}</TableCell>
                                     <TableCell>{sheet.destination}</TableCell>
                                     <TableCell>{new Date(sheet.date).toLocaleDateString()}</TableCell>
@@ -175,7 +175,7 @@ export default function DatabasePage() {
             </div>
 
             <div className="flex justify-center pt-4">
-                <Button variant="ghost" onClick={() => loadMoreArchived()} className="text-slate-500 hover:text-white">
+                <Button variant="ghost" onClick={() => loadMoreArchived()} className="text-slate-500 hover:text-slate-900">
                     Load Older Sheets
                 </Button>
             </div>

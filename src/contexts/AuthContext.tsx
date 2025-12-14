@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { Session, User } from '@supabase/supabase-js';
+import { Session, User, AuthChangeEvent } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 
 interface AuthContextType {
@@ -17,21 +17,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         // Safe session fetching with error handling
-        supabase.auth.getSession().then(({ data, error }) => {
+        supabase.auth.getSession().then(({ data, error }: { data: { session: Session | null }, error: any }) => {
             if (error) {
                 console.error("AuthCheck Failed:", error.message);
             }
             // Even if error, data.session might be null, which is fine
             setSession(data?.session ?? null);
             setLoading(false);
-        }).catch(err => {
+        }).catch((err: any) => {
             console.error("Unexpected Auth Error:", err);
             setLoading(false);
         });
 
         const {
             data: { subscription },
-        } = supabase.auth.onAuthStateChange((_event, session) => {
+        } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
             setSession(session);
             setLoading(false);
         });

@@ -1,19 +1,21 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Role } from '@/types';
-import { User, Lock, Loader2, AlertCircle, Eye, EyeOff, LogIn } from 'lucide-react';
+import { Loader2, AlertCircle, Eye, EyeOff, LogIn } from 'lucide-react';
 import { useData } from '@/contexts/DataContext';
 import { motion } from 'framer-motion';
+import RegisterModal from '@/components/auth/RegisterModal';
 
 export default function LoginPage() {
     const navigate = useNavigate();
-    const { setDevRole, users, setCurrentUser, resetAllData } = useData();
+    const { setDevRole, users, setCurrentUser } = useData();
 
 
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [showRegister, setShowRegister] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const [formData, setFormData] = useState({
         username: '',
         password: '',
@@ -23,6 +25,7 @@ export default function LoginPage() {
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
+        setError(null);
 
         // Find user
         const foundUser = users.find(u => u.username.toLowerCase() === formData.username.toLowerCase());
@@ -33,203 +36,193 @@ export default function LoginPage() {
         // Let's check matching password if it exists on the user object.
 
         if (foundUser) {
-            if (foundUser.password && foundUser.password !== formData.password) {
-                alert("Invalid password");
+            // Strict Password Check
+            if (!foundUser.password || foundUser.password !== formData.password) {
+                setError("Invalid password");
                 setLoading(false);
                 return;
             }
 
-            // Check role match? Or just override role from user?
-            // Usually login accepts username/pass and GIVES you the role.
-            // The dropdown is "Select Role" which might be a legacy override feature.
-            // We should probably respect the user's ACTUAL role from DB if found.
+            // Strict Approval Check
+            if (!foundUser.isApproved) {
+                setError("Account is pending Admin approval.");
+                setLoading(false);
+                return;
+            }
 
-            const finalRole = foundUser.role; // Use DB role
+            // Strict Role Check (Requested by User)
+            if (foundUser.role !== formData.role) {
+                setError(`Incorrect role selected. This user is a ${foundUser.role}.`);
+                setLoading(false);
+                return;
+            }
+
+            const finalRole = foundUser.role;
 
             setTimeout(() => {
                 setLoading(false);
                 setDevRole(finalRole);
                 setCurrentUser(foundUser);
                 navigate(finalRole === Role.ADMIN ? '/admin' : '/');
-            }, 1000);
+            }, 500);
 
         } else {
-            // Fallback for "Dev/Simulated" usage if user not in DB (e.g. initial setup)
-            // But we want to enforce DB for "full code".
-            // Let's just allow it for now but maybe warn?
-            // Actually, for "Create for all related database", we should enforce DB.
-            // But to avoid locking out, I'll allow the manual role fallback if no user found, 
-            // BUT simpler to just fail if invalid user.
-
-            // Reverting to legacy 'safe' mode: If user not found, allow login if it looks like a dev/test
-            // But the user specifically asked for password edits.
-
-            // Let's try to match standard auth flow.
-            setTimeout(() => {
-                setLoading(false);
-                alert("User not found (Simulating login locally)");
-                setDevRole(formData.role);
-                // Create a mock user for context
-                setCurrentUser({
-                    id: 'mock-id',
-                    username: formData.username,
-                    fullName: formData.username,
-                    empCode: 'MOCK001',
-                    role: formData.role,
-                    isApproved: true
-                });
-                navigate(formData.role === Role.ADMIN ? '/admin' : '/');
-            }, 1000);
+            setError("User not found.");
+            setLoading(false);
         }
     };
 
     return (
-        <div className="relative h-screen w-full overflow-hidden font-sans">
-            {/* Background Image - Restored */}
+        <div className="relative h-screen w-full font-sans overflow-hidden">
+            <RegisterModal isOpen={showRegister} onClose={() => setShowRegister(false)} />
+
+            {/* Background Image - Full Screen Cover */}
             <div
                 className="absolute inset-0 z-0"
                 style={{
-                    backgroundImage: `url('/bg-v2.png')`,
-                    backgroundSize: '100% 100%',
+                    backgroundImage: "url('/bg-v2.png')",
+                    backgroundSize: 'cover',
                     backgroundPosition: 'center',
                     backgroundRepeat: 'no-repeat'
                 }}
             />
-            {/* Dark Overlay for better text contrast */}
-            <div className="absolute inset-0 z-0 bg-black/40" />
+            {/* Subtle Overlay */}
+            <div className="absolute inset-0 z-0 bg-black/20" />
 
-            {/* Content Container - Two Column Layout */}
-            <div className="relative z-10 h-full w-full flex flex-col md:flex-row min-h-screen">
+            {/* Main Layout Container */}
+            <div className="relative z-10 w-full h-full flex">
 
-                {/* Left Side: Spacer (empty as requested in legacy) */}
-                <div className="hidden md:flex flex-1 flex-col justify-center px-16 lg:px-24">
-                </div>
+                {/* Left Side (Empty to show background content) */}
+                <div className="hidden md:flex flex-1"></div>
 
-                {/* Right Side: Modern Glassmorphism Card */}
-                <div className="flex-1 flex items-center justify-center px-4 md:px-16 lg:justify-end lg:pr-32">
-                    <motion.div
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.6, ease: "easeOut" }}
-                        className="w-full max-w-[420px]"
-                    >
-                        {/* Restored Transparent Hybrid Card */}
-                        <div className="relative bg-black/30 backdrop-blur-md border border-white/20 rounded-3xl p-8 shadow-2xl overflow-hidden ring-1 ring-white/10">
+                {/* Right Side - Full Height Glass Sidebar */}
+                <motion.div
+                    initial={{ x: 100, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ duration: 0.5, ease: "circOut" }}
+                    // Increased transparency: bg-black/40 instead of brown/80
+                    // Removed overflow-y-auto to enforce fit
+                    className="w-full md:w-[450px] h-full bg-black/40 backdrop-blur-xl border-l border-white/10 shadow-2xl flex flex-col justify-center px-10 relative"
+                >
+                    {/* Decorative Top Accent - Thinner */}
+                    <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-500/50 via-orange-400/50 to-amber-300/50" />
 
-                            {/* Decor header line */}
-                            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-400 via-purple-400 to-emerald-400 opacity-90" />
+                    <div className="w-full max-w-sm mx-auto flex flex-col h-full justify-center max-h-[800px]">
 
-                            {/* Branding */}
-                            <div className="text-center mb-8 mt-2">
-                                <div className="inline-flex items-center justify-center w-24 h-24 mb-4">
-                                    <img src="/unicharm-logo.png" alt="Unicharm Logo" className="w-full h-full object-contain" />
-                                </div>
-                                <h1 className="text-2xl font-bold text-white tracking-tight mb-1 drop-shadow-md">Unicharm Operations</h1>
+                        {/* Header */}
+                        <div className="text-center space-y-3 mb-6">
+                            {/* Straight Logo - No Rotation */}
+                            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/5 shadow-inner ring-1 ring-white/10 backdrop-blur-md">
+                                <img src="/unicharm-logo.png" alt="Logo" className="w-10 h-auto drop-shadow-md brightness-110" />
                             </div>
+                            <div className="space-y-0.5">
+                                <h1 className="text-2xl font-serif font-bold text-[#fcf5eb] tracking-tight">Unicharm Operations</h1>
+                                <p className="text-[#d8c5b0] text-[9px] uppercase tracking-[0.3em] font-bold opacity-70">Supply Chain Management</p>
+                            </div>
+                        </div>
 
-                            <form onSubmit={handleLogin} className="space-y-5">
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-white/90 ml-1 uppercase tracking-wider shadow-sm">Username</label>
+                        {/* Divider */}
+                        <div className="w-12 h-px bg-white/10 mx-auto mb-6" />
+
+                        {/* Error Message */}
+                        {error && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="mb-4 p-2.5 rounded-lg bg-red-900/30 border border-red-500/20 flex items-center gap-3"
+                            >
+                                <AlertCircle size={14} className="text-red-200" />
+                                <p className="text-[11px] text-red-100 font-medium">{error}</p>
+                            </motion.div>
+                        )}
+
+                        {/* Form - Tighter Spacing */}
+                        <form onSubmit={handleLogin} className="space-y-4">
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-[#e8d5c4] uppercase tracking-widest pl-1 opacity-80">Username</label>
+                                <div className="group relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-white/20 group-focus-within:bg-amber-400 transition-colors" />
+                                    </div>
                                     <input
                                         type="text"
                                         value={formData.username}
                                         onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                                        className="w-full h-12 bg-black/40 border border-white/20 rounded-xl px-4 text-white placeholder-white/50 focus:outline-none focus:border-blue-400 focus:bg-black/60 transition-all text-sm backdrop-blur-sm"
+                                        className="w-full h-11 bg-black/20 border border-white/5 rounded-xl pl-8 pr-4 text-[#fcf5eb] placeholder-[#e8d5c4]/20 focus:outline-none focus:border-amber-500/30 focus:bg-black/30 transition-all text-sm backdrop-blur-sm"
                                         required
+                                        placeholder="Enter ID"
                                     />
                                 </div>
-
-                                <div className="space-y-1.5 relative">
-                                    <label className="text-xs font-bold text-white/90 ml-1 uppercase tracking-wider shadow-sm">Password</label>
-                                    <div className="relative">
-                                        <input
-                                            type={showPassword ? "text" : "password"}
-                                            placeholder="••••••••"
-                                            value={formData.password}
-                                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                            className="w-full h-12 bg-black/40 border border-white/20 rounded-xl px-4 pr-12 text-white placeholder-white/50 focus:outline-none focus:border-blue-400 focus:bg-black/60 transition-all text-sm backdrop-blur-sm"
-                                            required
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
-                                        >
-                                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-white/90 ml-1 uppercase tracking-wider shadow-sm">Select Role</label>
-                                    <div className="relative">
-                                        <select
-                                            value={formData.role}
-                                            onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
-                                            className="w-full h-12 bg-black/40 border border-white/20 rounded-xl px-4 text-white focus:outline-none focus:border-blue-400 focus:bg-black/60 transition-all text-sm appearance-none cursor-pointer backdrop-blur-sm"
-                                        >
-                                            {Object.values(Role).map(role => (
-                                                <option key={role} value={role} className="bg-slate-900 text-white py-2">
-                                                    {role.replace(/_/g, ' ')}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-white/70">
-                                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                                            </svg>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <Button
-                                    type="submit"
-                                    disabled={loading}
-                                    className="w-full h-12 mt-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl text-base shadow-lg shadow-blue-500/30 border-none transition-all duration-300 transform active:scale-[0.98]"
-                                >
-                                    {loading ? <Loader2 className="animate-spin" /> : <span className="flex items-center gap-2">Sign In <LogIn size={18} /></span>}
-                                </Button>
-                            </form>
-
-                            {/* Register Option - Restored & Styled */}
-                            <div className="mt-8 pt-6 border-t border-white/10 text-center">
-                                <button
-                                    onClick={() => navigate('/register')}
-                                    className="group text-sm text-white/80 hover:text-white transition-colors flex items-center justify-center gap-2 w-full"
-                                >
-                                    <span>Don't have an account?</span>
-                                    <span className="font-bold text-blue-300 group-hover:text-blue-200 underline decoration-blue-300/50 underline-offset-4 decoration-2">Register now</span>
-                                    <User size={14} className="text-blue-300 group-hover:text-blue-200" />
-                                </button>
                             </div>
 
-                        </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-[#e8d5c4] uppercase tracking-widest pl-1 opacity-80">Password</label>
+                                <div className="group relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-white/20 group-focus-within:bg-amber-400 transition-colors" />
+                                    </div>
+                                    <input
+                                        type={showPassword ? "text" : "password"}
+                                        value={formData.password}
+                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                        className="w-full h-11 bg-black/20 border border-white/5 rounded-xl pl-8 pr-12 text-[#fcf5eb] placeholder-[#e8d5c4]/20 focus:outline-none focus:border-amber-500/30 focus:bg-black/30 transition-all text-sm backdrop-blur-sm"
+                                        required
+                                        placeholder="••••••••"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-white/30 hover:text-white transition-colors"
+                                    >
+                                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                    </button>
+                                </div>
+                            </div>
 
-                        {/* Reset Data Option (Discreet) */}
-                        <div className="text-center mt-6">
-                            <button
-                                type="button"
-                                onClick={async () => {
-                                    if (confirm("WARNING: This will delete ALL SHEET DATA from the database. This cannot be undone.\n\nAre you sure you want to start fresh?")) {
-                                        try {
-                                            setLoading(true);
-                                            await resetAllData();
-                                            alert("All data has been deleted. You can now start fresh.");
-                                            setLoading(false);
-                                        } catch (e) {
-                                            alert("Failed to reset data.");
-                                            console.error(e);
-                                            setLoading(false);
-                                        }
-                                    }
-                                }}
-                                className="text-[10px] text-white/30 hover:text-white/60 transition-colors uppercase tracking-widest"
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-[#e8d5c4] uppercase tracking-widest pl-1 opacity-80">Role</label>
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-white/20 group-focus-within:bg-amber-400 transition-colors" />
+                                    </div>
+                                    <select
+                                        value={formData.role}
+                                        onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
+                                        className="w-full h-11 bg-black/20 border border-white/5 rounded-xl pl-8 pr-4 text-[#fcf5eb] focus:outline-none focus:border-amber-500/30 focus:bg-black/30 transition-all text-sm appearance-none cursor-pointer"
+                                    >
+                                        <option value={Role.STAGING_SUPERVISOR} className="bg-[#2a2422] text-[#e8d5c4]">Staging Supervisor</option>
+                                        <option value={Role.LOADING_SUPERVISOR} className="bg-[#2a2422] text-[#e8d5c4]">Loading Supervisor</option>
+                                        <option value={Role.SHIFT_LEAD} className="bg-[#2a2422] text-[#e8d5c4]">Shift Lead</option>
+                                        <option value={Role.ADMIN} className="bg-[#2a2422] text-[#e8d5c4]">Admin</option>
+                                    </select>
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-white/40">
+                                        <svg width="10" height="10" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <Button
+                                type="submit"
+                                disabled={loading}
+                                className="w-full h-12 mt-6 bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-500 hover:to-orange-600 text-white font-bold rounded-xl text-sm shadow-xl shadow-orange-900/20 border-t border-white/10 transition-all duration-300 transform active:scale-[0.98] tracking-widest uppercase"
                             >
-                                Reset Database (Start Fresh)
+                                {loading ? <Loader2 className="animate-spin" /> : <span className="flex items-center gap-3">Sign In <LogIn size={16} /></span>}
+                            </Button>
+                        </form>
+
+                        {/* Register Option */}
+                        <div className="text-center pt-6">
+                            <button
+                                onClick={() => setShowRegister(true)}
+                                className="text-[11px] text-[#d8c5b0]/60 hover:text-[#fcf5eb] transition-colors"
+                            >
+                                New user? <span className="font-bold text-[#e8d5c4] ml-1 border-b border-transparent hover:border-[#e8d5c4]">Create Account</span>
                             </button>
                         </div>
-                    </motion.div>
-                </div>
+                    </div>
+                </motion.div>
             </div>
         </div>
     );

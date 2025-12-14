@@ -21,6 +21,7 @@ export interface User {
     role: Role;
     email?: string;
     isApproved: boolean;
+    isDeleted?: boolean;
     password?: string; // Only used for legacy simple auth comparison
 }
 
