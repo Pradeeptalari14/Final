@@ -430,7 +430,7 @@ export default function LoadingSheet() {
     const overLoadedItems = currentSheet.loadingItems?.filter(li => li.balance < 0) || [];
 
     return (
-        <div className="flex flex-col gap-6 max-w-7xl mx-auto pb-24 print:w-full print:max-w-none print:pb-0 print:gap-1">
+        <div className="flex flex-col gap-4 max-w-5xl mx-auto pb-24 print:w-full print:max-w-none print:pb-0 print:gap-1">
             {/* Preview Controls */}
             {isPreview && (
                 <div className="bg-slate-800 text-white p-4 rounded-xl shadow-lg flex justify-between items-center print:hidden sticky top-4 z-50">
@@ -446,7 +446,7 @@ export default function LoadingSheet() {
             <div className={`flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200 ${isPreview ? 'hidden' : 'block'} print:hidden`}>
                 <div className="flex items-center gap-4"><button type="button" onClick={() => navigate(-1)} className="text-slate-500 hover:text-blue-600"><ArrowLeft size={20} /></button>
                     <div>
-                        <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                             Loading Check Sheet
                             {isPendingVerification && <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full border border-purple-200">VERIFICATION PENDING</span>}
                         </h2>
@@ -862,12 +862,12 @@ export default function LoadingSheet() {
                     </div>
                 )}
 
-                <div className="p-6 border-t border-slate-200">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <HeaderField label="Supervisor Name" icon={User}><input type="text" value={svName} onChange={e => setSvName(e.target.value)} disabled={isLocked} className="w-full text-sm outline-none text-slate-900 font-bold disabled:text-slate-600" /></HeaderField>
-                        <HeaderField label="Supervisor Sign" icon={FileCheck}><input type="text" value={svSign} onChange={e => setSvSign(e.target.value)} disabled={isLocked} className="w-full text-sm outline-none font-script text-lg" placeholder="Sign" /></HeaderField>
-                        <HeaderField label="SL Sign" icon={FileCheck}><input type="text" value={slSign} onChange={e => setSlSign(e.target.value)} disabled={isLocked} className="w-full text-sm outline-none font-script text-lg" placeholder="Sign" /></HeaderField>
-                        <HeaderField label="DEO Sign" icon={FileCheck}><input type="text" value={deoSign} onChange={e => setDeoSign(e.target.value)} disabled={isLocked} className="w-full text-sm outline-none font-script text-lg" placeholder="Sign" /></HeaderField>
+                <div className="p-4 border-t border-slate-200">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <HeaderField label="Supervisor Name" icon={User}><input type="text" value={svName} onChange={e => setSvName(e.target.value)} disabled={isLocked} className="w-full text-sm outline-none p-1 text-slate-900 font-bold disabled:text-slate-600" /></HeaderField>
+                        <HeaderField label="Supervisor Sign" icon={FileCheck}><input type="text" value={svSign} onChange={e => setSvSign(e.target.value)} disabled={isLocked} className="w-full text-sm outline-none p-1 font-script text-lg" placeholder="Sign" /></HeaderField>
+                        <HeaderField label="SL Sign" icon={FileCheck}><input type="text" value={slSign} onChange={e => setSlSign(e.target.value)} disabled={isLocked} className="w-full text-sm outline-none p-1 font-script text-lg" placeholder="Sign" /></HeaderField>
+                        <HeaderField label="DEO Sign" icon={FileCheck}><input type="text" value={deoSign} onChange={e => setDeoSign(e.target.value)} disabled={isLocked} className="w-full text-sm outline-none p-1 font-script text-lg" placeholder="Sign" /></HeaderField>
                     </div>
                 </div>
 

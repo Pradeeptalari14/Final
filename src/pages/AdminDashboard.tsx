@@ -111,7 +111,7 @@ export default function AdminDashboard() {
                         (sheet.status === SheetStatus.COMPLETED && activeTab === 'database'); // Allow seeing history in generic DB view
                 }
                 if (currentUser?.role === Role.SHIFT_LEAD) {
-                    return true;
+                    return sheet.status !== SheetStatus.DRAFT;
                 }
                 return false;
             });
@@ -147,7 +147,8 @@ export default function AdminDashboard() {
         }
         else if (activeTab === 'staging_db') {
             if (subFilter === 'DRAFT') return relevantSheets.filter(s => s.status === SheetStatus.DRAFT && !isRejected(s));
-            if (subFilter === 'LOCKED') return relevantSheets.filter(s => s.status === SheetStatus.STAGING_VERIFICATION_PENDING || s.status === SheetStatus.LOCKED);
+            if (subFilter === 'PENDING') return relevantSheets.filter(s => s.status === SheetStatus.STAGING_VERIFICATION_PENDING);
+            if (subFilter === 'LOCKED') return relevantSheets.filter(s => s.status === SheetStatus.LOCKED);
             if (subFilter === 'COMPLETED') return relevantSheets.filter(s => s.status === SheetStatus.COMPLETED);
             if (subFilter === 'REJECTED') return relevantSheets.filter(s => s.status === SheetStatus.DRAFT && isRejected(s));
         }
@@ -158,7 +159,7 @@ export default function AdminDashboard() {
             if (subFilter === 'REJECTED') return relevantSheets.filter(s => s.status === SheetStatus.LOCKED && isRejected(s));
         }
         else if (activeTab === 'shift_lead_db') {
-            if (subFilter === 'STAGING_APPROVALS') return relevantSheets.filter(s => s.status === SheetStatus.DRAFT || s.status === SheetStatus.STAGING_VERIFICATION_PENDING);
+            if (subFilter === 'STAGING_APPROVALS') return relevantSheets.filter(s => s.status === SheetStatus.STAGING_VERIFICATION_PENDING);
             if (subFilter === 'LOADING_APPROVALS') return relevantSheets.filter(s => s.status === SheetStatus.LOADING_VERIFICATION_PENDING);
             if (subFilter === 'COMPLETED') return relevantSheets.filter(s => s.status === SheetStatus.COMPLETED);
 
@@ -474,7 +475,8 @@ export default function AdminDashboard() {
                 {activeTab === 'staging_db' && (
                     <>
                         <Button variant={subFilter === 'DRAFT' ? 'secondary' : 'ghost'} onClick={() => setSubFilter('DRAFT')} className={`text-xs ${subFilter === 'DRAFT' ? 'bg-slate-200 text-slate-900' : 'text-slate-600 hover:bg-slate-100'} dark:text-slate-400 dark:data-[state=active]:text-white`}>Draft</Button>
-                        <Button variant={subFilter === 'LOCKED' ? 'secondary' : 'ghost'} onClick={() => setSubFilter('LOCKED')} className={`text-xs ${subFilter === 'LOCKED' ? 'bg-blue-100 text-blue-900' : 'text-blue-600 hover:bg-blue-50'} dark:text-blue-400`}>Locked / Pending</Button>
+                        <Button variant={subFilter === 'PENDING' ? 'secondary' : 'ghost'} onClick={() => setSubFilter('PENDING')} className={`text-xs ${subFilter === 'PENDING' ? 'bg-orange-100 text-orange-900' : 'text-orange-600 hover:bg-orange-50'} dark:text-orange-400`}>Pending Approval</Button>
+                        <Button variant={subFilter === 'LOCKED' ? 'secondary' : 'ghost'} onClick={() => setSubFilter('LOCKED')} className={`text-xs ${subFilter === 'LOCKED' ? 'bg-blue-100 text-blue-900' : 'text-blue-600 hover:bg-blue-50'} dark:text-blue-400`}>Locked (Approved)</Button>
                         <Button variant={subFilter === 'COMPLETED' ? 'secondary' : 'ghost'} onClick={() => setSubFilter('COMPLETED')} className={`text-xs ${subFilter === 'COMPLETED' ? 'bg-emerald-100 text-emerald-900' : 'text-emerald-600 hover:bg-emerald-50'} dark:text-green-400`}>Completed</Button>
                         <Button variant={subFilter === 'REJECTED' ? 'secondary' : 'ghost'} onClick={() => setSubFilter('REJECTED')} className={`text-xs ${subFilter === 'REJECTED' ? 'bg-red-100 text-red-900' : 'text-red-600 hover:bg-red-50'} dark:text-red-400`}>Rejected</Button>
                     </>

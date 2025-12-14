@@ -148,7 +148,7 @@ export default function StagingSheet() {
     }
 
     return (
-        <div className="bg-white min-h-screen text-slate-800 pb-24 print:pb-0 print:min-h-0 print:h-auto print:overflow-visible font-sans max-w-[1280px] print:max-w-none mx-auto shadow-2xl print:shadow-none my-4 print:my-0 rounded-xl print:rounded-none overflow-hidden print:overflow-visible border border-slate-200 print:border-none">
+        <div className="bg-white min-h-screen text-slate-800 pb-24 print:pb-0 print:min-h-0 print:h-auto print:overflow-visible font-sans max-w-[1024px] print:max-w-none mx-auto shadow-xl print:shadow-none my-2 print:my-0 rounded-lg print:rounded-none overflow-hidden print:overflow-visible border border-slate-200 print:border-none">
 
             {/* IN-APP PRINT PREVIEW OVERLAY */}
             {isPreview && (
@@ -183,7 +183,7 @@ export default function StagingSheet() {
                         <ArrowLeft size={18} /> Back
                     </Button>
                     <div className="flex items-center gap-3">
-                        <h1 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight">Staging Check Sheet</h1>
+                        <h1 className="text-lg md:text-xl font-bold text-slate-800 tracking-tight">Staging Check Sheet</h1>
                         <Badge variant="outline" className={`text-xs px-2.5 py-0.5 font-bold uppercase ${formData.status === SheetStatus.LOCKED ? 'bg-purple-100 text-purple-700 border-purple-200' :
                             formData.status === SheetStatus.COMPLETED ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
                                 formData.status?.includes('PENDING') ? 'bg-orange-100 text-orange-700 border-orange-200' :
@@ -200,7 +200,7 @@ export default function StagingSheet() {
                 </div>
             </div>
 
-            <div className="print:hidden p-2 md:p-4 space-y-4 bg-slate-50/50 min-h-[calc(100vh-80px)]">
+            <div className="print:hidden p-2 space-y-3 bg-slate-50/50 min-h-[calc(100vh-60px)]">
                 {/* Rejection/Comments History */}
                 {formData.comments && formData.comments.length > 0 && (
                     <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex gap-4 animate-in fade-in slide-in-from-top-2">
@@ -226,7 +226,7 @@ export default function StagingSheet() {
                         <FileText size={16} className="text-slate-400" />
                         <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Sheet Details</span>
                     </div>
-                    <div className="p-3 md:p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="p-2 md:p-3 grid grid-cols-1 md:grid-cols-3 gap-2">
                         {/* ROw 1: Shift, Supervisor Name, Destination */}
                         <div>
                             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1"><Calendar size={14} /> Shift</label>
@@ -234,7 +234,7 @@ export default function StagingSheet() {
                                 value={formData.shift}
                                 onChange={(e) => setFormData({ ...formData, shift: e.target.value })}
                                 disabled={formData.status === SheetStatus.LOCKED || formData.status === SheetStatus.STAGING_VERIFICATION_PENDING}
-                                className="w-full border border-slate-200 bg-white p-2.5 rounded-lg text-sm text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all font-medium appearance-none"
+                                className="w-full border border-slate-200 bg-white p-1.5 rounded text-sm text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all font-medium appearance-none"
                             >
                                 <option value="A">A</option>
                                 <option value="B">B</option>
@@ -246,7 +246,7 @@ export default function StagingSheet() {
                             <input
                                 value={formData.supervisorName}
                                 disabled={true} // Always disabled as per request
-                                className="w-full border border-slate-200 bg-slate-100 p-2.5 rounded-lg text-sm text-slate-500 outline-none font-medium cursor-not-allowed"
+                                className="w-full border border-slate-200 bg-slate-100 p-1.5 rounded text-sm text-slate-500 outline-none font-medium cursor-not-allowed"
                                 placeholder="Auto-filled"
                             />
                         </div>
@@ -256,7 +256,7 @@ export default function StagingSheet() {
                                 value={formData.destination}
                                 onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
                                 disabled={formData.status === SheetStatus.LOCKED || formData.status === SheetStatus.STAGING_VERIFICATION_PENDING}
-                                className="w-full border border-slate-200 bg-white p-2.5 rounded-lg text-sm text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all placeholder:text-slate-300"
+                                className="w-full border border-slate-200 bg-white p-1.5 rounded text-sm text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all placeholder:text-slate-300"
                                 placeholder="Enter Destination"
                             />
                         </div>
@@ -323,7 +323,7 @@ export default function StagingSheet() {
                                                 value={item.skuName}
                                                 onChange={(e) => updateItem(index, 'skuName', e.target.value)}
                                                 disabled={formData.status === SheetStatus.LOCKED || formData.status === SheetStatus.STAGING_VERIFICATION_PENDING || formData.status === SheetStatus.COMPLETED}
-                                                className="w-full p-2 bg-transparent rounded hover:bg-white focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all placeholder:text-slate-300 text-slate-700 font-medium disabled:text-slate-500"
+                                                className="w-full p-1.5 bg-transparent rounded hover:bg-white focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all placeholder:text-slate-300 text-slate-700 font-medium disabled:text-slate-500"
                                                 placeholder="Enter SKU..."
                                             />
                                         </td>
@@ -333,7 +333,7 @@ export default function StagingSheet() {
                                                 value={item.casesPerPlt || ''}
                                                 onChange={(e) => updateItem(index, 'casesPerPlt', e.target.value)}
                                                 disabled={formData.status === SheetStatus.LOCKED || formData.status === SheetStatus.STAGING_VERIFICATION_PENDING || formData.status === SheetStatus.COMPLETED}
-                                                className="w-full p-2 text-center bg-transparent rounded hover:bg-white focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-slate-600 disabled:text-slate-400"
+                                                className="w-full p-1.5 text-center bg-transparent rounded hover:bg-white focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-slate-600 disabled:text-slate-400"
                                             />
                                         </td>
                                         <td className="p-1 border-r border-slate-100">
@@ -351,7 +351,7 @@ export default function StagingSheet() {
                                                 value={item.loose || ''}
                                                 onChange={(e) => updateItem(index, 'loose', e.target.value)}
                                                 disabled={formData.status === SheetStatus.LOCKED || formData.status === SheetStatus.STAGING_VERIFICATION_PENDING || formData.status === SheetStatus.COMPLETED}
-                                                className="w-full p-2 text-center bg-transparent rounded hover:bg-white focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-slate-600 bg-yellow-50/50 disabled:bg-transparent disabled:text-slate-400"
+                                                className="w-full p-1.5 text-center bg-transparent rounded hover:bg-white focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-slate-600 bg-yellow-50/50 disabled:bg-transparent disabled:text-slate-400"
                                             />
                                         </td>
                                         <td className="p-2 text-center font-bold text-blue-700 bg-blue-50/30 border-l border-blue-100">
