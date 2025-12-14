@@ -322,8 +322,8 @@ export default function StagingSheet() {
                                             <input
                                                 value={item.skuName}
                                                 onChange={(e) => updateItem(index, 'skuName', e.target.value)}
-                                                disabled={formData.status === SheetStatus.LOCKED || formData.status === SheetStatus.STAGING_VERIFICATION_PENDING}
-                                                className="w-full p-2 bg-transparent rounded hover:bg-white focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all placeholder:text-slate-300 text-slate-700 font-medium"
+                                                disabled={formData.status === SheetStatus.LOCKED || formData.status === SheetStatus.STAGING_VERIFICATION_PENDING || formData.status === SheetStatus.COMPLETED}
+                                                className="w-full p-2 bg-transparent rounded hover:bg-white focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all placeholder:text-slate-300 text-slate-700 font-medium disabled:text-slate-500"
                                                 placeholder="Enter SKU..."
                                             />
                                         </td>
@@ -332,8 +332,8 @@ export default function StagingSheet() {
                                                 type="number"
                                                 value={item.casesPerPlt || ''}
                                                 onChange={(e) => updateItem(index, 'casesPerPlt', e.target.value)}
-                                                disabled={formData.status === SheetStatus.LOCKED || formData.status === SheetStatus.STAGING_VERIFICATION_PENDING}
-                                                className="w-full p-2 text-center bg-transparent rounded hover:bg-white focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-slate-600"
+                                                disabled={formData.status === SheetStatus.LOCKED || formData.status === SheetStatus.STAGING_VERIFICATION_PENDING || formData.status === SheetStatus.COMPLETED}
+                                                className="w-full p-2 text-center bg-transparent rounded hover:bg-white focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-slate-600 disabled:text-slate-400"
                                             />
                                         </td>
                                         <td className="p-1 border-r border-slate-100">
@@ -341,8 +341,8 @@ export default function StagingSheet() {
                                                 type="number"
                                                 value={item.fullPlt || ''}
                                                 onChange={(e) => updateItem(index, 'fullPlt', e.target.value)}
-                                                disabled={formData.status === SheetStatus.LOCKED || formData.status === SheetStatus.STAGING_VERIFICATION_PENDING}
-                                                className="w-full p-2 text-center bg-transparent rounded hover:bg-white focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-slate-600"
+                                                disabled={formData.status === SheetStatus.LOCKED || formData.status === SheetStatus.STAGING_VERIFICATION_PENDING || formData.status === SheetStatus.COMPLETED}
+                                                className="w-full p-2 text-center bg-transparent rounded hover:bg-white focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-slate-600 disabled:text-slate-400"
                                             />
                                         </td>
                                         <td className="p-1 border-r border-slate-100">
@@ -350,8 +350,8 @@ export default function StagingSheet() {
                                                 type="number"
                                                 value={item.loose || ''}
                                                 onChange={(e) => updateItem(index, 'loose', e.target.value)}
-                                                disabled={formData.status === SheetStatus.LOCKED || formData.status === SheetStatus.STAGING_VERIFICATION_PENDING}
-                                                className="w-full p-2 text-center bg-transparent rounded hover:bg-white focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-slate-600 bg-yellow-50/50"
+                                                disabled={formData.status === SheetStatus.LOCKED || formData.status === SheetStatus.STAGING_VERIFICATION_PENDING || formData.status === SheetStatus.COMPLETED}
+                                                className="w-full p-2 text-center bg-transparent rounded hover:bg-white focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-slate-600 bg-yellow-50/50 disabled:bg-transparent disabled:text-slate-400"
                                             />
                                         </td>
                                         <td className="p-2 text-center font-bold text-blue-700 bg-blue-50/30 border-l border-blue-100">
@@ -389,7 +389,7 @@ export default function StagingSheet() {
             </div>
 
             {/* Standard Footer Actions for Edit Mode */}
-            {formData.status !== SheetStatus.LOCKED && formData.status !== SheetStatus.STAGING_VERIFICATION_PENDING && (
+            {formData.status !== SheetStatus.LOCKED && formData.status !== SheetStatus.STAGING_VERIFICATION_PENDING && formData.status !== SheetStatus.COMPLETED && (
                 <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-200 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)] flex justify-center gap-4 z-40 print:hidden animate-in slide-in-from-bottom-4">
                     <Button variant="outline" onClick={() => navigate(-1)} className="text-slate-500 hover:text-slate-900 border-slate-200">
                         Cancel

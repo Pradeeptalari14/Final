@@ -66,7 +66,8 @@ export default function LoadingSheet() {
     const isPendingVerification = currentSheet?.status === SheetStatus.LOADING_VERIFICATION_PENDING;
     const canApprove = (currentUser?.role === Role.SHIFT_LEAD || currentUser?.role === Role.ADMIN) && isPendingVerification;
     // Lock edits if completed or pending verification (unless rejecting)
-    const isLocked = (isCompleted || isPendingVerification) && currentUser?.role !== Role.ADMIN;
+    // STRICT RULE: If completed, it is READ ONLY for everyone.
+    const isLocked = isCompleted || (isPendingVerification && currentUser?.role !== Role.ADMIN);
 
     // Print Preview State
     const [isPreview, setIsPreview] = useState(false);
@@ -863,14 +864,14 @@ export default function LoadingSheet() {
 
                 <div className="p-6 border-t border-slate-200">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <HeaderField label="Supervisor Name" icon={User}><input type="text" value={svName} onChange={e => setSvName(e.target.value)} disabled={isLocked} className="w-full text-sm outline-none" /></HeaderField>
+                        <HeaderField label="Supervisor Name" icon={User}><input type="text" value={svName} onChange={e => setSvName(e.target.value)} disabled={isLocked} className="w-full text-sm outline-none text-slate-900 font-bold disabled:text-slate-600" /></HeaderField>
                         <HeaderField label="Supervisor Sign" icon={FileCheck}><input type="text" value={svSign} onChange={e => setSvSign(e.target.value)} disabled={isLocked} className="w-full text-sm outline-none font-script text-lg" placeholder="Sign" /></HeaderField>
                         <HeaderField label="SL Sign" icon={FileCheck}><input type="text" value={slSign} onChange={e => setSlSign(e.target.value)} disabled={isLocked} className="w-full text-sm outline-none font-script text-lg" placeholder="Sign" /></HeaderField>
                         <HeaderField label="DEO Sign" icon={FileCheck}><input type="text" value={deoSign} onChange={e => setDeoSign(e.target.value)} disabled={isLocked} className="w-full text-sm outline-none font-script text-lg" placeholder="Sign" /></HeaderField>
                     </div>
                 </div>
 
-                {!isLocked && !cameraActive && !isPendingVerification && (
+                {!isLocked && !isCompleted && !cameraActive && !isPendingVerification && (
                     <div className="fixed bottom-0 left-0 w-full p-4 bg-white/90 backdrop-blur-md border-t border-slate-200 shadow flex justify-center gap-4 z-50 lg:pl-64 no-print">
                         <button type="button" id="cameraButton" onClick={startCamera} className="px-6 py-2.5 bg-slate-100 text-slate-700 border border-slate-300 rounded-lg flex items-center gap-2 cursor-pointer hover:bg-slate-200 transition-colors pointer-events-auto"><Camera size={18} /> Add Photo</button>
                         <button type="button" id="submitButton" onClick={handleSubmit} className="px-8 py-2.5 bg-green-600 text-white rounded-lg flex items-center gap-2 font-bold shadow-lg cursor-pointer hover:bg-green-700 transition-colors pointer-events-auto"><CheckCircle size={18} /> Request Verification</button>
