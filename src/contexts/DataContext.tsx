@@ -125,7 +125,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'sheets' },
-                (payload) => {
+                (payload: any) => {
                     console.log('Realtime update:', payload);
                     if (payload.eventType === 'INSERT') {
                         const newSheet = { ...payload.new.data, id: payload.new.id, status: payload.new.data.status || 'DRAFT' } as SheetData;

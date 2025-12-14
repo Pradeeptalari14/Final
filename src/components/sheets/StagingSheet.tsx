@@ -1,11 +1,34 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Save, Plus, Printer, Calendar, UserCheck, Truck, Lock, ClipboardList, CheckCircle, AlertTriangle, Loader2, FileText, User, MapPin } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Printer, Calendar, UserCheck, Truck, Lock, ClipboardList, CheckCircle, AlertTriangle, Loader2, FileText, User, MapPin, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { SheetData, SheetStatus, StagingItem, Role } from '@/types';
 import { Badge } from '@/components/ui/badge';
+
+const DismissibleAlert = ({ comments }: { comments: any[] }) => {
+    const [isVisible, setIsVisible] = useState(true);
+    if (!isVisible) return null;
+    return (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex gap-4 animate-in fade-in slide-in-from-top-2 relative">
+            <button onClick={() => setIsVisible(false)} className="absolute top-2 right-2 text-red-400 hover:text-red-700"><X size={16} /></button>
+            <div className="bg-red-100 p-2 rounded-lg h-fit text-red-600"><AlertTriangle size={20} /></div>
+            <div>
+                <h3 className="font-bold text-red-800 text-sm mb-1">Feedback / Shift Lead Message</h3>
+                <div className="space-y-2">
+                    {comments.map((comment, i) => (
+                        <div key={i} className="text-sm text-red-700 border-l-2 border-red-300 pl-3">
+                            <span className="font-semibold text-red-900 mr-2">{comment.author}</span>
+                            <span className="text-red-400 text-xs">{new Date(comment.timestamp).toLocaleString()}</span>
+                            <p className="mt-0.5">{comment.text}</p>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const EMPTY_ITEM: StagingItem = {
     srNo: 0,
@@ -201,23 +224,10 @@ export default function StagingSheet() {
             </div>
 
             <div className="print:hidden p-2 space-y-3 bg-slate-50/50 min-h-[calc(100vh-60px)]">
-                {/* Rejection/Comments History */}
-                {formData.comments && formData.comments.length > 0 && (
-                    <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex gap-4 animate-in fade-in slide-in-from-top-2">
-                        <div className="bg-red-100 p-2 rounded-lg h-fit text-red-600"><AlertTriangle size={20} /></div>
-                        <div>
-                            <h3 className="font-bold text-red-800 text-sm mb-1">Feedback / Rejection History</h3>
-                            <div className="space-y-2">
-                                {formData.comments.map((comment, i) => (
-                                    <div key={i} className="text-sm text-red-700 border-l-2 border-red-300 pl-3">
-                                        <span className="font-semibold text-red-900 mr-2">{comment.author}</span>
-                                        <span className="text-red-400 text-xs">{new Date(comment.timestamp).toLocaleString()}</span>
-                                        <p className="mt-0.5">{comment.text}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
+
+                {/* Rejection/Comments History - Only show if NOT pending (i.e. Draft/Rejected or Locked) */}
+                {formData.comments && formData.comments.length > 0 && formData.status !== SheetStatus.STAGING_VERIFICATION_PENDING && (
+                    <DismissibleAlert comments={formData.comments} />
                 )}
 
                 {/* Sheet Details Form - Excel Style Grid */}

@@ -549,9 +549,16 @@ export default function AdminDashboard() {
                         ) : filteredSheets.map(sheet => (
                             <tr key={sheet.id} className="group hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => {
                                 const isStagingUser = currentUser?.role === Role.STAGING_SUPERVISOR;
-                                const target = ((sheet.status === SheetStatus.COMPLETED || sheet.status === SheetStatus.LOADING_VERIFICATION_PENDING || sheet.status === SheetStatus.LOCKED) && !isStagingUser)
-                                    ? `/sheets/loading/${sheet.id}`
-                                    : `/sheets/staging/${sheet.id}`;
+                                // If Completed -> Always Loading Sheet (Final View)
+                                // If Locked/Pending -> Loading Sheet for Admin/LoadingSV, Staging Sheet for StagingSV
+                                let target = `/sheets/staging/${sheet.id}`;
+
+                                if (sheet.status === SheetStatus.COMPLETED) {
+                                    target = `/sheets/loading/${sheet.id}`;
+                                } else if ((sheet.status === SheetStatus.LOADING_VERIFICATION_PENDING || sheet.status === SheetStatus.LOCKED) && !isStagingUser) {
+                                    target = `/sheets/loading/${sheet.id}`;
+                                }
+
                                 navigate(target);
                             }}>
                                 <td className={`pl-4 text-blue-600 dark:text-blue-400 font-mono text-xs ${settings.density === 'compact' ? 'py-1' : 'py-3'}`}>#{sheet.id.slice(0, 8)}</td>
@@ -743,9 +750,12 @@ export default function AdminDashboard() {
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             const isStagingUser = currentUser?.role === Role.STAGING_SUPERVISOR;
-                                            const target = ((sheet.status === SheetStatus.COMPLETED || sheet.status === SheetStatus.LOADING_VERIFICATION_PENDING || sheet.status === SheetStatus.LOCKED) && !isStagingUser)
-                                                ? `/sheets/loading/${sheet.id}`
-                                                : `/sheets/staging/${sheet.id}`;
+                                            let target = `/sheets/staging/${sheet.id}`;
+                                            if (sheet.status === SheetStatus.COMPLETED) {
+                                                target = `/sheets/loading/${sheet.id}`;
+                                            } else if ((sheet.status === SheetStatus.LOADING_VERIFICATION_PENDING || sheet.status === SheetStatus.LOCKED) && !isStagingUser) {
+                                                target = `/sheets/loading/${sheet.id}`;
+                                            }
                                             navigate(target);
                                         }}
                                     >
