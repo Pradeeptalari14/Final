@@ -13,7 +13,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 export default function AdminDashboard() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const { users, sheets, loading, refreshUsers, refreshSheets, currentUser, settings, resetAllData } = useData();
+    const { users, sheets, loading, refreshUsers, refreshSheets, currentUser, settings } = useData();
     const { addToast } = useToast();
 
     // Derived State
@@ -520,14 +520,6 @@ export default function AdminDashboard() {
                     onChange={(e) => setDateFilter(e.target.value)}
                     className="bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:border-primary/50 focus:outline-none [color-scheme:dark] dark:[color-scheme:dark] light:[color-scheme:light]"
                 />
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-muted-foreground hover:text-foreground"
-                    onClick={() => { setSubFilter('ALL'); setSearchQuery(''); setDateFilter(''); }}
-                >
-                    Reset
-                </Button>
             </div>
         </div>
     );
@@ -536,8 +528,8 @@ export default function AdminDashboard() {
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
             {FilterBar()}
 
-            <div className="rounded-xl border border-border overflow-hidden bg-card/50">
-                <table className="w-full text-left text-sm">
+            <div className="rounded-xl border border-border overflow-hidden bg-card/50 overflow-x-auto">
+                <table className="w-full text-left text-sm min-w-[800px]">
                     <thead>
                         <tr className="bg-muted/50 text-muted-foreground border-b border-border">
                             <th className={`pl-4 font-medium ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>Sheet ID</th>
@@ -666,52 +658,12 @@ export default function AdminDashboard() {
                         onChange={(e) => setDateFilter(e.target.value)}
                         className="bg-white dark:bg-slate-950/50 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-purple-500/50 focus:outline-none [color-scheme:light] dark:[color-scheme:dark]"
                     />
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-slate-400 hover:text-white cursor-pointer"
-                        onClick={(e) => {
-                            console.log("Reset Filters Clicked");
-                            e.preventDefault();
-                            setStatusFilter('ALL');
-                            setSearchQuery('');
-                            setDateFilter('');
-                        }}
-                    >
-                        Reset Filters
-                    </Button>
 
-                    <div className="h-6 w-px bg-white/10 mx-2 hidden md:block"></div>
-
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300 hover:border-red-500 cursor-pointer"
-                        onClick={async (e) => {
-                            console.log("Factory Reset Clicked");
-                            e.preventDefault();
-                            if (window.confirm("DANGER: This will delete ALL users (except Admins) and ALL sheets.\n\nThis cannot be undone. Are you sure?")) {
-                                try {
-                                    console.log("Calling resetAllData...");
-                                    await resetAllData();
-                                    alert("Factory Reset Complete.\n\nAll non-admin data has been wiped.");
-                                    window.location.reload();
-                                } catch (e: any) {
-                                    console.error("Reset Failed", e);
-                                    alert("Reset Failed: " + e.message);
-                                }
-                            }
-                        }}
-                    >
-
-                        <Trash2 size={14} className="mr-2" />
-                        Factory Reset
-                    </Button>
                 </div>
             </div>
 
-            <div className="rounded-xl border border-slate-200 dark:border-white/5 overflow-hidden bg-white dark:bg-slate-900/20 shadow-sm dark:shadow-none">
-                <table className="w-full text-left text-sm">
+            <div className="rounded-xl border border-slate-200 dark:border-white/5 overflow-hidden bg-white dark:bg-slate-900/20 shadow-sm dark:shadow-none overflow-x-auto">
+                <table className="w-full text-left text-sm min-w-[800px]">
                     <thead>
                         <tr className="bg-slate-50 dark:bg-slate-950/50 text-slate-700 dark:text-slate-500 border-b border-slate-200 dark:border-white/5">
                             <th className={`pl-4 font-medium ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>Sheet ID</th>
@@ -902,8 +854,8 @@ export default function AdminDashboard() {
                 </div>
             )}
 
-            <div className="rounded-xl border border-border overflow-hidden bg-card">
-                <table className="w-full text-left text-sm">
+            <div className="rounded-xl border border-border overflow-hidden bg-card overflow-x-auto">
+                <table className="w-full text-left text-sm min-w-[700px]">
                     <thead>
                         <tr className="bg-muted text-muted-foreground border-b border-border">
                             <th className="py-3 pl-4 font-medium">User</th>
