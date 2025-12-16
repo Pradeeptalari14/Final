@@ -19,7 +19,7 @@ export default function DashboardOverview() {
                 const name = sheet.supervisorName?.toLowerCase().trim();
                 const username = currentUser.username?.toLowerCase().trim();
                 const fullname = currentUser.fullName?.toLowerCase().trim();
-                return name === username || name === fullname;
+                return (name === username || name === fullname) && sheet.status !== SheetStatus.COMPLETED; // Hide Completed from Dashboard Overview
             }
             // Loading Supervisor
             if (currentUser?.role === Role.LOADING_SUPERVISOR) {
@@ -57,7 +57,7 @@ export default function DashboardOverview() {
                 const rejectedCount = relevantSheets.filter(s => s.status === SheetStatus.DRAFT && isRejected(s)).length;
 
                 return [
-                    { label: 'Total Staging', count: stagingActiveCount, link: '/admin?tab=staging_db', color: 'bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold' },
+                    { label: 'Total Staging', count: stagingActiveCount, link: '/admin?tab=staging_db&filter=ACTIVE', color: 'bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold' },
                     { label: 'Draft', count: draftCount, link: '/admin?tab=staging_db&filter=DRAFT', color: 'bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-400 font-bold' },
                     { label: 'Pending', count: pendingCount, link: '/admin?tab=staging_db&filter=PENDING', color: 'bg-orange-100 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-500/30 text-orange-900 dark:text-orange-400 font-bold' },
                     { label: 'Locked', count: lockedCount, link: '/admin?tab=staging_db&filter=LOCKED', color: 'bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 text-blue-900 dark:text-blue-400 font-bold' },

@@ -63,7 +63,7 @@ export default function LoginPage() {
                 setLoading(false);
                 setDevRole(finalRole);
                 setCurrentUser(foundUser);
-                navigate(finalRole === Role.ADMIN ? '/admin' : '/');
+                navigate('/'); // Always go to Dashboard Overview first
             }, 500);
 
         } else {

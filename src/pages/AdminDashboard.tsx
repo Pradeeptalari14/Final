@@ -146,6 +146,7 @@ export default function AdminDashboard() {
             }
         }
         else if (activeTab === 'staging_db') {
+            if (subFilter === 'ACTIVE') return relevantSheets.filter(s => s.status === SheetStatus.DRAFT || s.status === SheetStatus.STAGING_VERIFICATION_PENDING);
             if (subFilter === 'DRAFT') return relevantSheets.filter(s => s.status === SheetStatus.DRAFT && !isRejected(s));
             if (subFilter === 'PENDING') return relevantSheets.filter(s => s.status === SheetStatus.STAGING_VERIFICATION_PENDING);
             if (subFilter === 'LOCKED') return relevantSheets.filter(s => s.status === SheetStatus.LOCKED);
