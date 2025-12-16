@@ -19,7 +19,10 @@ export default function DashboardOverview() {
                 const name = sheet.supervisorName?.toLowerCase().trim();
                 const username = currentUser.username?.toLowerCase().trim();
                 const fullname = currentUser.fullName?.toLowerCase().trim();
-                return (name === username || name === fullname) && sheet.status !== SheetStatus.COMPLETED; // Hide Completed from Dashboard Overview
+                // STRICT VIEW: Only show sheets in Staging Phase (Draft or Pending Verification)
+                // Locked = Handed over to Loading. Completed = Done.
+                return (name === username || name === fullname) &&
+                    (sheet.status === SheetStatus.DRAFT || sheet.status === SheetStatus.STAGING_VERIFICATION_PENDING);
             }
             // Loading Supervisor
             if (currentUser?.role === Role.LOADING_SUPERVISOR) {

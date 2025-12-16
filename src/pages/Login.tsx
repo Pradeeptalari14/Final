@@ -188,12 +188,13 @@ export default function LoginPage() {
                                     <select
                                         value={formData.role}
                                         onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
-                                        className="w-full h-11 bg-black/20 border border-white/5 rounded-xl pl-8 pr-4 text-[#fcf5eb] focus:outline-none focus:border-amber-500/30 focus:bg-black/30 transition-all text-sm appearance-none cursor-pointer"
+                                        className="w-full h-11 bg-black/20 border border-white/5 rounded-xl pl-8 pr-4 text-[#fcf5eb] focus:outline-none focus:border-amber-500/30 focus:bg-black/30 transition-all text-sm appearance-none cursor-pointer placeholder-white/50"
+                                        style={{ colorScheme: 'dark' }} // Force browser dark scrollbar/menu interaction
                                     >
-                                        <option value={Role.STAGING_SUPERVISOR} className="bg-[#2a2422] text-[#e8d5c4]">Staging Supervisor</option>
-                                        <option value={Role.LOADING_SUPERVISOR} className="bg-[#2a2422] text-[#e8d5c4]">Loading Supervisor</option>
-                                        <option value={Role.SHIFT_LEAD} className="bg-[#2a2422] text-[#e8d5c4]">Shift Lead</option>
-                                        <option value={Role.ADMIN} className="bg-[#2a2422] text-[#e8d5c4]">Admin</option>
+                                        <option value={Role.STAGING_SUPERVISOR} className="bg-zinc-900 text-white py-2">Staging Supervisor</option>
+                                        <option value={Role.LOADING_SUPERVISOR} className="bg-zinc-900 text-white py-2">Loading Supervisor</option>
+                                        <option value={Role.SHIFT_LEAD} className="bg-zinc-900 text-white py-2">Shift Lead</option>
+                                        <option value={Role.ADMIN} className="bg-zinc-900 text-white py-2">Admin</option>
                                     </select>
                                     <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-white/40">
                                         <svg width="10" height="10" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
