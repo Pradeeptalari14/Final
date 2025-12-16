@@ -19,10 +19,7 @@ export default function DashboardOverview() {
                 const name = sheet.supervisorName?.toLowerCase().trim();
                 const username = currentUser.username?.toLowerCase().trim();
                 const fullname = currentUser.fullName?.toLowerCase().trim();
-                // STRICT VIEW: Only show sheets in Staging Phase (Draft or Pending Verification)
-                // Locked = Handed over to Loading. Completed = Done.
-                return (name === username || name === fullname) &&
-                    (sheet.status === SheetStatus.DRAFT || sheet.status === SheetStatus.STAGING_VERIFICATION_PENDING);
+                return (name === username || name === fullname);
             }
             // Loading Supervisor
             if (currentUser?.role === Role.LOADING_SUPERVISOR) {
@@ -47,27 +44,31 @@ export default function DashboardOverview() {
         const isRejected = (s: any) => s.rejectionReason && s.rejectionReason.trim() !== '';
 
         if (stage === 'STAGING') {
-            const rejectedCount = relevantSheets.filter(s =>
-                (s.status === SheetStatus.DRAFT || s.status === SheetStatus.STAGING_VERIFICATION_PENDING) && isRejected(s)
-            ).length;
-
+            // Stats for Staging Supervisor
             if (currentUser?.role === Role.ADMIN || currentUser?.role === Role.STAGING_SUPERVISOR) {
-                const stagingActiveCount = relevantSheets.filter(s => s.status === SheetStatus.DRAFT || s.status === SheetStatus.STAGING_VERIFICATION_PENDING).length;
+
                 const draftCount = relevantSheets.filter(s => s.status === SheetStatus.DRAFT && !isRejected(s)).length;
                 const pendingCount = relevantSheets.filter(s => s.status === SheetStatus.STAGING_VERIFICATION_PENDING).length;
                 const lockedCount = relevantSheets.filter(s => s.status === SheetStatus.LOCKED).length;
                 const completedCount = relevantSheets.filter(s => s.status === SheetStatus.COMPLETED).length;
                 const rejectedCount = relevantSheets.filter(s => s.status === SheetStatus.DRAFT && isRejected(s)).length;
 
+                // "Total Staging" = ALL sheets (Active + History)
+                const totalStagingCount = relevantSheets.length;
+
                 return [
-                    { label: 'Total Staging', count: stagingActiveCount, link: '/admin?tab=staging_db&filter=ACTIVE', color: 'bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold' },
+                    { label: 'Total Staging', count: totalStagingCount, link: '/admin?tab=staging_db', color: 'bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold' },
                     { label: 'Draft', count: draftCount, link: '/admin?tab=staging_db&filter=DRAFT', color: 'bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-400 font-bold' },
                     { label: 'Pending', count: pendingCount, link: '/admin?tab=staging_db&filter=PENDING', color: 'bg-orange-100 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-500/30 text-orange-900 dark:text-orange-400 font-bold' },
-                    { label: 'Locked', count: lockedCount, link: '/admin?tab=staging_db&filter=LOCKED', color: 'bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 text-blue-900 dark:text-blue-400 font-bold' },
+                    { label: 'Locked', count: lockedCount, link: '/admin?tab=staging_db&filter=LOCKED', color: 'bg-purple-100 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-500/30 text-purple-900 dark:text-purple-400 font-bold' },
                     { label: 'Completed', count: completedCount, link: '/admin?tab=staging_db&filter=COMPLETED', color: 'bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold' },
                     { label: 'Rejected', count: rejectedCount, link: '/admin?tab=staging_db&filter=REJECTED', color: 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold' }
                 ];
             }
+
+            const rejectedCount = relevantSheets.filter(s =>
+                (s.status === SheetStatus.DRAFT || s.status === SheetStatus.STAGING_VERIFICATION_PENDING) && isRejected(s)
+            ).length;
 
             if (rejectedCount === 0) return [];
             return [
@@ -274,7 +275,7 @@ export default function DashboardOverview() {
                 <div className={`grid gap-4 ${settings?.density === 'compact' ? 'max-h-[600px]' : ''} 
                     ${isStagingSupervisor || isLoadingSupervisor || isShiftLead ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'}`}>
 
-                    {/* 1. Staging Column */}
+                    {/* 1. Staging Column (Consolidated) */}
                     {(currentUser?.role === Role.ADMIN || currentUser?.role === Role.STAGING_SUPERVISOR) && (
                         <StageColumn
                             title="Staging"
@@ -287,7 +288,7 @@ export default function DashboardOverview() {
                         />
                     )}
 
-                    {/* 2. Loading Column */}
+                    {/* 2. Loading Column (Admin/Loading SV) */}
                     {(currentUser?.role === Role.ADMIN || currentUser?.role === Role.LOADING_SUPERVISOR) && (
                         <StageColumn
                             title="Loading"
@@ -351,7 +352,12 @@ export default function DashboardOverview() {
                                 {relevantSheets.length === 0 ? (
                                     <tr><td colSpan={5} className="p-6 text-center opacity-50">No recent activity found.</td></tr>
                                 ) : (
-                                    relevantSheets.slice(0, 10).map(sheet => (
+                                    relevantSheets.filter(s => {
+                                        if (currentUser?.role === Role.STAGING_SUPERVISOR) {
+                                            return s.status === SheetStatus.DRAFT || s.status === SheetStatus.STAGING_VERIFICATION_PENDING;
+                                        }
+                                        return true;
+                                    }).slice(0, 10).map(sheet => (
                                         <tr
                                             key={sheet.id}
                                             className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors cursor-pointer group"
