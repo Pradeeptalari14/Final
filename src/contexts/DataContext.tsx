@@ -198,10 +198,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
     const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-    // Load User from LocalStorage on mount
+    // Load User from SessionStorage on mount (Per-Tab Isolation)
     useEffect(() => {
         try {
-            const savedUser = localStorage.getItem('currentUser');
+            const savedUser = sessionStorage.getItem('currentUser');
             if (savedUser) {
                 setCurrentUser(JSON.parse(savedUser));
             }
@@ -225,17 +225,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                     password: ''
                 };
                 setCurrentUser(devUser);
-                localStorage.setItem('currentUser', JSON.stringify(devUser));
+                sessionStorage.setItem('currentUser', JSON.stringify(devUser));
             }
         }
     }, [devRole]);
 
-    // Save User to LocalStorage on Change
+    // Save User to SessionStorage on Change
     useEffect(() => {
         if (currentUser) {
-            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
         } else {
-            localStorage.removeItem('currentUser');
+            sessionStorage.removeItem('currentUser');
         }
     }, [currentUser]);
 

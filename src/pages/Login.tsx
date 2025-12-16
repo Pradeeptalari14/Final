@@ -16,16 +16,35 @@ export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [showRegister, setShowRegister] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [isRoleOpen, setIsRoleOpen] = useState(false);
     const [formData, setFormData] = useState({
         username: '',
         password: '',
-        role: Role.STAGING_SUPERVISOR
+        role: '' as Role | '' // Allow empty initial state
     });
+
+    const formatRole = (role: Role | '') => {
+        if (!role) return "";
+        switch (role) {
+            case Role.STAGING_SUPERVISOR: return "Staging Supervisor";
+            case Role.LOADING_SUPERVISOR: return "Loading Supervisor";
+            case Role.SHIFT_LEAD: return "Shift Lead";
+            case Role.ADMIN: return "Admin";
+            default: return role;
+        }
+    };
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setError(null);
+
+        // Validate Role Selection
+        if (!formData.role) {
+            setError("Please select a role.");
+            setLoading(false);
+            return;
+        }
 
         // Find user
         const foundUser = users.find(u => u.username.toLowerCase() === formData.username.toLowerCase());
@@ -179,28 +198,66 @@ export default function LoginPage() {
                                 </div>
                             </div>
 
-                            <div className="space-y-1">
+                            {/* Role Section - High Z-Index to overlap everything */}
+                            <div className="space-y-1 relative z-50">
                                 <label className="text-[10px] font-bold text-[#e8d5c4] uppercase tracking-widest pl-1 opacity-80">Role</label>
                                 <div className="relative group">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-20">
                                         <div className="w-1.5 h-1.5 rounded-full bg-white/20 group-focus-within:bg-amber-400 transition-colors" />
                                     </div>
-                                    <select
-                                        value={formData.role}
-                                        onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
-                                        className="w-full h-11 bg-black/20 border border-white/5 rounded-xl pl-8 pr-4 text-[#fcf5eb] focus:outline-none focus:border-amber-500/30 focus:bg-black/30 transition-all text-sm appearance-none cursor-pointer placeholder-white/50"
-                                        style={{ colorScheme: 'dark' }} // Force browser dark scrollbar/menu interaction
+
+                                    {/* Custom Select Trigger */}
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsRoleOpen(!isRoleOpen)}
+                                        className={`w-full h-11 border border-white/5 pl-8 pr-4 text-left text-[#fcf5eb] focus:outline-none focus:border-amber-500/30 transition-all text-sm flex items-center justify-between backdrop-blur-sm relative z-50
+                                            ${isRoleOpen
+                                                ? 'bg-[#1a1a1a] rounded-t-xl rounded-b-none border-b-transparent'
+                                                : 'bg-black/20 rounded-xl hover:bg-black/30'
+                                            }
+                                        `}
                                     >
-                                        <option value={Role.STAGING_SUPERVISOR} className="bg-zinc-900 text-white py-2">Staging Supervisor</option>
-                                        <option value={Role.LOADING_SUPERVISOR} className="bg-zinc-900 text-white py-2">Loading Supervisor</option>
-                                        <option value={Role.SHIFT_LEAD} className="bg-zinc-900 text-white py-2">Shift Lead</option>
-                                        <option value={Role.ADMIN} className="bg-zinc-900 text-white py-2">Admin</option>
-                                    </select>
-                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-white/40">
-                                        <svg width="10" height="10" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                                        </svg>
-                                    </div>
+                                        <span className="truncate font-medium">
+                                            {formatRole(formData.role) || "Select Role"}
+                                        </span>
+                                        <div className={`transition-transform duration-200 ${isRoleOpen ? 'rotate-180' : ''} text-white/40`}>
+                                            <svg width="10" height="10" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                            </svg>
+                                        </div>
+                                    </button>
+
+                                    {/* Custom Dropdown Menu */}
+                                    {isRoleOpen && (
+                                        <>
+                                            {/* Click outside closer */}
+                                            <div className="fixed inset-0 z-0" onClick={() => setIsRoleOpen(false)} />
+
+                                            <motion.div
+                                                initial={{ opacity: 0, y: -10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, y: -10 }}
+                                                className="absolute top-full left-0 right-0 bg-[#1a1a1a] border border-white/5 border-t-0 rounded-b-xl overflow-hidden shadow-2xl z-50 ring-1 ring-black/50"
+                                            >
+                                                {[Role.STAGING_SUPERVISOR, Role.LOADING_SUPERVISOR, Role.SHIFT_LEAD, Role.ADMIN].map((role) => (
+                                                    <button
+                                                        key={role}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setFormData({ ...formData, role });
+                                                            setIsRoleOpen(false);
+                                                        }}
+                                                        className={`w-full text-left px-4 py-3 text-sm transition-all flex items-center gap-3 border-b border-white/5 last:border-0
+                                                                ${formData.role === role ? 'bg-amber-500/10 text-amber-100 font-medium' : 'text-slate-400 hover:bg-white/5 hover:text-white'}
+                                                            `}
+                                                    >
+                                                        <div className={`w-2 h-2 rounded-full shadow-sm ${formData.role === role ? 'bg-amber-500 shadow-amber-500/50' : 'bg-white/10'}`} />
+                                                        {formatRole(role)}
+                                                    </button>
+                                                ))}
+                                            </motion.div>
+                                        </>
+                                    )}
                                 </div>
                             </div>
 

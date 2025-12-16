@@ -370,7 +370,11 @@ export default function LoadingSheet() {
         setEndTime(timeNow);
 
         const tempSheet = buildSheetData(SheetStatus.LOADING_VERIFICATION_PENDING);
-        const finalSheet = { ...tempSheet, loadingEndTime: timeNow };
+        const finalSheet = {
+            ...tempSheet,
+            loadingEndTime: timeNow,
+            rejectionReason: undefined // Clear rejection on resubmit
+        };
 
         try {
             await updateSheet(finalSheet);

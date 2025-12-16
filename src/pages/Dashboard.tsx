@@ -1,10 +1,11 @@
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Plus, ArrowRight } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useData } from '@/contexts/DataContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { SheetStatus, SheetData, Role } from '@/types';
+import { SheetStatus, Role } from '@/types';
+import { StageColumn } from '@/components/dashboard/StageColumn';
 
 export default function DashboardOverview() {
     const { sheets, currentUser, settings, users } = useData();
@@ -30,7 +31,7 @@ export default function DashboardOverview() {
             }
             // Shift Lead
             if (currentUser?.role === Role.SHIFT_LEAD) {
-                return true;
+                return sheet.status !== SheetStatus.DRAFT;
             }
             return false;
         });
@@ -50,14 +51,15 @@ export default function DashboardOverview() {
                 const draftCount = relevantSheets.filter(s => s.status === SheetStatus.DRAFT && !isRejected(s)).length;
                 const pendingCount = relevantSheets.filter(s => s.status === SheetStatus.STAGING_VERIFICATION_PENDING).length;
                 const lockedCount = relevantSheets.filter(s => s.status === SheetStatus.LOCKED).length;
-                const completedCount = relevantSheets.filter(s => s.status === SheetStatus.COMPLETED).length;
                 const rejectedCount = relevantSheets.filter(s => s.status === SheetStatus.DRAFT && isRejected(s)).length;
 
-                // "Total Staging" = ALL sheets (Active + History)
-                const totalStagingCount = relevantSheets.length;
+                // GLOBAL STATS (Requested by User: See all users' totals)
+                // Use 'sheets' directly instead of 'relevantSheets'
+                const completedCount = sheets.filter(s => s.status === SheetStatus.COMPLETED).length;
+                const totalStagingCount = sheets.length;
 
                 return [
-                    { label: 'Total Staging', count: totalStagingCount, link: '/admin?tab=staging_db', color: 'bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold' },
+                    { label: 'Total Staging', count: totalStagingCount, link: '/database', color: 'bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold' },
                     { label: 'Draft', count: draftCount, link: '/admin?tab=staging_db&filter=DRAFT', color: 'bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-400 font-bold' },
                     { label: 'Pending', count: pendingCount, link: '/admin?tab=staging_db&filter=PENDING', color: 'bg-orange-100 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-500/30 text-orange-900 dark:text-orange-400 font-bold' },
                     { label: 'Locked', count: lockedCount, link: '/admin?tab=staging_db&filter=LOCKED', color: 'bg-purple-100 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-500/30 text-purple-900 dark:text-purple-400 font-bold' },
@@ -81,15 +83,18 @@ export default function DashboardOverview() {
             if (currentUser?.role === Role.ADMIN || currentUser?.role === Role.LOADING_SUPERVISOR) {
                 const loadingSheets = relevantSheets.filter(s => s.status !== SheetStatus.DRAFT && s.status !== SheetStatus.STAGING_VERIFICATION_PENDING);
 
-                const loadingActiveCount = loadingSheets.filter(s => s.status !== SheetStatus.COMPLETED).length;
+                // GLOBAL STATS for Total and Completed
+                const globalLoadingSheets = sheets.filter(s => s.status !== SheetStatus.DRAFT && s.status !== SheetStatus.STAGING_VERIFICATION_PENDING);
+                const loadingActiveCount = globalLoadingSheets.filter(s => s.status !== SheetStatus.COMPLETED).length;
+                const completedCount = globalLoadingSheets.filter(s => s.status === SheetStatus.COMPLETED).length;
 
+                // Personal/Actionable Stats
                 const readyCount = loadingSheets.filter(s => s.status === SheetStatus.LOCKED).length;
                 const pendingVerCount = loadingSheets.filter(s => s.status === SheetStatus.LOADING_VERIFICATION_PENDING).length;
-                const completedCount = loadingSheets.filter(s => s.status === SheetStatus.COMPLETED).length;
                 const rejectedCount = loadingSheets.filter(s => s.status === SheetStatus.LOCKED && isRejected(s)).length;
 
                 return [
-                    { label: 'Total Loading', count: loadingActiveCount, link: '/admin?tab=loading_db', color: 'bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold' },
+                    { label: 'Total Loading', count: loadingActiveCount, link: '/database', color: 'bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold' },
                     { label: 'Ready to Load', count: readyCount, link: '/admin?tab=loading_db&filter=READY', color: 'bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 text-blue-900 dark:text-blue-400 font-bold' },
                     { label: 'Locked (Pending Ver.)', count: pendingVerCount, link: '/admin?tab=loading_db&filter=LOCKED', color: 'bg-orange-100 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-500/30 text-orange-900 dark:text-orange-400 font-bold' },
                     { label: 'Completed', count: completedCount, link: '/admin?tab=loading_db&filter=COMPLETED', color: 'bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold' },
@@ -339,7 +344,7 @@ export default function DashboardOverview() {
                 <CardContent className={`${settings?.density === 'compact' ? 'pb-2' : ''}`}>
                     <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-white/5">
                         <table className="w-full text-xs text-left text-slate-600 dark:text-slate-400">
-                            <thead className="bg-slate-50 dark:bg-slate-950/50 text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-500">
+                            <thead className="bg-slate-50 dark:bg-slate-950/50 text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-500 sticky top-0 z-10 backdrop-blur-sm">
                                 <tr>
                                     <th className={`p-2 ${settings?.density === 'compact' ? 'py-1' : ''}`}>Sheet ID</th>
                                     <th className={`p-2 ${settings?.density === 'compact' ? 'py-1' : ''}`}>Supervisor</th>
@@ -406,97 +411,3 @@ export default function DashboardOverview() {
     );
 }
 
-// StageColumn
-function StageColumn({ title, color, items, linkTo, filters, density, fullWidth, hideItems }: {
-    title: string,
-    color: string,
-    items: SheetData[],
-    linkTo?: string,
-    filters?: any[],
-    density?: 'compact' | 'comfortable',
-    fullWidth?: boolean,
-    hideItems?: boolean
-}) {
-    const navigate = useNavigate();
-    const safeLink = linkTo || '/database';
-    const isCompact = density === 'compact';
-
-    // Dynamic grid for filters
-    const filterGridClass = fullWidth
-        ? filters && filters.length > 5 ? 'grid-cols-2 md:grid-cols-4 lg:grid-cols-7' : 'grid-cols-2 md:grid-cols-4 lg:grid-cols-5'
-        : 'grid-cols-2';
-
-    return (
-        <div className={`rounded-lg border ${color} ${isCompact ? 'p-2' : 'p-3'} flex flex-col gap-2 transition-colors h-full relative group hover:bg-slate-50 dark:hover:bg-white/[0.02]`}>
-            <div className={`flex items-center justify-between border-b border-slate-200 dark:border-white/5 ${isCompact ? 'pb-1' : 'pb-2'}`}>
-                <h3 className="text-xs font-bold uppercase tracking-wider opacity-70">{title}</h3>
-                {items.length > 0 && !hideItems && <span className="text-xs font-mono opacity-50">{items.length}</span>}
-            </div>
-
-            {filters && filters.length > 0 && (
-                <div className={`grid ${filterGridClass} ${isCompact ? 'gap-1' : 'gap-2'}`}>
-                    {filters.map((f, i) => (
-                        <button
-                            key={i}
-                            onClick={(e) => { e.stopPropagation(); navigate(f.link); }}
-                            className={`
-                                flex flex-col items-center justify-center ${isCompact ? 'p-1' : 'p-2'} rounded 
-                                transition-all hover:scale-[1.02] active:scale-[0.98] 
-                                border border-white/5 shadow-sm
-                                ${f.color} 
-                                ${fullWidth ? 'min-h-[60px]' : ''}
-                            `}
-                        >
-                            <span className={`font-bold leading-none ${fullWidth ? 'text-lg' : 'text-sm'}`}>{f.count}</span>
-                            <span className="text-[9px] opacity-80 uppercase tracking-tight text-center leading-tight mt-1">{f.label}</span>
-                        </button>
-                    ))}
-                </div>
-            )}
-
-            {!hideItems && (
-                <div className={`flex-1 overflow-y-auto custom-scrollbar ${isCompact ? 'max-h-[200px]' : 'max-h-[300px]'} ${fullWidth ? 'max-h-[500px]' : ''}`}>
-                    {items.length === 0 ? (
-                        <div
-                            onClick={() => navigate(safeLink)}
-                            className={`h-full flex flex-col items-center justify-center cursor-pointer hover:opacity-100 opacity-60 transition-opacity ${isCompact ? 'min-h-[60px]' : 'min-h-[80px]'}`}
-                        >
-                            <div className="text-[10px] opacity-40 mt-1 flex items-center gap-1">
-                                View Details <ArrowRight size={10} />
-                            </div>
-                        </div>
-                    ) : (
-                        <div className={`space-y-2 ${isCompact ? 'pt-0.5' : 'pt-1'} ${fullWidth ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 space-y-0' : ''}`}>
-                            {items.map(item => (
-                                <div
-                                    key={item.id}
-                                    onClick={() => {
-                                        const isStaging = item.status === SheetStatus.DRAFT || item.status === SheetStatus.STAGING_VERIFICATION_PENDING;
-                                        navigate(isStaging ? `/sheets/staging/${item.id}` : `/sheets/loading/${item.id}`);
-                                    }}
-                                    className={`bg-white dark:bg-slate-950/40 ${isCompact ? 'p-1.5' : 'p-2'} rounded border border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-50 dark:hover:bg-slate-900 transition-all cursor-pointer shadow-sm group/item relative`}
-                                >
-                                    <div className="flex justify-between items-start">
-                                        <span className="font-mono text-[10px] font-semibold text-slate-800 dark:text-white group-hover/item:text-blue-600 dark:group-hover/item:text-blue-400 transition-colors">#{item.id.slice(-4)}</span>
-                                        <span className="text-[9px] bg-slate-100 dark:bg-white/5 px-1.5 py-0.5 rounded text-slate-500">{new Date(item.createdAt).toLocaleDateString()}</span>
-                                    </div>
-                                    <div className="text-[10px] text-slate-600 dark:text-slate-400 mt-1 truncate font-medium">
-                                        {item.destination || 'Unknown Dest'}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                    {items.length > 0 && !fullWidth && (
-                        <div
-                            onClick={() => navigate(safeLink)}
-                            className="text-[10px] text-center opacity-40 hover:opacity-100 cursor-pointer pt-2 border-t border-white/5 mt-2"
-                        >
-                            View All {items.length} Items &rarr;
-                        </div>
-                    )}
-                </div>
-            )}
-        </div>
-    );
-}
