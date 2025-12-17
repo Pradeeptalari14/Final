@@ -350,6 +350,20 @@ export default function LoadingSheet() {
         if (!currentSheet) return;
         try {
             const data = buildSheetData(currentSheet.status);
+
+            // Log "Started" if not already logged (simple check: if loadingStartTime exists and we are just starting or first save in this state)
+            // Ideally check if HISTORY has 'LOADING_STARTED'
+            const hasStartedLog = currentSheet.history?.some(h => h.action === 'LOADING_STARTED');
+            if (!hasStartedLog && data.loadingStartTime) {
+                data.history = [...(data.history || []), {
+                    id: Date.now().toString(),
+                    actor: currentUser?.username || 'Unknown',
+                    action: 'LOADING_STARTED',
+                    timestamp: new Date().toISOString(),
+                    details: 'Loading Process Started'
+                }];
+            }
+
             await updateSheet(data);
             alert("Progress Saved Successfully!");
         } catch (e) {
@@ -373,7 +387,14 @@ export default function LoadingSheet() {
         const finalSheet = {
             ...tempSheet,
             loadingEndTime: timeNow,
-            rejectionReason: undefined // Clear rejection on resubmit
+            rejectionReason: undefined, // Clear rejection on resubmit
+            history: [...(currentSheet.history || []), {
+                id: Date.now().toString(),
+                actor: currentUser?.username || 'Unknown',
+                action: 'LOADING_SUBMITTED',
+                timestamp: new Date().toISOString(),
+                details: 'Submitted for Final Verification'
+            }]
         };
 
         try {
@@ -387,6 +408,7 @@ export default function LoadingSheet() {
         }
     };
 
+    // --- APPROVAL ACTIONS (Shift Lead) ---
     const handleApprove = async (approve: boolean) => {
         if (!currentSheet) return;
 
@@ -400,18 +422,26 @@ export default function LoadingSheet() {
                     loadingEndTime: currentSheet.loadingEndTime || new Date().toLocaleTimeString('en-US', { hour12: false }),
                     slSign: currentUser?.fullName,
                     completedBy: currentUser?.username,
-                    completedAt: new Date().toISOString()
+                    completedAt: new Date().toISOString(),
+                    history: [...(currentSheet.history || []), {
+                        id: Date.now().toString(),
+                        actor: currentUser?.username || 'Unknown',
+                        action: 'COMPLETED',
+                        timestamp: new Date().toISOString(),
+                        details: 'Final Approval Granted - Dispatched'
+                    }]
                 };
                 await updateSheet(finalSheet);
                 setCurrentSheet(finalSheet);
                 navigate('/database');
             }
         } else {
-            const reason = prompt("Enter rejection reason:");
+            // Reject
+            const reason = prompt("Enter Rejection Reason:");
             if (reason) {
                 const rejectedSheet: SheetData = {
                     ...currentSheet,
-                    status: SheetStatus.LOCKED, // Return to Locked (In Progress)
+                    status: SheetStatus.LOCKED, // Send back to Loading
                     rejectionReason: reason,
                     history: [...(currentSheet.history || []), {
                         id: Date.now().toString(),
@@ -478,10 +508,7 @@ export default function LoadingSheet() {
             {/* EXCEL PRINT LAYOUT (Legacy Ported) */}
             <div className={`${isPreview ? 'block' : 'hidden'} print:block font-sans text-[10px] w-full text-black bg-white p-4 print:p-0 overflow-auto`}>
                 <div className="min-w-[800px]">
-                    <div className='flex justify-between items-end mb-2'>
-                        <h1 className="text-xl font-bold underline">LOADING CHECK REPORT</h1>
-                        <div className="border border-black px-2 py-1">Doc No: UCIA/LOG/REC/004</div>
-                    </div>
+
 
                     <table className="w-full border-collapse border border-black mb-1 table-fixed text-[10px]">
                         <colgroup>
@@ -647,10 +674,10 @@ export default function LoadingSheet() {
                     </div>
                     <div className="border border-black border-t-0 flex">
                         <div className="w-[40%] border-r border-black flex">
-                            <div className="flex-1 p-1">
-                                <div className="flex justify-between border-b border-black p-1"><span>Total Staging Qty</span><span>{totalStaging}</span></div>
-                                <div className="flex justify-between border-b border-black p-1"><span>Actual Loaded Qty</span><span>{grandTotalLoaded}</span></div>
-                                <div className="flex justify-between p-1"><span>Balance to be returned</span><span>{balance}</span></div>
+                            <div className="flex-1 text-[9px]">
+                                <div className="flex justify-between border-b border-black p-1 font-bold"><span>Total Staging Qty</span><span>{totalStaging}</span></div>
+                                <div className="flex justify-between border-b border-black p-1 font-bold"><span>Actual Loaded Qty</span><span>{grandTotalLoaded}</span></div>
+                                <div className="flex justify-between p-1 font-bold"><span>Balance to be returned</span><span>{balance}</span></div>
                             </div>
                         </div>
                         <div className="w-[60%] p-1 flex flex-col">
@@ -700,7 +727,7 @@ export default function LoadingSheet() {
                         </div>
                     </div>
                     <div className="border border-black border-t-0 p-2 text-center text-lg font-bold">TOTAL loaded Cases: {grandTotalLoaded}</div>
-                    <div className="flex border border-black border-t-0 text-xs mt-2">
+                    <div className="flex border border-black border-t-0 text-xs">
                         <div className="w-1/4 border-r border-black p-1"><div>Supervisor Name:</div><div className="font-bold">{svName}</div></div>
                         <div className="w-1/4 border-r border-black p-1"><div>Supervisor Sign:</div><div className="font-script text-sm">{svSign}</div></div>
                         <div className="w-1/4 border-r border-black p-1"><div>SL Sign:</div><div className="font-script text-sm">{slSign}</div></div>

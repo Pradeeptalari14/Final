@@ -18,7 +18,10 @@ export function StageColumn({ title, color, items, linkTo, filters, density, ful
 
     // Dynamic grid for filters
     const filterGridClass = fullWidth
-        ? filters && filters.length > 5 ? 'grid-cols-2 md:grid-cols-4 lg:grid-cols-7' : 'grid-cols-2 md:grid-cols-4 lg:grid-cols-5'
+        ? filters && filters.length === 4 ? 'grid-cols-2 md:grid-cols-4'
+            : filters && filters.length === 6 ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-6'
+                : filters && filters.length === 5 ? 'grid-cols-2 md:grid-cols-5' // Fallback for 5 items
+                    : 'grid-cols-2 md:grid-cols-4 lg:grid-cols-5' // Default
         : 'grid-cols-2';
 
     return (

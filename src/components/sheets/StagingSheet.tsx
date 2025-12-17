@@ -401,7 +401,7 @@ export default function StagingSheet() {
                     )}
                 </div>
 
-                <VerificationFooter formData={formData} setFormData={setFormData} onSave={handleSave} currentRole={currentRole} />
+                <VerificationFooter formData={formData} setFormData={setFormData} onSave={handleSave} currentRole={currentRole} currentUser={currentUser} />
             </div>
 
             {/* Standard Footer Actions for Edit Mode */}
@@ -422,7 +422,7 @@ export default function StagingSheet() {
     );
 }
 
-function VerificationFooter({ formData, setFormData, onSave, currentRole }: { formData: Partial<SheetData>, setFormData: any, onSave: (data: any) => void, currentRole: Role | undefined }) {
+function VerificationFooter({ formData, setFormData, onSave, currentRole, currentUser }: { formData: Partial<SheetData>, setFormData: any, onSave: (data: any) => void, currentRole: Role | undefined, currentUser: any }) {
     const isShiftLead = currentRole === Role.SHIFT_LEAD || currentRole === Role.ADMIN;
     const isPending = formData.status === SheetStatus.STAGING_VERIFICATION_PENDING;
 
@@ -433,7 +433,20 @@ function VerificationFooter({ formData, setFormData, onSave, currentRole }: { fo
         if (!Object.values(checks).every(Boolean)) return;
 
         if (confirm("Are you sure you want to verify and lock this sheet?")) {
-            const updated = { ...formData, status: SheetStatus.LOCKED, lockedBy: currentRole };
+            const updated = {
+                ...formData,
+                status: SheetStatus.LOCKED, // Moves to Loading Pipeline
+                lockedBy: currentUser?.username,
+                lockedAt: new Date().toISOString(),
+                slSign: currentUser?.fullName,  // Auto-sign with Lead's Name
+                history: [...(formData.history || []), {
+                    id: Date.now().toString(),
+                    actor: currentUser?.username || 'Unknown',
+                    action: 'STAGING_VERIFIED',
+                    timestamp: new Date().toISOString(),
+                    details: 'Verified and Locked State'
+                }]
+            };
             setFormData(updated);
             onSave(updated);
         }
@@ -444,7 +457,7 @@ function VerificationFooter({ formData, setFormData, onSave, currentRole }: { fo
         if (reason) {
             const newComment = {
                 id: Date.now().toString(),
-                author: 'Shift Lead', // ideally fetch name
+                author: currentUser?.fullName || 'Shift Lead', // ideally fetch name
                 text: `REJECTED: ${reason}`,
                 timestamp: new Date().toISOString()
             };
@@ -454,7 +467,15 @@ function VerificationFooter({ formData, setFormData, onSave, currentRole }: { fo
             const updated = {
                 ...formData,
                 status: SheetStatus.DRAFT,
-                comments: [...(formData.comments || []), newComment]
+                rejectionReason: reason, // For dashboard highlighting
+                comments: [...(formData.comments || []), newComment],
+                history: [...(formData.history || []), {
+                    id: Date.now().toString(),
+                    actor: currentUser?.username || 'Unknown',
+                    action: 'STAGING_REJECTED',
+                    timestamp: new Date().toISOString(),
+                    details: `Rejected: ${reason}`
+                }]
             };
             setFormData(updated);
             onSave(updated);

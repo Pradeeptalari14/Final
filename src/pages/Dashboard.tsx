@@ -6,6 +6,7 @@ import { useData } from '@/contexts/DataContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SheetStatus, Role } from '@/types';
 import { StageColumn } from '@/components/dashboard/StageColumn';
+import { WorkflowRailway } from '@/components/dashboard/WorkflowRailway';
 
 export default function DashboardOverview() {
     const { sheets, currentUser, settings, users } = useData();
@@ -85,7 +86,11 @@ export default function DashboardOverview() {
 
                 // GLOBAL STATS for Total and Completed
                 const globalLoadingSheets = sheets.filter(s => s.status !== SheetStatus.DRAFT && s.status !== SheetStatus.STAGING_VERIFICATION_PENDING);
-                const loadingActiveCount = globalLoadingSheets.filter(s => s.status !== SheetStatus.COMPLETED).length;
+
+                // "Total Loading" = Ready to Load + Pending + Rejected (which are Locked/Pending) + Completed
+                // Basically everything passing the "Staging" phase.
+                const totalLoadingCount = globalLoadingSheets.length;
+
                 const completedCount = globalLoadingSheets.filter(s => s.status === SheetStatus.COMPLETED).length;
 
                 // Personal/Actionable Stats
@@ -94,7 +99,7 @@ export default function DashboardOverview() {
                 const rejectedCount = loadingSheets.filter(s => s.status === SheetStatus.LOCKED && isRejected(s)).length;
 
                 return [
-                    { label: 'Total Loading', count: loadingActiveCount, link: '/database', color: 'bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold' },
+                    { label: 'Total Loading', count: totalLoadingCount, link: '/database', color: 'bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold' },
                     { label: 'Ready to Load', count: readyCount, link: '/admin?tab=loading_db&filter=READY', color: 'bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 text-blue-900 dark:text-blue-400 font-bold' },
                     { label: 'Locked (Pending Ver.)', count: pendingVerCount, link: '/admin?tab=loading_db&filter=LOCKED', color: 'bg-orange-100 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-500/30 text-orange-900 dark:text-orange-400 font-bold' },
                     { label: 'Completed', count: completedCount, link: '/admin?tab=loading_db&filter=COMPLETED', color: 'bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold' },
@@ -189,7 +194,10 @@ export default function DashboardOverview() {
 
             {isAdmin ? (
                 // ADMIN LAYOUT
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-6">
+                    {/* NEW: Workflow Visualizer (Railway) */}
+                    <WorkflowRailway sheets={sheets} />
+
                     {/* Row 1: Operations Columns (Now 4 Columns) */}
                     <div className={`grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-4`}>
                         <StageColumn
@@ -242,15 +250,15 @@ export default function DashboardOverview() {
                                     <span className="font-bold text-lg">{userStats?.total || 0}</span>
                                     <span className="text-[9px] opacity-80 uppercase mt-1">Total</span>
                                 </button>
-                                <button onClick={() => navigate('/admin?tab=users')} className="flex flex-col items-center justify-center p-2 rounded bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 text-blue-900 dark:text-blue-400 font-bold hover:scale-[1.02] transition-all">
+                                <button onClick={() => navigate('/admin?tab=users&filter=STAGING_SUPERVISOR')} className="flex flex-col items-center justify-center p-2 rounded bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 text-blue-900 dark:text-blue-400 font-bold hover:scale-[1.02] transition-all">
                                     <span className="font-bold text-lg">{userStats?.staging || 0}</span>
                                     <span className="text-[9px] opacity-80 uppercase mt-1">Staging</span>
                                 </button>
-                                <button onClick={() => navigate('/admin?tab=users')} className="flex flex-col items-center justify-center p-2 rounded bg-orange-100 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-500/30 text-orange-900 dark:text-orange-400 font-bold hover:scale-[1.02] transition-all">
+                                <button onClick={() => navigate('/admin?tab=users&filter=LOADING_SUPERVISOR')} className="flex flex-col items-center justify-center p-2 rounded bg-orange-100 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-500/30 text-orange-900 dark:text-orange-400 font-bold hover:scale-[1.02] transition-all">
                                     <span className="font-bold text-lg">{userStats?.loading || 0}</span>
                                     <span className="text-[9px] opacity-80 uppercase mt-1">Loading</span>
                                 </button>
-                                <button onClick={() => navigate('/admin?tab=users')} className="flex flex-col items-center justify-center p-2 rounded bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold hover:scale-[1.02] transition-all">
+                                <button onClick={() => navigate('/admin?tab=users&filter=SHIFT_LEAD')} className="flex flex-col items-center justify-center p-2 rounded bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold hover:scale-[1.02] transition-all">
                                     <span className="font-bold text-lg">{userStats?.shift || 0}</span>
                                     <span className="text-[9px] opacity-80 uppercase mt-1">Leads</span>
                                 </button>

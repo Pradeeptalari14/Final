@@ -1,11 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from "@/lib/supabase";
 import { Role, User } from "@/types";
 import { useToast } from "@/contexts/ToastContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, UserPlus, Trash2, KeyRound, CheckCircle, XCircle, X, Loader2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Search, UserPlus, Trash2, KeyRound, CheckCircle, XCircle, X, Loader2, FileText } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface UserManagementProps {
     users: User[];
@@ -13,12 +14,37 @@ interface UserManagementProps {
     refreshUsers: () => Promise<void>;
 }
 
-export function UserManagement({ users, refreshUsers, currentUser }: UserManagementProps) {
+export function UserManagement({ users, currentUser, refreshUsers }: UserManagementProps) {
     const { addToast } = useToast();
+    const [searchParams, setSearchParams] = useSearchParams();
 
     // --- User Management State ---
     const [userSearchQuery, setUserSearchQuery] = useState('');
-    const [userFilter, setUserFilter] = useState<'ALL' | 'PENDING' | Role.STAGING_SUPERVISOR | Role.LOADING_SUPERVISOR | Role.SHIFT_LEAD>('ALL');
+    // Initialize filter from URL param if present, otherwise default to 'ALL'
+    const [userFilter, setUserFilter] = useState<'ALL' | 'PENDING' | Role>(
+        (searchParams.get('filter') as 'ALL' | 'PENDING' | Role) || 'ALL'
+    );
+
+    // Sync filter with URL
+    useEffect(() => {
+        const filterParam = searchParams.get('filter');
+        if (filterParam) {
+            setUserFilter(filterParam as any);
+        } else {
+            setUserFilter('ALL');
+        }
+    }, [searchParams]);
+
+    // Helper to update filter and URL
+    const setFilter = (newFilter: 'ALL' | 'PENDING' | Role) => {
+        setUserFilter(newFilter);
+        // Optional: Update URL to reflect change (keeps state shareable)
+        setSearchParams(prev => {
+            prev.set('filter', newFilter);
+            return prev;
+        });
+    }
+
     const [isAddingUser, setIsAddingUser] = useState(false);
     const [newUserLoading, setNewUserLoading] = useState(false);
     const [newUser, setNewUser] = useState({
@@ -233,32 +259,32 @@ export function UserManagement({ users, refreshUsers, currentUser }: UserManagem
                 {/* User Filter Tabs */}
                 <div className="flex bg-muted p-1 rounded-lg gap-1 overflow-x-auto">
                     <button
-                        onClick={() => setUserFilter('ALL')}
+                        onClick={() => setFilter('ALL')}
                         className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${userFilter === 'ALL' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                     >
                         All
                     </button>
                     <button
-                        onClick={() => setUserFilter('PENDING')}
+                        onClick={() => setFilter('PENDING')}
                         className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${userFilter === 'PENDING' ? 'bg-background shadow-sm text-destructive' : 'text-muted-foreground hover:text-foreground'}`}
                     >
                         Pending
                     </button>
                     <div className="w-px bg-border my-1" />
                     <button
-                        onClick={() => setUserFilter(Role.STAGING_SUPERVISOR)}
+                        onClick={() => setFilter(Role.STAGING_SUPERVISOR)}
                         className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${userFilter === Role.STAGING_SUPERVISOR ? 'bg-background shadow-sm text-blue-600' : 'text-muted-foreground hover:text-foreground'}`}
                     >
                         Staging
                     </button>
                     <button
-                        onClick={() => setUserFilter(Role.LOADING_SUPERVISOR)}
+                        onClick={() => setFilter(Role.LOADING_SUPERVISOR)}
                         className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${userFilter === Role.LOADING_SUPERVISOR ? 'bg-background shadow-sm text-orange-600' : 'text-muted-foreground hover:text-foreground'}`}
                     >
                         Loading
                     </button>
                     <button
-                        onClick={() => setUserFilter(Role.SHIFT_LEAD)}
+                        onClick={() => setFilter(Role.SHIFT_LEAD)}
                         className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${userFilter === Role.SHIFT_LEAD ? 'bg-background shadow-sm text-purple-600' : 'text-muted-foreground hover:text-foreground'}`}
                     >
                         Shift Lead
@@ -369,7 +395,7 @@ export function UserManagement({ users, refreshUsers, currentUser }: UserManagem
                                 <label className="text-xs font-bold uppercase text-muted-foreground mb-1 block">Role</label>
                                 <select
                                     value={newUser.role}
-                                    onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+                                    onChange={(e) => setNewUser({ ...newUser, role: e.target.value as Role })}
                                     className="w-full bg-background border border-border p-2 rounded-lg"
                                 >
                                     {Object.values(Role).map(r => <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>)}
@@ -471,7 +497,7 @@ export function UserManagement({ users, refreshUsers, currentUser }: UserManagem
                                 <label className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Role Assignment</label>
                                 <select
                                     value={editingUser.role}
-                                    onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value })}
+                                    onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value as Role })}
                                     className="w-full bg-background border border-border p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all appearance-none"
                                 >
                                     {Object.values(Role).map(r => (
@@ -512,15 +538,4 @@ export function UserManagement({ users, refreshUsers, currentUser }: UserManagem
     );
 }
 
-// Helper icon component since FileText is used in main file
-function FileText({ size = 16, className = "" }: { size?: number, className?: string }) {
-    return (
-        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
-            <polyline points="14 2 14 8 20 8" />
-            <line x1="16" x2="8" y1="13" y2="13" />
-            <line x1="16" x2="8" y1="17" y2="17" />
-            <line x1="10" x2="8" y1="9" y2="9" />
-        </svg>
-    )
-}
+

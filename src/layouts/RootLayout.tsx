@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Database, Settings, Menu, Shield, LogOut, X } from 'lucide-react';
+import { LayoutDashboard, Database, Settings, Menu, Shield, LogOut, X, Users, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { useData } from '@/contexts/DataContext';
@@ -51,11 +51,58 @@ export default function RootLayout() {
             </div>
 
             <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-                <NavItem to="/" icon={LayoutDashboard} label="Dashboard" collapsed={collapsed && !isMobile} />
-                <NavItem to="/database" icon={Database} label="Database" collapsed={collapsed && !isMobile} />
-                <NavItem to="/admin" icon={Shield} label={adminLabel} collapsed={collapsed && !isMobile} />
-                <NavItem to="/settings" icon={Settings} label="Settings" collapsed={collapsed && !isMobile} />
+                <NavItem
+                    to="/"
+                    icon={LayoutDashboard}
+                    label="Dashboard"
+                    collapsed={collapsed && !isMobile}
+                    active={location.pathname === '/'}
+                />
+                <NavItem
+                    to="/database"
+                    icon={Database}
+                    label="Database"
+                    collapsed={collapsed && !isMobile}
+                    active={location.pathname === '/database'}
+                />
+                <NavItem
+                    to="/admin"
+                    icon={Shield}
+                    label={adminLabel}
+                    collapsed={collapsed && !isMobile}
+                    active={location.pathname === '/admin' && !location.search.includes('tab=users') && !location.search.includes('tab=audit_logs')}
+                />
+                <NavItem
+                    to="/settings"
+                    icon={Settings}
+                    label="Settings"
+                    collapsed={collapsed && !isMobile}
+                    active={location.pathname === '/settings'}
+                />
+
+                {/* ADMIN ONLY EXTENSIONS */}
+                {currentUser?.role === Role.ADMIN && (
+                    <NavItem
+                        to="/admin?tab=users"
+                        icon={Users}
+                        label="Users"
+                        collapsed={collapsed && !isMobile}
+                        active={location.pathname === '/admin' && location.search.includes('tab=users')}
+                    />
+                )}
+
+                {(currentUser?.role === Role.ADMIN || currentUser?.role === Role.SHIFT_LEAD) && (
+                    <NavItem
+                        to="/admin?tab=audit_logs"
+                        icon={FileText}
+                        label="Audit Logs"
+                        collapsed={collapsed && !isMobile}
+                        active={location.pathname === '/admin' && location.search.includes('tab=audit_logs')}
+                    />
+                )}
             </nav>
+
+
 
             <div className="p-4 border-t border-border mt-auto">
                 <button onClick={handleSignOut} className="flex items-center gap-3 w-full p-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/10 transition-all">
@@ -120,13 +167,13 @@ export default function RootLayout() {
     );
 }
 
-function NavItem({ to, icon: Icon, label, collapsed }: { to: string, icon: React.ElementType, label: string, collapsed: boolean }) {
+function NavItem({ to, icon: Icon, label, collapsed, active }: { to: string, icon: React.ElementType, label: string, collapsed: boolean, active?: boolean }) {
     return (
         <NavLink
             to={to}
             className={({ isActive }) => cn(
                 "flex items-center gap-3 p-3 rounded-xl transition-all duration-200 group relative",
-                isActive
+                (active !== undefined ? active : isActive)
                     ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/10",
                 collapsed && "justify-center"

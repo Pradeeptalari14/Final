@@ -28,18 +28,17 @@ export function DatabaseView({ sheets, currentUser, settings, refreshSheets }: D
 
         // 0. STRICT USER FILTERING (Security Layer)
         if (currentUser?.role !== Role.ADMIN) {
-            relevantSheets = relevantSheets.filter(sheet => {
-                if (currentUser?.role === Role.STAGING_SUPERVISOR) {
-                    return sheet.supervisorName === currentUser.username || sheet.supervisorName === currentUser.fullName;
+            relevantSheets = relevantSheets.filter(_ => {
+                const isStaging = currentUser?.role === Role.STAGING_SUPERVISOR;
+                const isLoading = currentUser?.role === Role.LOADING_SUPERVISOR;
+                const isShiftLead = currentUser?.role === Role.SHIFT_LEAD;
+
+                // CHANGED: Allow Supervisors to see ALL sheets in Database View (Read-Only)
+                // This ensures the "Total Count" on Dashboard matches the list shown here.
+                if (isStaging || isLoading || isShiftLead) {
+                    return true;
                 }
-                if (currentUser?.role === Role.LOADING_SUPERVISOR) {
-                    return sheet.status === SheetStatus.LOCKED ||
-                        sheet.status === SheetStatus.LOADING_VERIFICATION_PENDING ||
-                        (sheet.status === SheetStatus.COMPLETED); // Allow seeing history in generic DB view
-                }
-                if (currentUser?.role === Role.SHIFT_LEAD) {
-                    return sheet.status !== SheetStatus.DRAFT;
-                }
+
                 return false;
             });
         }
