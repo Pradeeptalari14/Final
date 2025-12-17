@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { Plus, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useData } from '@/contexts/DataContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -167,7 +167,7 @@ export default function DashboardOverview() {
 
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-3">
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -194,7 +194,7 @@ export default function DashboardOverview() {
 
             {isAdmin ? (
                 // ADMIN LAYOUT
-                <div className="flex flex-col gap-6">
+                <div className="flex flex-col gap-3">
                     {/* NEW: Workflow Visualizer (Railway) */}
                     <WorkflowRailway sheets={sheets} />
 
@@ -234,31 +234,50 @@ export default function DashboardOverview() {
 
                             {/* User Stats Grid */}
                             <div className="grid grid-cols-2 gap-2">
-                                {/* Pending Approvals (New Request) */}
+                                {/* Total Users (Full Width) */}
                                 <button
-                                    onClick={() => navigate('/admin?tab=users&filter=PENDING')}
-                                    className="col-span-2 flex items-center justify-between p-2 rounded bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold hover:scale-[1.02] transition-all group/pending shadow-sm"
+                                    onClick={() => navigate('/admin?tab=users')}
+                                    className="col-span-2 flex items-center justify-start gap-3 p-2 rounded bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold hover:scale-[1.02] transition-all group min-h-[40px]"
                                 >
-                                    <div className="flex items-center gap-2">
-                                        <div className="bg-red-200 p-1 rounded-full"><Plus size={12} className="text-red-700 group-hover/pending:text-red-900" /></div>
-                                        <span className="text-[10px] uppercase font-bold tracking-wider">Pending</span>
+                                    <div className="text-left pl-1">
+                                        <span className="font-bold text-base block leading-none">{userStats?.total || 0}</span>
+                                        <span className="text-[9px] uppercase font-bold tracking-wider opacity-70 block leading-none mt-1">Total Users</span>
                                     </div>
-                                    <span className="font-bold text-lg">{users.filter(u => !u.isApproved).length}</span>
                                 </button>
 
-                                <button onClick={() => navigate('/admin?tab=users')} className="flex flex-col items-center justify-center p-2 rounded bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold hover:scale-[1.02] transition-all">
-                                    <span className="font-bold text-lg">{userStats?.total || 0}</span>
-                                    <span className="text-[9px] opacity-80 uppercase mt-1">Total</span>
+                                {/* Pending (Alert) */}
+                                <button
+                                    onClick={() => navigate('/admin?tab=users&filter=PENDING')}
+                                    className="flex flex-col items-center justify-center p-2 rounded bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold hover:scale-[1.02] transition-all relative overflow-hidden"
+                                >
+                                    <div className="absolute top-0 right-0 p-1 opacity-20"><Plus size={24} /></div>
+                                    <span className="font-bold text-lg">{users.filter(u => !u.isApproved).length}</span>
+                                    <span className="text-[9px] opacity-80 uppercase mt-1">Pending</span>
                                 </button>
-                                <button onClick={() => navigate('/admin?tab=users&filter=STAGING_SUPERVISOR')} className="flex flex-col items-center justify-center p-2 rounded bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 text-blue-900 dark:text-blue-400 font-bold hover:scale-[1.02] transition-all">
+
+                                {/* Staging */}
+                                <button
+                                    onClick={() => navigate('/admin?tab=users&filter=STAGING_SUPERVISOR')}
+                                    className="flex flex-col items-center justify-center p-2 rounded bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 text-blue-900 dark:text-blue-400 font-bold hover:scale-[1.02] transition-all"
+                                >
                                     <span className="font-bold text-lg">{userStats?.staging || 0}</span>
                                     <span className="text-[9px] opacity-80 uppercase mt-1">Staging</span>
                                 </button>
-                                <button onClick={() => navigate('/admin?tab=users&filter=LOADING_SUPERVISOR')} className="flex flex-col items-center justify-center p-2 rounded bg-orange-100 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-500/30 text-orange-900 dark:text-orange-400 font-bold hover:scale-[1.02] transition-all">
+
+                                {/* Loading */}
+                                <button
+                                    onClick={() => navigate('/admin?tab=users&filter=LOADING_SUPERVISOR')}
+                                    className="flex flex-col items-center justify-center p-2 rounded bg-orange-100 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-500/30 text-orange-900 dark:text-orange-400 font-bold hover:scale-[1.02] transition-all"
+                                >
                                     <span className="font-bold text-lg">{userStats?.loading || 0}</span>
                                     <span className="text-[9px] opacity-80 uppercase mt-1">Loading</span>
                                 </button>
-                                <button onClick={() => navigate('/admin?tab=users&filter=SHIFT_LEAD')} className="flex flex-col items-center justify-center p-2 rounded bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold hover:scale-[1.02] transition-all">
+
+                                {/* Leads */}
+                                <button
+                                    onClick={() => navigate('/admin?tab=users&filter=SHIFT_LEAD')}
+                                    className="flex flex-col items-center justify-center p-2 rounded bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold hover:scale-[1.02] transition-all"
+                                >
                                     <span className="font-bold text-lg">{userStats?.shift || 0}</span>
                                     <span className="text-[9px] opacity-80 uppercase mt-1">Leads</span>
                                 </button>

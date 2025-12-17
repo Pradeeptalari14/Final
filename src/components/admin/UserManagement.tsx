@@ -1,20 +1,21 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from "@/lib/supabase";
-import { Role, User } from "@/types";
+import { Role, User, SheetData } from "@/types";
 import { useToast } from "@/contexts/ToastContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, UserPlus, Trash2, KeyRound, CheckCircle, XCircle, X, Loader2, FileText } from 'lucide-react';
+import { Search, UserPlus, Trash2, KeyRound, CheckCircle, XCircle, X, Loader2, FileText, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface UserManagementProps {
     users: User[];
     currentUser: User | null;
     refreshUsers: () => Promise<void>;
+    sheets: SheetData[];
 }
 
-export function UserManagement({ users, currentUser, refreshUsers }: UserManagementProps) {
+export function UserManagement({ users, currentUser, refreshUsers, sheets }: UserManagementProps) {
     const { addToast } = useToast();
     const [searchParams, setSearchParams] = useSearchParams();
 
@@ -61,6 +62,44 @@ export function UserManagement({ users, currentUser, refreshUsers }: UserManagem
 
     // Edit User State
     const [editingUser, setEditingUser] = useState<User | null>(null);
+
+    // --- Compute Last Active Logic ---
+    const lastActiveMap = useMemo(() => {
+        const map = new Map<string, number>();
+        if (!sheets) return map;
+
+        sheets.forEach(sheet => {
+            // Check creation time
+            if (sheet.supervisorName) {
+                const t = new Date(sheet.createdAt).getTime();
+                if (t > (map.get(sheet.supervisorName) || 0)) map.set(sheet.supervisorName, t);
+            }
+
+            // Check history logs
+            if (sheet.history) {
+                sheet.history.forEach(log => {
+                    if (log.actor) {
+                        const t = new Date(log.timestamp).getTime();
+                        if (t > (map.get(log.actor) || 0)) map.set(log.actor, t);
+                    }
+                });
+            }
+        });
+        return map;
+    }, [sheets]);
+
+    const getTimeAgo = (timestamp: number | undefined) => {
+        if (!timestamp) return 'Never';
+        const diff = Date.now() - timestamp;
+        const minutes = Math.floor(diff / 60000);
+        if (minutes < 1) return 'Just now';
+        if (minutes < 60) return `${minutes}m ago`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours}h ago`;
+        const days = Math.floor(hours / 24);
+        return `${days}d ago`;
+    };
+
 
     const filteredUsers = useMemo(() => {
         let res = users;
@@ -314,7 +353,7 @@ export function UserManagement({ users, currentUser, refreshUsers }: UserManagem
                             <th className="py-3 pl-4 font-medium">User</th>
                             <th className="py-3 font-medium">Role</th>
                             <th className="py-3 font-medium">EMP</th>
-                            <th className="py-3 font-medium">Email</th>
+                            <th className="py-3 font-medium">Last Active</th>
                             <th className="py-3 font-medium">Status</th>
                             <th className="py-3 pr-4 text-right font-medium">Actions</th>
                         </tr>
@@ -322,62 +361,70 @@ export function UserManagement({ users, currentUser, refreshUsers }: UserManagem
                     <tbody className="divide-y divide-border">
                         {filteredUsers.length === 0 ? (
                             <tr><td colSpan={6} className="py-8 text-center text-muted-foreground">No users found.</td></tr>
-                        ) : filteredUsers.map((user) => (
-                            <tr key={user.id} className="group hover:bg-muted/50 transition-colors">
-                                <td className="py-3 pl-4 font-medium text-foreground">{user.fullName} <div className="text-xs text-muted-foreground font-normal sm:hidden">{user.username}</div></td>
-                                <td className="py-3">
-                                    <Badge variant="secondary" className="text-xs font-normal">
-                                        {user.role.replace(/_/g, ' ')}
-                                    </Badge>
-                                </td>
-                                <td className="py-3 text-muted-foreground text-xs">{user.empCode || '-'}</td>
-                                <td className="py-3 text-muted-foreground text-xs">{user.email || '-'}</td>
-                                <td className="py-3">
-                                    <button
-                                        onClick={() => toggleUserStatus(user)}
-                                        className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium transition-colors border ${user.isApproved
-                                            ? 'bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500/20'
-                                            : 'bg-red-500/10 text-red-600 border-red-500/20 hover:bg-red-500/20'
-                                            }`}
-                                    >
-                                        {user.isApproved ? (
-                                            <> <CheckCircle size={12} /> Active </>
-                                        ) : (
-                                            <> <XCircle size={12} /> Inactive </>
-                                        )}
-                                    </button>
-                                </td>
-                                <td className="py-3 pr-4 text-right flex justify-end gap-2">
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-                                        onClick={() => setPasswordResetUser(user)}
-                                        title="Reset Password"
-                                    >
-                                        <KeyRound size={14} />
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-                                        onClick={() => setEditingUser(user)}
-                                        title="Edit User"
-                                    >
-                                        <FileText size={14} />
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-8 w-8 p-0 text-destructive/50 hover:text-destructive hover:bg-destructive/10"
-                                        onClick={() => handleDeleteUser(user)}
-                                        title="Delete User"
-                                    >
-                                        <Trash2 size={14} />
-                                    </Button>
-                                </td>
-                            </tr>
-                        ))}
+                        ) : filteredUsers.map((user) => {
+                            const lastActive = lastActiveMap.get(user.username);
+                            return (
+                                <tr key={user.id} className="group hover:bg-muted/50 transition-colors">
+                                    <td className="py-3 pl-4 font-medium text-foreground">{user.fullName} <div className="text-xs text-muted-foreground font-normal sm:hidden">{user.username}</div></td>
+                                    <td className="py-3">
+                                        <Badge variant="secondary" className="text-xs font-normal">
+                                            {user.role.replace(/_/g, ' ')}
+                                        </Badge>
+                                    </td>
+                                    <td className="py-3 text-muted-foreground text-xs">{user.empCode || '-'}</td>
+                                    <td className="py-3 text-muted-foreground text-xs">
+                                        <div className="flex items-center gap-1.5">
+                                            <Clock size={12} className={lastActive ? "text-emerald-500" : "text-slate-300"} />
+                                            {getTimeAgo(lastActive)}
+                                        </div>
+                                    </td>
+                                    <td className="py-3">
+                                        <button
+                                            onClick={() => toggleUserStatus(user)}
+                                            className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium transition-colors border ${user.isApproved
+                                                ? 'bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500/20'
+                                                : 'bg-red-500/10 text-red-600 border-red-500/20 hover:bg-red-500/20'
+                                                }`}
+                                        >
+                                            {user.isApproved ? (
+                                                <> <CheckCircle size={12} /> Active </>
+                                            ) : (
+                                                <> <XCircle size={12} /> Inactive </>
+                                            )}
+                                        </button>
+                                    </td>
+                                    <td className="py-3 pr-4 text-right flex justify-end gap-2">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                                            onClick={() => setPasswordResetUser(user)}
+                                            title="Reset Password"
+                                        >
+                                            <KeyRound size={14} />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                                            onClick={() => setEditingUser(user)}
+                                            title="Edit User"
+                                        >
+                                            <FileText size={14} />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-8 w-8 p-0 text-destructive/50 hover:text-destructive hover:bg-destructive/10"
+                                            onClick={() => handleDeleteUser(user)}
+                                            title="Delete User"
+                                        >
+                                            <Trash2 size={14} />
+                                        </Button>
+                                    </td>
+                                </tr>
+                            )
+                        })}
                     </tbody>
                 </table>
             </div>

@@ -5,7 +5,7 @@ import { SheetData, SheetStatus, Role, User } from "@/types";
 import { useToast } from "@/contexts/ToastContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, Printer, Trash2 } from 'lucide-react';
+import { Search, Printer, Trash2, CheckCircle, XCircle, ArrowRight } from 'lucide-react';
 
 interface OperationalTableViewProps {
     sheets: SheetData[];
@@ -22,6 +22,7 @@ export function OperationalTableView({ sheets, activeTab, currentUser, settings,
 
     // Local filter state
     const [subFilter, setSubFilter] = useState<string>('ALL');
+    const [processingId, setProcessingId] = useState<string | null>(null);
 
     // Sync subFilter from URL if present
     useEffect(() => {
@@ -125,6 +126,68 @@ export function OperationalTableView({ sheets, activeTab, currentUser, settings,
             await refreshSheets();
         } catch (error: any) {
             addToast('error', "Failed to delete sheet: " + error.message);
+        }
+    };
+
+    // Quick Approve logic
+    const handleQuickApprove = async (sheet: SheetData) => {
+        if (!confirm(`Approve sheet #${sheet.id.slice(0, 8)}?`)) return;
+        setProcessingId(sheet.id);
+
+        try {
+            const nextStatus = sheet.status === SheetStatus.STAGING_VERIFICATION_PENDING
+                ? SheetStatus.LOCKED
+                : SheetStatus.COMPLETED;
+
+            // If completing, we need to ensure all logic runs (simplified here for update)
+            const updates: Partial<SheetData> = {
+                status: nextStatus,
+                verifiedBy: currentUser?.username,
+                verifiedAt: new Date().toISOString()
+            };
+
+            const { error } = await supabase.from('sheets').update(updates).eq('id', sheet.id);
+            if (error) throw error;
+
+            addToast('success', `Sheet approved: ${nextStatus.replace(/_/g, ' ')}`);
+            await refreshSheets();
+        } catch (err: any) {
+            addToast('error', err.message);
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
+    const handleQuickReject = async (sheet: SheetData) => {
+        const reason = prompt("Enter rejection reason:");
+        if (!reason) return;
+        setProcessingId(sheet.id);
+
+        try {
+            const nextStatus = sheet.status === SheetStatus.STAGING_VERIFICATION_PENDING
+                ? SheetStatus.DRAFT // Back to Staging
+                : SheetStatus.LOCKED; // Back to Loading (Locked state)
+
+            const updates: Partial<SheetData> = {
+                status: nextStatus,
+                rejectionReason: reason,
+                comments: [...(sheet.comments || []), {
+                    id: crypto.randomUUID(),
+                    text: `REJECTED: ${reason}`,
+                    author: currentUser?.username || 'Admin',
+                    timestamp: new Date().toISOString()
+                }]
+            };
+
+            const { error } = await supabase.from('sheets').update(updates).eq('id', sheet.id);
+            if (error) throw error;
+
+            addToast('info', `Sheet rejected and returned to ${nextStatus.replace(/_/g, ' ')}`);
+            await refreshSheets();
+        } catch (err: any) {
+            addToast('error', err.message);
+        } finally {
+            setProcessingId(null);
         }
     };
 
@@ -243,6 +306,39 @@ export function OperationalTableView({ sheets, activeTab, currentUser, settings,
                                     </Badge>
                                 </td>
                                 <td className={`pr-4 text-right flex justify-end gap-2 ${settings.density === 'compact' ? 'py-1' : 'py-3'}`}>
+
+                                    {/* QUICK ACTION BUTTONS for Shift Lead / Admin */}
+                                    {(currentUser?.role === Role.ADMIN || currentUser?.role === Role.SHIFT_LEAD) && sheet.status.includes('PENDING') && (
+                                        <>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                disabled={processingId === sheet.id}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleQuickReject(sheet);
+                                                }}
+                                                className="h-8 w-8 p-0 text-red-500 hover:text-red-400 hover:bg-red-500/10 bg-white shadow-sm ring-1 ring-slate-200"
+                                                title="Quick Reject"
+                                            >
+                                                <XCircle size={16} />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                disabled={processingId === sheet.id}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleQuickApprove(sheet);
+                                                }}
+                                                className="h-8 w-8 p-0 text-emerald-600 hover:text-emerald-500 hover:bg-emerald-500/10 bg-white shadow-sm ring-1 ring-slate-200"
+                                                title="Quick Approve"
+                                            >
+                                                <CheckCircle size={16} />
+                                            </Button>
+                                        </>
+                                    )}
+
                                     {currentUser?.role === Role.ADMIN && (
                                         <Button
                                             variant="ghost"
@@ -273,9 +369,9 @@ export function OperationalTableView({ sheets, activeTab, currentUser, settings,
                                             }
                                             navigate(target);
                                         }}
-                                        title="View & Print"
+                                        title="View Details"
                                     >
-                                        <Printer size={16} />
+                                        <ArrowRight size={16} />
                                     </Button>
                                 </td>
                             </tr>

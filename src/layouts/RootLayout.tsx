@@ -36,7 +36,7 @@ export default function RootLayout() {
 
     const SidebarContent = ({ isMobile = false }) => (
         <>
-            <div className="h-16 flex items-center px-6 border-b border-border">
+            <div className="h-16 flex items-center px-6">
                 <div className="flex items-center gap-3">
                     <div className="h-10 w-10 flex items-center justify-center">
                         <img src="/unicharm-logo.png" alt="Logo" className="w-full h-full object-contain" />
@@ -104,7 +104,7 @@ export default function RootLayout() {
 
 
 
-            <div className="p-4 border-t border-border mt-auto">
+            <div className="p-4 mt-auto">
                 <button onClick={handleSignOut} className="flex items-center gap-3 w-full p-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/10 transition-all">
                     <LogOut size={20} />
                     {(!collapsed || isMobile) && <span className="font-medium">Sign Out</span>}
@@ -118,7 +118,7 @@ export default function RootLayout() {
 
             {/* DESKTOP SIDEBAR (Hidden on mobile) */}
             <aside className={cn(
-                "hidden md:flex relative z-20 flex-col border-r border-border bg-card/80 backdrop-blur-xl transition-all duration-300 print:hidden",
+                "hidden md:flex relative z-20 flex-col bg-card/80 backdrop-blur-xl transition-all duration-300 print:hidden",
                 collapsed ? "w-20" : "w-64"
             )}>
                 <SidebarContent />
@@ -139,7 +139,7 @@ export default function RootLayout() {
             {/* Main Content */}
             <main className="flex-1 relative overflow-hidden flex flex-col print:h-auto print:overflow-visible">
                 {/* Header */}
-                <header className="h-16 border-b border-border bg-background/50 backdrop-blur flex items-center justify-between px-4 md:px-8 print:hidden shrink-0">
+                <header className="h-16 bg-background/50 backdrop-blur flex items-center justify-between px-4 md:px-8 print:hidden shrink-0">
 
                     {/* Mobile Menu Toggle */}
                     <button onClick={() => setMobileOpen(true)} className="md:hidden p-2 -ml-2 text-muted-foreground hover:text-foreground transition-colors">

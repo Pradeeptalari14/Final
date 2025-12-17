@@ -223,8 +223,8 @@ export default function StagingSheet() {
                     </div>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" onClick={handlePrint} className="gap-2 border-slate-200 hover:bg-slate-50 text-slate-700">
-                        <Printer size={16} /> <span className="hidden sm:inline">Print Preview</span>
+                    <Button variant="default" onClick={handlePrint} className="gap-2 bg-slate-900 text-white shadow-sm hover:bg-slate-800 transition-colors">
+                        <Printer size={16} /> <span className="hidden sm:inline">Print / PDF</span>
                     </Button>
                 </div>
             </div>

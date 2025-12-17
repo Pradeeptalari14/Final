@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react';
 import { SheetData, Role, User } from '@/types';
-import { Search, History } from 'lucide-react';
+import { Search, History, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import { Button } from '@/components/ui/button';
 
 interface AuditLogViewProps {
     sheets: SheetData[];
@@ -57,6 +59,21 @@ export function AuditLogView({ sheets, currentUser }: AuditLogViewProps) {
         return allLogs;
     }, [sheets, currentUser, searchQuery]);
 
+    const handleExportLogs = () => {
+        const exportData = logs.map(log => ({
+            Timestamp: new Date(log.timestamp).toLocaleString(),
+            Actor: log.actor,
+            Action: log.action,
+            Sheet_ID: log.sheetId,
+            Details: log.details
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Audit Logs");
+        XLSX.writeFile(wb, `Audit_Logs_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    };
+
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-500">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -65,14 +82,19 @@ export function AuditLogView({ sheets, currentUser }: AuditLogViewProps) {
                     <h3 className="text-xl font-bold text-foreground">System Audit Logs</h3>
                 </div>
 
-                <div className="relative">
-                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                    <input
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="bg-background border border-input rounded-lg pl-9 pr-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-blue-500 w-64"
-                        placeholder="Search logs..."
-                    />
+                <div className="flex items-center gap-2">
+                    <div className="relative">
+                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                        <input
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="bg-background border border-input rounded-lg pl-9 pr-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-blue-500 w-64"
+                            placeholder="Search logs..."
+                        />
+                    </div>
+                    <Button variant="outline" size="sm" onClick={handleExportLogs} className="gap-2">
+                        <Download size={14} /> Export
+                    </Button>
                 </div>
             </div>
 

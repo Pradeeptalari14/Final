@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useData } from "@/contexts/DataContext";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -13,7 +14,11 @@ export default function DatabasePage() {
     const [searchParams, setSearchParams] = useSearchParams();
     const activeFilter = searchParams.get('filter');
 
-    if (loading) return <div className="p-8 text-slate-400">Loading Database...</div>;
+    // Local State
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+    if (loading && sheets.length === 0) return <div className="p-8 text-slate-400">Loading Database...</div>;
 
     const getStatusVariant = (status: SheetStatus) => {
         switch (status) {
@@ -27,6 +32,16 @@ export default function DatabasePage() {
 
     // Filter Logic
     const filteredSheets = sheets.filter(sheet => {
+        // 1. Search Query Filter
+        if (searchQuery) {
+            const query = searchQuery.toLowerCase();
+            const matchesId = sheet.id.toLowerCase().includes(query);
+            const matchesSupervisor = sheet.supervisorName?.toLowerCase().includes(query);
+            const matchesDest = sheet.destination?.toLowerCase().includes(query);
+            if (!matchesId && !matchesSupervisor && !matchesDest) return false;
+        }
+
+        // 2. Tab/Status Filter
         if (!activeFilter) return true;
 
         // Exact Status Match
@@ -52,6 +67,13 @@ export default function DatabasePage() {
 
     const clearFilter = () => {
         setSearchParams({});
+        setSearchQuery('');
+    };
+
+    const handleLoadMore = async () => {
+        setIsLoadingMore(true);
+        await loadMoreArchived();
+        setIsLoadingMore(false);
     };
 
     const handleExport = () => {
@@ -78,9 +100,9 @@ export default function DatabasePage() {
                     <h2 className="text-3xl font-bold text-foreground tracking-tight">Database</h2>
                     <p className="text-muted-foreground">Manage staging and loading sheets.</p>
                 </div>
-                {activeFilter && (
+                {(activeFilter || searchQuery) && (
                     <Button variant="ghost" onClick={clearFilter} className="text-red-400 hover:text-red-300 hover:bg-red-900/10 gap-2">
-                        <X size={16} /> Clear Filter
+                        <X size={16} /> Clear Filters
                     </Button>
                 )}
             </div>
@@ -102,13 +124,15 @@ export default function DatabasePage() {
                 <div className="relative flex-1 max-w-sm">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
                     <input
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full bg-background border border-input rounded-lg pl-10 pr-4 py-2 text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        placeholder="Search sheets..."
+                        placeholder="Search by ID, Supervisor, Destination..."
                     />
                 </div>
-                <Button variant="outline" className="gap-2">
+                {/* <Button variant="outline" className="gap-2">
                     <Filter size={16} /> Filter
-                </Button>
+                </Button> */}
             </div>
 
             <div className="rounded-xl border border-border overflow-hidden">
@@ -175,8 +199,9 @@ export default function DatabasePage() {
             </div>
 
             <div className="flex justify-center pt-4">
-                <Button variant="ghost" onClick={() => loadMoreArchived()} className="text-slate-500 hover:text-slate-900">
-                    Load Older Sheets
+                <Button variant="ghost" onClick={handleLoadMore} disabled={isLoadingMore} className="text-slate-500 hover:text-slate-900">
+                    {isLoadingMore ? <RefreshCw className="animate-spin mr-2" size={16} /> : null}
+                    {isLoadingMore ? "Loading..." : "Load Older Sheets"}
                 </Button>
             </div>
         </div >

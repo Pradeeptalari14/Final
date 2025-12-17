@@ -33,22 +33,34 @@ export function StageColumn({ title, color, items, linkTo, filters, density, ful
 
             {filters && filters.length > 0 && (
                 <div className={`grid ${filterGridClass} ${isCompact ? 'gap-1' : 'gap-2'}`}>
-                    {filters.map((f, i) => (
-                        <button
-                            key={i}
-                            onClick={(e) => { e.stopPropagation(); navigate(f.link); }}
-                            className={`
-                                flex flex-col items-center justify-center ${isCompact ? 'p-1' : 'p-2'} rounded 
+                    {filters.map((f, i) => {
+                        // Make the first item span 2 columns (Header)
+                        const isMainHeader = !fullWidth && i === 0;
+                        // Make the last item span 2 columns if it's an orphan (to fill gap)
+                        const isLastOddItem = !fullWidth && i === filters.length - 1 && (filters.length - 1) % 2 !== 0;
+
+                        return (
+                            <button
+                                key={i}
+                                onClick={(e) => { e.stopPropagation(); navigate(f.link); }}
+                                className={`
+                                flex ${isMainHeader ? 'flex-row items-center justify-start gap-3 pl-3' : 'flex-col items-center justify-center'} 
+                                ${isCompact ? 'p-1' : 'p-2'} rounded 
                                 transition-all hover:scale-[1.02] active:scale-[0.98] 
                                 border border-white/5 shadow-sm
                                 ${f.color} 
-                                ${fullWidth ? 'min-h-[60px]' : ''}
+                                ${fullWidth ? 'min-h-[50px]' : ''}
+                                ${isMainHeader ? 'col-span-2 min-h-[40px]' : ''}
+                                ${isLastOddItem ? 'col-span-2' : ''}
                             `}
-                        >
-                            <span className={`font-bold leading-none ${fullWidth ? 'text-lg' : 'text-sm'}`}>{f.count}</span>
-                            <span className="text-[9px] opacity-80 uppercase text-center leading-none mt-1">{f.label}</span>
-                        </button>
-                    ))}
+                            >
+                                <div className={isMainHeader ? "text-left pl-3" : "text-center"}>
+                                    <span className={`font-bold leading-none block ${fullWidth || isMainHeader ? 'text-base' : 'text-sm'}`}>{f.count}</span>
+                                    <span className={`text-[9px] opacity-80 uppercase leading-none mt-1 block ${isMainHeader ? 'text-left' : 'text-center'}`}>{f.label}</span>
+                                </div>
+                            </button>
+                        );
+                    })}
                 </div>
             )}
 

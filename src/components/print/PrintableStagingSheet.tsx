@@ -49,7 +49,7 @@ export function PrintableStagingSheet({ data }: { data: Partial<SheetData> }) {
                 </table>
 
                 {/* Staging Details */}
-                <div className="w-full border-t border-black mt-2">
+                <div className="w-full border-t border-black">
                     <div className="font-bold text-center bg-gray-200 border-b border-black p-1 uppercase tracking-wider">STAGING DETAILS</div>
                     <table className="w-full text-[10px] border-collapse">
                         <thead>
@@ -82,7 +82,7 @@ export function PrintableStagingSheet({ data }: { data: Partial<SheetData> }) {
                 </div>
 
                 {/* Footer Signatures matching Excel */}
-                <div className="grid grid-cols-3 gap-0 border-t border-black mt-4 text-center">
+                <div className="grid grid-cols-3 gap-0 border-t border-black text-center">
                     <div className="border-r border-black p-8 flex flex-col justify-end h-24">
                         <div className="border-t border-black pt-1 w-2/3 mx-auto font-bold text-xs uppercase">Picked By</div>
                     </div>

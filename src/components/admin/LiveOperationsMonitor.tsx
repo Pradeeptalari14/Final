@@ -1,10 +1,11 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SheetData, SheetStatus, User } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlayCircle, Clock, CheckCircle, RefreshCcw } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { PlayCircle, Clock, CheckCircle, RefreshCcw, Search } from "lucide-react";
 
 interface LiveOperationsMonitorProps {
     sheets: SheetData[];
@@ -14,6 +15,7 @@ interface LiveOperationsMonitorProps {
 
 export function LiveOperationsMonitor({ sheets, users, onRefresh }: LiveOperationsMonitorProps) {
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
 
     const handleRefresh = async () => {
         setIsRefreshing(true);
@@ -21,12 +23,19 @@ export function LiveOperationsMonitor({ sheets, users, onRefresh }: LiveOperatio
         setIsRefreshing(false);
     };
 
+    // Auto-Refresh every 30 seconds
+    useEffect(() => {
+        const interval = setInterval(() => {
+            handleRefresh();
+        }, 30000);
+        return () => clearInterval(interval);
+    }, []);
+
     // 1. Get Active Sheets
     const activeSheets = sheets.filter(s => s.status !== SheetStatus.COMPLETED);
 
     // 2. Map Users to Sheets
     const activeOperations = activeSheets.map(sheet => {
-        // Find supervisor details if possible (optional, sheet has supervisorName already)
         return {
             id: sheet.id,
             type: sheet.status === SheetStatus.DRAFT ? 'Staging' : 'Loading',
@@ -35,9 +44,14 @@ export function LiveOperationsMonitor({ sheets, users, onRefresh }: LiveOperatio
             timestamp: sheet.updatedAt || sheet.createdAt,
             destination: sheet.destination
         };
-    });
+    }).filter(op =>
+        op.supervisor?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        op.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        op.destination?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
-    if (activeOperations.length === 0) {
+    if (activeSheets.length === 0) { // Check original length for "Idle" state, but show search empty state if needed
+        // If no active sheets at all:
         return (
             <Card className="bg-slate-50 dark:bg-slate-900/50 border-dashed">
                 <CardContent className="flex flex-col items-center justify-center p-8 text-slate-500">
@@ -55,47 +69,68 @@ export function LiveOperationsMonitor({ sheets, users, onRefresh }: LiveOperatio
 
     return (
         <Card>
-            <CardHeader className="pb-3 border-b border-border flex flex-row items-center justify-between space-y-0">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                    <span className="relative flex h-3 w-3">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-                    </span>
-                    Live Operations
-                </CardTitle>
-                <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={isRefreshing} className="h-8 w-8 p-0">
-                    <RefreshCcw size={16} className={isRefreshing ? 'animate-spin' : ''} />
-                    <span className="sr-only">Refresh</span>
-                </Button>
+            <CardHeader className="pb-3 border-b border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 space-y-0">
+                <div className="flex items-center gap-2">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                        <span className="relative flex h-3 w-3">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                        </span>
+                        Live Operations
+                    </CardTitle>
+                    <Badge variant="secondary" className="text-xs">
+                        {activeSheets.length} Active
+                    </Badge>
+                </div>
+
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <div className="relative w-full sm:w-48">
+                        <Search className="absolute left-2 top-1.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search supervisor, ID..."
+                            className="h-8 pl-8 text-xs w-full"
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={isRefreshing} className="h-8 w-8 p-0 shrink-0">
+                        <RefreshCcw size={16} className={isRefreshing ? 'animate-spin' : ''} />
+                        <span className="sr-only">Refresh</span>
+                    </Button>
+                </div>
             </CardHeader>
             <CardContent className="p-0">
                 <div className="divide-y divide-border">
-                    {activeOperations.map(op => (
-                        <div key={op.id} className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
-                            <div className="flex items-center gap-4">
-                                <div className={`p - 2 rounded - full ${op.type === 'Staging' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/20' : 'bg-orange-100 text-orange-600 dark:bg-orange-900/20'} `}>
+                    {activeOperations.length === 0 ? (
+                        <div className="p-8 text-center text-sm text-muted-foreground">
+                            No matching active workflows found.
+                        </div>
+                    ) : activeOperations.map(op => (
+                        <div key={op.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-muted/50 transition-colors">
+                            <div className="flex items-start sm:items-center gap-4">
+                                <div className={`p - 2 rounded - full shrink - 0 ${op.type === 'Staging' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/20' : 'bg-orange-100 text-orange-600 dark:bg-orange-900/20'} `}>
                                     <PlayCircle size={20} />
                                 </div>
-                                <div>
-                                    <div className="font-bold text-sm flex items-center gap-2">
+                                <div className="space-y-1">
+                                    <div className="font-bold text-sm flex flex-wrap items-center gap-2">
                                         {op.supervisor}
                                         <Badge variant="outline" className="text-[10px] font-normal h-5">
                                             {op.type}
                                         </Badge>
                                     </div>
-                                    <div className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
-                                        <span className="font-mono">#{op.id.slice(0, 8)}</span>
+                                    <div className="text-xs text-muted-foreground flex items-center gap-2">
+                                        <span className="font-mono bg-muted px-1 rounded">#{op.id.slice(0, 8)}</span>
                                         <span>•</span>
-                                        <span>{op.destination || 'No Dest'}</span>
+                                        <span className="font-medium text-foreground">{op.destination || 'No Dest'}</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="text-right">
-                                <Badge className={`mb - 1 ${op.type === 'Staging' ? 'bg-blue-500 hover:bg-blue-600' : 'bg-orange-500 hover:bg-orange-600'} `}>
+                            <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 pt-2 sm:pt-0 mt-2 sm:mt-0">
+                                <Badge className={`mb - 0 sm: mb - 1 ${op.type === 'Staging' ? 'bg-blue-500 hover:bg-blue-600' : 'bg-orange-500 hover:bg-orange-600'} `}>
                                     {op.status.replace(/_/g, ' ')}
                                 </Badge>
-                                <div className="text-[10px] text-muted-foreground flex items-center justify-end gap-1">
+                                <div className="text-[10px] text-muted-foreground flex items-center gap-1">
                                     <Clock size={10} />
                                     {new Date(op.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </div>
