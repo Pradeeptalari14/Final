@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { SheetData, SheetStatus, Role, User } from "@/types";
 import { useToast } from "@/contexts/ToastContext";
+import { useData } from "@/contexts/DataContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search, Printer, Trash2, Layers, Package, CheckCircle, LayoutGrid, XCircle, List } from 'lucide-react';
@@ -19,6 +20,7 @@ interface DatabaseViewProps {
 export function DatabaseView({ sheets, currentUser, settings, refreshSheets }: DatabaseViewProps) {
     const navigate = useNavigate();
     const { addToast } = useToast();
+    const { updateSheet, deleteSheet } = useData();
 
     // Local State
     const [searchQuery, setSearchQuery] = useState('');
@@ -70,7 +72,7 @@ export function DatabaseView({ sheets, currentUser, settings, refreshSheets }: D
         if (!confirm(t('delete_confirm', settings.language))) return;
 
         try {
-            const { error } = await supabase.from('sheets').delete().eq('id', sheetId);
+            const { error } = await deleteSheet(sheetId);
             if (error) throw error;
             addToast('success', t('sheet_deleted_successfully', settings.language));
             await refreshSheets();
@@ -81,11 +83,17 @@ export function DatabaseView({ sheets, currentUser, settings, refreshSheets }: D
 
     const handleUpdateStatus = async (sheetId: string, newStatus: SheetStatus) => {
         try {
-            const { error } = await supabase
-                .from('sheets')
-                .update({ status: newStatus, verifiedBy: currentUser?.fullName, verifiedAt: new Date().toISOString() })
-                .eq('id', sheetId);
+            const currentSheet = sheets.find(s => s.id === sheetId);
+            if (!currentSheet) return;
 
+            const updatedSheet = {
+                ...currentSheet,
+                status: newStatus,
+                verifiedBy: currentUser?.fullName,
+                verifiedAt: new Date().toISOString()
+            };
+
+            const { error } = await updateSheet(updatedSheet);
             if (error) throw error;
             addToast('success', `${t('status_updated', settings.language)}: ${newStatus}`);
             await refreshSheets();

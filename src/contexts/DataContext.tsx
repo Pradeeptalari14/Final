@@ -11,8 +11,9 @@ interface DataContextType {
     refreshSheets: () => Promise<void>;
     loadMoreArchived: () => Promise<void>;
     refreshUsers: () => Promise<void>;
-    addSheet: (sheet: SheetData) => Promise<void>;
-    updateSheet: (sheet: SheetData) => Promise<void>;
+    addSheet: (sheet: SheetData) => Promise<{ error: any }>;
+    updateSheet: (sheet: SheetData) => Promise<{ error: any }>;
+    deleteSheet: (id: string) => Promise<{ error: any }>;
     devRole: string | null;
     setDevRole: (role: string) => void;
     shift: string;
@@ -101,6 +102,7 @@ export function DataProvider({ children, queryClient }: { children: React.ReactN
         mutationFn: async (sheet: SheetData) => {
             const { error } = await supabase.from('sheets').insert({ id: sheet.id, data: sheet });
             if (error) throw error;
+            return { error: null };
         },
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['sheets'] }),
     });
@@ -109,6 +111,16 @@ export function DataProvider({ children, queryClient }: { children: React.ReactN
         mutationFn: async (sheet: SheetData) => {
             const { error } = await supabase.from('sheets').update({ data: sheet }).eq('id', sheet.id);
             if (error) throw error;
+            return { error: null };
+        },
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['sheets'] }),
+    });
+
+    const deleteSheetMutation = useMutation({
+        mutationFn: async (id: string) => {
+            const { error } = await supabase.from('sheets').delete().eq('id', id);
+            if (error) throw error;
+            return { error: null };
         },
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['sheets'] }),
     });
@@ -196,6 +208,7 @@ export function DataProvider({ children, queryClient }: { children: React.ReactN
     const loadMoreArchived = async () => { /* Server-side pagination handled by Query in Phase 3 */ };
     const addSheet = async (sheet: SheetData) => addSheetMutation.mutateAsync(sheet);
     const updateSheet = async (sheet: SheetData) => updateSheetMutation.mutateAsync(sheet);
+    const deleteSheet = async (id: string) => deleteSheetMutation.mutateAsync(id);
 
     const [currentUser, setCurrentUser] = useState<User | null>(null);
 
@@ -251,6 +264,7 @@ export function DataProvider({ children, queryClient }: { children: React.ReactN
         refreshUsers,
         addSheet,
         updateSheet,
+        deleteSheet,
         devRole,
         setDevRole,
         shift,

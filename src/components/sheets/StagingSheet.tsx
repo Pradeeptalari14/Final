@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Save, Plus, Printer, Calendar, UserCheck, Truck, Lock, ClipboardList, CheckCircle, AlertTriangle, Loader2, FileText, User, MapPin, X } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Printer, Calendar, UserCheck, Truck, Lock, ClipboardList, CheckCircle, AlertTriangle, Loader2, FileText, User, MapPin, X, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -66,7 +66,7 @@ const RejectionSection = ({ reason, comments }: { reason?: string | null, commen
 export default function StagingSheet() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { addSheet, updateSheet, sheets, refreshSheets, shift, currentUser, devRole, loading: dataLoading } = useData();
+    const { addSheet, updateSheet, deleteSheet, sheets, refreshSheets, shift, currentUser, devRole, loading: dataLoading } = useData();
     const { session } = useAuth();
 
     // Determine effective role
@@ -117,30 +117,51 @@ export default function StagingSheet() {
         if (loading) return; // Strict lock
         setLoading(true);
         try {
-            // ID Format: SH-TIMESTAMP (numeric only) -> e.g. SH-1736423423423
-            const newId = `SH-${Date.now()}`;
+            // Determine ID: If previously saved (but nav pending), use that. Else if new, generate. Else existing.
+            const isNew = id === 'new' && !formData.id;
+            const targetId = isNew ? `SH-${Date.now()}` : (formData.id || id!);
+
             const sheetToSave: SheetData = {
                 ...dataToSave as SheetData,
-                id: id === 'new' ? newId : id!,
+                id: targetId,
                 updatedAt: new Date().toISOString(),
-                // Keep rejection reason persistent until cleared by explicit status change if needed,
-                // but usually we want to keep it visible.
+                status: dataToSave.status || SheetStatus.DRAFT
             };
 
             // If new, invoke addSheet (which does INSERT)
-            if (id === 'new') {
+            if (isNew) {
+                // Optimistically set ID to prevent double-save creating duplicates
+                setFormData(prev => ({ ...prev, id: targetId }));
+
                 const { error } = await addSheet(sheetToSave);
                 if (error) throw error;
                 // Navigate to the newly created sheet URL
-                navigate(`/sheets/staging/${newId}`, { replace: true });
+                navigate(`/sheets/staging/${targetId}`, { replace: true });
             } else {
                 // If update, invoke updateSheet (which does UPDATE)
-                const { error } = await updateSheet(id!, sheetToSave);
+                const { error } = await updateSheet(sheetToSave);
                 if (error) throw error;
             }
 
         } catch (err: any) {
             console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!confirm("Are you sure you want to delete this sheet? This cannot be undone.")) return;
+        setLoading(true);
+        try {
+            const currentId = id === 'new' ? formData.id : id;
+            if (currentId) {
+                const { error } = await deleteSheet(currentId);
+                if (error) throw error;
+                navigate('/database');
+            }
+        } catch (error) {
+            console.error("Delete failed", error);
         } finally {
             setLoading(false);
         }
@@ -420,6 +441,11 @@ export default function StagingSheet() {
                 <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-200 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)] flex justify-center gap-4 z-40 print:hidden animate-in slide-in-from-bottom-4">
                     <Button variant="outline" onClick={() => navigate(-1)} className="text-slate-500 hover:text-slate-900 border-slate-200">
                         Cancel
+                    </Button>
+                    {/* Delete Option for Drafts */}
+                    {/* Delete Option for Drafts - Always show in edit footer */}
+                    <Button variant="outline" onClick={handleDelete} disabled={loading} className="text-red-500 border-red-200 hover:bg-red-50">
+                        {loading ? <Loader2 className="animate-spin" /> : <Trash2 size={16} className="mr-2" />} Delete
                     </Button>
                     <Button onClick={handleRequestVerification} className="px-8 bg-purple-600 hover:bg-purple-500 text-white shadow-lg">
                         <Lock className="mr-2" size={16} /> Request Verification
