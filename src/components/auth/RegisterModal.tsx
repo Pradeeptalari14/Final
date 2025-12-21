@@ -19,7 +19,7 @@ export default function RegisterModal({ isOpen, onClose, initialRole }: Register
         username: '',
         password: '',
         confirmPassword: '',
-        role: initialRole || Role.STAGING_SUPERVISOR,
+        role: initialRole || '' as Role, // Cast to allow empty initially for placeholder
         fullName: '',
         email: '',
         empCode: ''
@@ -31,6 +31,12 @@ export default function RegisterModal({ isOpen, onClose, initialRole }: Register
 
         if (formData.password !== formData.confirmPassword) {
             alert("Passwords do not match");
+            setLoading(false);
+            return;
+        }
+
+        if (!formData.role) {
+            alert("Please select a role");
             setLoading(false);
             return;
         }
@@ -131,7 +137,6 @@ export default function RegisterModal({ isOpen, onClose, initialRole }: Register
                                                 value={formData.username}
                                                 onChange={e => setFormData({ ...formData, username: e.target.value })}
                                                 className="w-full bg-background border border-input rounded-lg px-3 py-2 text-foreground focus:ring-2 focus:ring-primary/50 outline-none text-sm transition-all"
-                                                placeholder="jdoe"
                                             />
                                         </div>
                                         <div className="space-y-1">
@@ -140,7 +145,6 @@ export default function RegisterModal({ isOpen, onClose, initialRole }: Register
                                                 value={formData.fullName}
                                                 onChange={e => setFormData({ ...formData, fullName: e.target.value })}
                                                 className="w-full bg-background border border-input rounded-lg px-3 py-2 text-foreground focus:ring-2 focus:ring-primary/50 outline-none text-sm transition-all"
-                                                placeholder="John Doe"
                                             />
                                         </div>
                                     </div>
@@ -155,7 +159,6 @@ export default function RegisterModal({ isOpen, onClose, initialRole }: Register
                                                 value={formData.email}
                                                 onChange={e => setFormData({ ...formData, email: e.target.value })}
                                                 className="w-full bg-background border border-input rounded-lg px-3 py-2 text-foreground focus:ring-2 focus:ring-primary/50 outline-none text-sm transition-all"
-                                                placeholder="john@example.com"
                                             />
                                         </div>
                                         <div className="space-y-1">
@@ -165,7 +168,6 @@ export default function RegisterModal({ isOpen, onClose, initialRole }: Register
                                                 value={formData.empCode}
                                                 onChange={e => setFormData({ ...formData, empCode: e.target.value })}
                                                 className="w-full bg-background border border-input rounded-lg px-3 py-2 text-foreground focus:ring-2 focus:ring-primary/50 outline-none text-sm transition-all"
-                                                placeholder="EMP-001"
                                             />
                                         </div>
                                     </div>
@@ -179,7 +181,6 @@ export default function RegisterModal({ isOpen, onClose, initialRole }: Register
                                                 value={formData.password}
                                                 onChange={e => setFormData({ ...formData, password: e.target.value })}
                                                 className="w-full bg-background border border-input rounded-lg px-3 py-2 pr-10 text-foreground focus:ring-2 focus:ring-primary/50 outline-none text-sm transition-all"
-                                                placeholder="Create a password"
                                             />
                                             <button
                                                 type="button"
@@ -199,7 +200,6 @@ export default function RegisterModal({ isOpen, onClose, initialRole }: Register
                                             value={formData.confirmPassword}
                                             onChange={e => setFormData({ ...formData, confirmPassword: e.target.value })}
                                             className="w-full bg-background border border-input rounded-lg px-3 py-2 text-foreground focus:ring-2 focus:ring-primary/50 outline-none text-sm transition-all"
-                                            placeholder="Repeat password"
                                         />
                                     </div>
 
@@ -208,10 +208,11 @@ export default function RegisterModal({ isOpen, onClose, initialRole }: Register
                                         <select
                                             value={formData.role}
                                             onChange={e => setFormData({ ...formData, role: e.target.value as Role })}
-                                            className="w-full bg-background border border-input rounded-lg px-3 py-2 text-foreground focus:ring-2 focus:ring-primary/50 outline-none text-sm transition-all"
+                                            className="w-full bg-background border border-input rounded-lg px-3 py-2 text-foreground focus:ring-2 focus:ring-primary/50 outline-none text-sm transition-all font-bold"
                                         >
+                                            <option value="" disabled>Select Role</option>
                                             {Object.values(Role).map(role => (
-                                                <option key={role} value={role}>{role}</option>
+                                                <option key={role} value={role} className="font-bold">{role}</option>
                                             ))}
                                         </select>
                                     </div>

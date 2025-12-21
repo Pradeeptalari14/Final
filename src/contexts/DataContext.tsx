@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { SheetData, User, Notification, AppSettings } from '@/types';
 
@@ -20,6 +21,8 @@ interface DataContextType {
     setCurrentUser: (user: User | null) => void;
     settings: AppSettings;
     updateSettings: (newSettings: Partial<AppSettings>) => void;
+    isOnline: boolean;
+    syncStatus: 'CONNECTING' | 'LIVE' | 'OFFLINE';
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -30,14 +33,119 @@ const defaultSettings: AppSettings = {
     density: 'comfortable',
     sidebarCollapsed: false,
     fontSize: 'medium',
-    defaultTab: 'dashboard'
+    defaultTab: 'dashboard',
+    language: 'en'
 };
 
-export function DataProvider({ children }: { children: React.ReactNode }) {
-    const [sheets, setSheets] = useState<SheetData[]>([]);
-    const [users, setUsers] = useState<User[]>([]);
-    const [notifications] = useState<Notification[]>([]);
-    const [loading, setLoading] = useState(true);
+export function DataProvider({ children, queryClient }: { children: React.ReactNode, queryClient: any }) {
+    const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+    useEffect(() => {
+        const handleOnline = () => setIsOnline(true);
+        const handleOffline = () => setIsOnline(false);
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, []);
+
+    // 1. Sheets Query
+    const { data: sheets = [], isLoading: sheetsLoading } = useQuery<SheetData[]>({
+        queryKey: ['sheets'],
+        queryFn: async () => {
+            interface SupabaseRow {
+                id: string;
+                data: any;
+            }
+            const [activeRes, archivedRes] = await Promise.all([
+                supabase.from('sheets').select('*').or('data->isArchived.is.null,data->isArchived.eq.false'),
+                supabase.from('sheets')
+                    .select('*')
+                    .eq('data->isArchived', true)
+                    .order('created_at', { ascending: false })
+                    .range(0, 49)
+            ]);
+
+            const { data: activeData, error: activeError } = activeRes as { data: SupabaseRow[] | null, error: any };
+            const { data: archivedData, error: archivedError } = archivedRes as { data: SupabaseRow[] | null, error: any };
+
+            if (activeError || archivedError) throw activeError || archivedError;
+
+            const active = (activeData || []).map((d: SupabaseRow) => ({ ...d.data, id: d.id, status: d.data.status || 'DRAFT' })) as SheetData[];
+            const archived = (archivedData || []).map((d: SupabaseRow) => ({ ...d.data, id: d.id, status: d.data.status || 'DRAFT' })) as SheetData[];
+
+            const combined = [...active, ...archived];
+            const uniqueMap = new Map(combined.map(s => [s.id, s]));
+            return Array.from(uniqueMap.values());
+        },
+    });
+
+    // 2. Users Query
+    const { data: users = [], isLoading: usersLoading } = useQuery<User[]>({
+        queryKey: ['users'],
+        queryFn: async () => {
+            interface SupabaseUserRow {
+                id: string;
+                data: any;
+            }
+            const { data, error } = await supabase.from('users').select('*') as { data: SupabaseUserRow[] | null, error: any };
+            if (error) throw error;
+            return (data || []).filter((d: SupabaseUserRow) => d.data && !d.data.isDeleted).map((d: SupabaseUserRow) => ({ ...d.data, id: d.id }) as User);
+        },
+    });
+
+    // 3. Mutations
+    const addSheetMutation = useMutation({
+        mutationFn: async (sheet: SheetData) => {
+            const { error } = await supabase.from('sheets').insert({ id: sheet.id, data: sheet });
+            if (error) throw error;
+        },
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['sheets'] }),
+    });
+
+    const updateSheetMutation = useMutation({
+        mutationFn: async (sheet: SheetData) => {
+            const { error } = await supabase.from('sheets').update({ data: sheet }).eq('id', sheet.id);
+            if (error) throw error;
+        },
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['sheets'] }),
+    });
+
+    const [syncStatus, setSyncStatus] = useState<'CONNECTING' | 'LIVE' | 'OFFLINE'>('CONNECTING');
+
+    // Real-time Sync
+    useEffect(() => {
+        const channel = supabase
+            .channel('public:sheets')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'sheets' }, () => {
+                queryClient.invalidateQueries({ queryKey: ['sheets'] });
+            })
+            .subscribe((status: string) => {
+                if (status === 'SUBSCRIBED') setSyncStatus('LIVE');
+                if (status === 'mismatch') setSyncStatus('OFFLINE'); // Should retry, but indicate offline
+                if (status === 'timed_out') setSyncStatus('OFFLINE');
+                if (status === 'CLOSED') setSyncStatus('OFFLINE');
+                if (status === 'CHANNEL_ERROR') setSyncStatus('OFFLINE');
+            });
+
+        // Also listen to window online/offline events to toggle status manually if needed
+        const handleOffline = () => setSyncStatus('OFFLINE');
+        const handleOnline = () => setSyncStatus('CONNECTING'); // Let subscribe callback flip it to LIVE
+
+        window.addEventListener('offline', handleOffline);
+        window.addEventListener('online', handleOnline);
+
+        return () => {
+            supabase.removeChannel(channel);
+            window.removeEventListener('offline', handleOffline);
+            window.removeEventListener('online', handleOnline);
+        };
+    }, [queryClient]);
+
+    const loading = sheetsLoading || usersLoading;
+
     const [devRole, setDevRole] = useState<string | null>(null); // Default null to force login
     const [shift, setShift] = useState<string>('A');
 
@@ -47,7 +155,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             const saved = localStorage.getItem('appSettings');
             return saved ? JSON.parse(saved) : defaultSettings;
         } catch (e) {
-            console.error('Failed to load settings:', e);
             return defaultSettings;
         }
     });
@@ -58,7 +165,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             try {
                 localStorage.setItem('appSettings', JSON.stringify(updated));
             } catch (e) {
-                console.error('Failed to save settings:', e);
             }
             return updated;
         });
@@ -85,116 +191,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
     }, [settings.theme, settings.fontSize, settings.accentColor]);
 
-    const [archivedPage, setArchivedPage] = useState(0);
-    const PAGE_SIZE = 50;
-
-    const refreshSheets = async () => {
-        // 1. Fetch ALL Active Sheets (Non-Completed) - Crucial for Dashboard
-        // Note: We use JSON arrow operator ->> for Supabase filtering on jsonb column
-        const { data: activeData, error: activeError } = await supabase
-            .from('sheets')
-            .select('*')
-            .neq('data->>status', 'COMPLETED')
-            .order('created_at', { ascending: false });
-
-        // 2. Fetch Recent Archived Sheets (Completed) - Limit to PAGE_SIZE
-        const { data: archivedData, error: archivedError } = await supabase
-            .from('sheets')
-            .select('*')
-            .eq('data->>status', 'COMPLETED')
-            .order('created_at', { ascending: false })
-            .range(0, PAGE_SIZE - 1);
-
-        if (!activeError && !archivedError) {
-            const active = (activeData || []).map((d: any) => ({ ...d.data, id: d.id, status: d.data.status || 'DRAFT' })) as SheetData[];
-            const archived = (archivedData || []).map((d: any) => ({ ...d.data, id: d.id, status: d.data.status || 'DRAFT' })) as SheetData[];
-
-            // Combine strict unique set just in case
-            const combined = [...active, ...archived];
-            // Remove potential duplicates if status changed mid-query (rare)
-            const uniqueMap = new Map(combined.map(s => [s.id, s]));
-            setSheets(Array.from(uniqueMap.values()));
-            setArchivedPage(0);
-        }
-    };
-
-    // Real-time Subscription
-    useEffect(() => {
-        const channel = supabase
-            .channel('public:sheets')
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'sheets' },
-                (payload: any) => {
-                    console.log('Realtime update:', payload);
-                    if (payload.eventType === 'INSERT') {
-                        const newSheet = { ...payload.new.data, id: payload.new.id, status: payload.new.data.status || 'DRAFT' } as SheetData;
-                        setSheets(prev => {
-                            // Avoid duplicates
-                            if (prev.find(s => s.id === newSheet.id)) return prev;
-                            return [newSheet, ...prev];
-                        });
-                    } else if (payload.eventType === 'UPDATE') {
-                        const updatedSheet = { ...payload.new.data, id: payload.new.id, status: payload.new.data.status || 'DRAFT' } as SheetData;
-                        setSheets(prev => prev.map(s => s.id === updatedSheet.id ? updatedSheet : s));
-                    } else if (payload.eventType === 'DELETE') {
-                        setSheets(prev => prev.filter(s => s.id !== payload.old.id));
-                    }
-                }
-            )
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, []);
-
-    const loadMoreArchived = async () => {
-        const nextPage = archivedPage + 1;
-        const from = nextPage * PAGE_SIZE;
-        const to = from + PAGE_SIZE - 1;
-
-        const { data, error } = await supabase
-            .from('sheets')
-            .select('*')
-            .eq('data->>status', 'COMPLETED')
-            .order('created_at', { ascending: false })
-            .range(from, to);
-
-        if (data && !error && data.length > 0) {
-            const newArchived = data.map((d: any) => ({ ...d.data, id: d.id, status: d.data.status || 'DRAFT' })) as SheetData[];
-            setSheets((prev: SheetData[]) => {
-                const combined = [...prev, ...newArchived];
-                const uniqueMap = new Map(combined.map(s => [s.id, s]));
-                return Array.from(uniqueMap.values());
-            });
-            setArchivedPage(nextPage);
-        }
-    };
-
-    const refreshUsers = async () => {
-        const { data } = await supabase.from('users').select('*');
-        if (data) {
-            const mappedUsers = data.filter((d: any) => d.data && !d.data.isDeleted).map((d: any) => ({ ...d.data, id: d.id }) as User);
-            setUsers(mappedUsers);
-        }
-    };
-
-    const addSheet = async (sheet: SheetData) => {
-        const { error } = await supabase.from('sheets').insert({ id: sheet.id, data: sheet });
-        if (error) throw error;
-        setSheets(prev => [sheet, ...prev]);
-    };
-
-    const updateSheet = async (sheet: SheetData) => {
-        const { error } = await supabase.from('sheets').update({ data: sheet }).eq('id', sheet.id);
-        if (error) throw error;
-        setSheets(prev => prev.map(s => s.id === sheet.id ? sheet : s));
-    };
-
-    useEffect(() => {
-        Promise.all([refreshSheets(), refreshUsers()]).then(() => setLoading(false));
-    }, []);
+    const refreshSheets = async () => { queryClient.invalidateQueries({ queryKey: ['sheets'] }); };
+    const refreshUsers = async () => { queryClient.invalidateQueries({ queryKey: ['users'] }); };
+    const loadMoreArchived = async () => { /* Server-side pagination handled by Query in Phase 3 */ };
+    const addSheet = async (sheet: SheetData) => addSheetMutation.mutateAsync(sheet);
+    const updateSheet = async (sheet: SheetData) => updateSheetMutation.mutateAsync(sheet);
 
     const [currentUser, setCurrentUser] = useState<User | null>(null);
 
@@ -239,17 +240,30 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         }
     }, [currentUser]);
 
-    // ...
 
-    return (
-        <DataContext.Provider value={{
-            sheets, users, notifications, loading, refreshSheets, loadMoreArchived, refreshUsers, addSheet, updateSheet,
-            devRole, setDevRole, shift, setShift, currentUser, setCurrentUser,
-            settings, updateSettings
-        }}>
-            {children}
-        </DataContext.Provider>
-    );
+    return <DataContext.Provider value={{
+        sheets,
+        users,
+        notifications: [],
+        loading,
+        refreshSheets,
+        loadMoreArchived,
+        refreshUsers,
+        addSheet,
+        updateSheet,
+        devRole,
+        setDevRole,
+        shift,
+        setShift,
+        currentUser,
+        setCurrentUser,
+        settings,
+        updateSettings,
+        isOnline,
+        syncStatus
+    }}>
+        {children}
+    </DataContext.Provider>;
 }
 
 export const useData = () => {

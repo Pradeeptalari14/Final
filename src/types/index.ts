@@ -114,6 +114,9 @@ export interface SheetData {
     completedBy?: string;
     completedAt?: string;
 
+    verifiedBy?: string;
+    verifiedAt?: string;
+
     capturedImages?: string[];
     history?: HistoryLog[];
     comments?: Comment[];
@@ -133,6 +136,7 @@ export interface Notification {
     timestamp: string;
 }
 
+export type Language = 'en' | 'jp';
 export type Theme = 'light' | 'dark';
 export type AccentColor = 'blue' | 'emerald' | 'purple';
 export type Density = 'compact' | 'comfortable';
@@ -145,4 +149,5 @@ export interface AppSettings {
     sidebarCollapsed: boolean;
     fontSize: FontSize;
     defaultTab: string;
+    language: Language;
 }

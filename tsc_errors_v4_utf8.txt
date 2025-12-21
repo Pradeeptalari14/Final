@@ -1,0 +1,12 @@
+﻿src/components/admin/UserManagement.tsx(361,42): error TS2304: Cannot find name 'Badge'.
+src/components/admin/UserManagement.tsx(367,43): error TS2304: Cannot find name 'Badge'.
+src/components/admin/UserManagement.tsx(372,46): error TS2552: Cannot find name 'Clock'. Did you mean 'Lock'?
+src/components/admin/UserManagement.tsx(385,53): error TS2304: Cannot find name 'CheckCircle'.
+src/components/admin/UserManagement.tsx(387,53): error TS2304: Cannot find name 'XCircle'.
+src/components/admin/UserManagement.tsx(408,46): error TS2304: Cannot find name 'FileText'.
+src/components/admin/UserManagement.tsx(430,22): error TS2552: Cannot find name 'motion'. Did you mean 'Option'?
+src/components/admin/UserManagement.tsx(433,133): error TS2304: Cannot find name 'X'.
+src/components/admin/UserManagement.tsx(482,57): error TS2304: Cannot find name 'Loader2'.
+src/components/admin/UserManagement.tsx(486,23): error TS2552: Cannot find name 'motion'. Did you mean 'Option'?
+src/components/admin/UserManagement.tsx(522,38): error TS2304: Cannot find name 'FileText'.
+src/components/admin/UserManagement.tsx(525,38): error TS2304: Cannot find name 'X'.

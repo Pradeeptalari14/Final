@@ -40,6 +40,29 @@ const EMPTY_ITEM: StagingItem = {
     ttlCases: 0
 };
 
+const RejectionSection = ({ reason, comments }: { reason?: string | null, comments?: any[] }) => {
+    if (!reason) return null;
+    return (
+        <div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg shadow-sm animate-in fade-in slide-in-from-top-2 print:hidden">
+            <div className="flex items-start gap-4">
+                <div className="p-2 bg-red-100 rounded-full text-red-600">
+                    <AlertTriangle size={24} />
+                </div>
+                <div className="flex-1">
+                    <h3 className="text-lg font-bold text-red-800 flex items-center gap-2">
+                        <AlertTriangle size={20} className="hidden" />
+                        ACTION REQUIRED: Sheet Rejected
+                    </h3>
+                    <div className="mt-2 text-red-700 font-medium">
+                        <span className="uppercase text-xs font-bold text-red-500 tracking-wider block mb-1">Rejection Reason:</span>
+                        <p className="text-base bg-white/50 p-3 rounded border border-red-200">{reason}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 export default function StagingSheet() {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -62,7 +85,7 @@ export default function StagingSheet() {
     });
 
     const [loading, setLoading] = useState(false);
-    const [isPreview, setIsPreview] = useState(false);
+
     const isDirty = useRef(false);
     const prevId = useRef(id);
 
@@ -98,27 +121,31 @@ export default function StagingSheet() {
             const newId = `SH-${Date.now()}`;
             const sheetToSave: SheetData = {
                 ...dataToSave as SheetData,
-                id: dataToSave.id || newId,
-                createdBy: dataToSave.createdBy || session?.user.email || 'system',
-                createdAt: dataToSave.createdAt || new Date().toISOString(),
+                id: id === 'new' ? newId : id!,
                 updatedAt: new Date().toISOString(),
-                // Fix: Keep rows if they have SKU OR any numeric data entered
-                stagingItems: dataToSave.stagingItems?.filter(i => i.skuName || i.ttlCases > 0 || i.casesPerPlt > 0 || i.fullPlt > 0 || i.loose > 0) || []
+                // Keep rejection reason persistent until cleared by explicit status change if needed,
+                // but usually we want to keep it visible.
             };
 
-            if (id === 'new' || !dataToSave.id) {
-                await addSheet(sheetToSave);
+            // If new, invoke addSheet (which does INSERT)
+            if (id === 'new') {
+                const { error } = await addSheet(sheetToSave);
+                if (error) throw error;
+                // Navigate to the newly created sheet URL
+                navigate(`/sheets/staging/${newId}`, { replace: true });
             } else {
-                await updateSheet(sheetToSave);
+                // If update, invoke updateSheet (which does UPDATE)
+                const { error } = await updateSheet(id!, sheetToSave);
+                if (error) throw error;
             }
-            if (!isPreview) navigate('/database');
-        } catch (e: any) {
-            console.error(e);
-            alert(`Failed to save sheet: ${e.message || 'Unknown error'}. Please check your connection and try again.`);
+
+        } catch (err: any) {
+            console.error(err);
         } finally {
             setLoading(false);
         }
     };
+
 
     const handleRequestVerification = () => {
         // Clear rejection reason on resubmit so it doesn't show as rejected in Dashboard
@@ -151,7 +178,7 @@ export default function StagingSheet() {
     };
 
     const handlePrint = () => {
-        setIsPreview(true);
+        window.print();
     };
 
     // Loading / Not Found Handling
@@ -179,26 +206,7 @@ export default function StagingSheet() {
     return (
         <div className="bg-white min-h-screen text-slate-800 pb-24 print:pb-0 print:min-h-0 print:h-auto print:overflow-visible font-sans max-w-[1024px] print:max-w-none mx-auto shadow-xl print:shadow-none my-2 print:my-0 rounded-lg print:rounded-none overflow-hidden print:overflow-visible border border-slate-200 print:border-none">
 
-            {/* IN-APP PRINT PREVIEW OVERLAY */}
-            {isPreview && (
-                <div className="fixed inset-0 z-50 bg-slate-900/95 backdrop-blur-sm flex flex-col h-screen print:hidden">
-                    <div className="flex justify-between items-center p-4 border-b border-white/10 bg-slate-900 text-white">
-                        <div className="flex items-center gap-2">
-                            <div className="bg-blue-600 p-2 rounded-lg"><Printer size={20} /></div>
-                            <h2 className="text-lg font-bold">Print Preview</h2>
-                        </div>
-                        <div className="flex gap-3">
-                            <Button variant="ghost" className="text-slate-400 hover:text-white" onClick={() => setIsPreview(false)}>Close Preview</Button>
-                            <Button onClick={() => window.print()} className="bg-blue-600 hover:bg-blue-500"><Printer className="mr-2" size={16} /> Print Now</Button>
-                        </div>
-                    </div>
-                    <div className="flex-1 overflow-auto p-8 flex justify-center bg-slate-800/50">
-                        <div className="bg-white shadow-2xl pointer-events-none select-none origin-top scale-[0.8] md:scale-100 transition-transform">
-                            <PrintableStagingSheet data={formData} />
-                        </div>
-                    </div>
-                </div>
-            )}
+
 
             {/* HIDDEN PRINTABLE VIEW (For actual printing) */}
             <div className="hidden print:block">
@@ -231,8 +239,8 @@ export default function StagingSheet() {
 
             <div className="print:hidden p-2 space-y-3 bg-slate-50/50 min-h-[calc(100vh-60px)]">
 
-                {/* Rejection/Comments History - Only show if DRAFT (Rejected) */}
-                {formData.comments && formData.comments.length > 0 && formData.status === SheetStatus.DRAFT && (
+                {/* Rejection/Comments History - Show if Rejected OR if Verification Pending (so Lead can see history) */}
+                {formData.comments && formData.comments.length > 0 && (formData.status === SheetStatus.DRAFT || formData.status === SheetStatus.STAGING_VERIFICATION_PENDING) && (
                     <DismissibleAlert comments={formData.comments} />
                 )}
 
@@ -308,6 +316,9 @@ export default function StagingSheet() {
                         </div>
                     </div>
                 </div>
+
+                {/* Rejection Alert - Visible on Screen & Print */}
+                <RejectionSection reason={formData.rejectionReason} comments={formData.comments} />
 
                 {/* Staging Table - Excel Look */}
                 <div className="bg-white border border-slate-200 rounded-xl shadow-md overflow-hidden flex flex-col">
@@ -462,7 +473,6 @@ function VerificationFooter({ formData, setFormData, onSave, currentRole, curren
                 timestamp: new Date().toISOString()
             };
 
-            // Revert to DRAFT so it can be edited again
             // Revert to DRAFT so it can be edited again
             const updated = {
                 ...formData,

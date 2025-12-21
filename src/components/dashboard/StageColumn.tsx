@@ -54,10 +54,17 @@ export function StageColumn({ title, color, items, linkTo, filters, density, ful
                                 ${isLastOddItem ? 'col-span-2' : ''}
                             `}
                             >
-                                <div className={isMainHeader ? "text-left pl-3" : "text-center"}>
-                                    <span className={`font-bold leading-none block ${fullWidth || isMainHeader ? 'text-base' : 'text-sm'}`}>{f.count}</span>
-                                    <span className={`text-[9px] opacity-80 uppercase leading-none mt-1 block ${isMainHeader ? 'text-left' : 'text-center'}`}>{f.label}</span>
-                                </div>
+                                {isMainHeader ? (
+                                    <div className="w-full flex items-center justify-between px-2">
+                                        <span className="text-xs font-bold uppercase opacity-80 text-left">{f.label}</span>
+                                        <span className="text-2xl font-black">{f.count}</span>
+                                    </div>
+                                ) : (
+                                    <div className="text-center">
+                                        <span className={`font-bold leading-none block ${fullWidth ? 'text-base' : 'text-sm'}`}>{f.count}</span>
+                                        <span className="text-[9px] opacity-80 uppercase leading-none mt-1 block text-center">{f.label}</span>
+                                    </div>
+                                )}
                             </button>
                         );
                     })}

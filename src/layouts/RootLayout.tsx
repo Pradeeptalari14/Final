@@ -1,12 +1,13 @@
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Database, Settings, Menu, Shield, LogOut, X, Users, FileText } from 'lucide-react';
+import { LayoutDashboard, Database, Settings, Menu, Shield, LogOut, X, Users, FileText, WifiOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { Role } from '@/types';
+import { t } from '@/lib/i18n';
 
 export default function RootLayout() {
-    const { devRole, setDevRole, currentUser, settings, updateSettings } = useData();
+    const { devRole, setDevRole, currentUser, settings, updateSettings, isOnline } = useData();
     const navigate = useNavigate();
     const location = useLocation();
     const [mobileOpen, setMobileOpen] = useState(false);
@@ -29,10 +30,10 @@ export default function RootLayout() {
     };
 
     // Determine Admin Label based on Role
-    const adminLabel = currentUser?.role === Role.SHIFT_LEAD ? "Shift Lead"
-        : currentUser?.role === Role.STAGING_SUPERVISOR ? "Staging"
-            : currentUser?.role === Role.LOADING_SUPERVISOR ? "Loading"
-                : "Admin";
+    const adminLabel = currentUser?.role === Role.SHIFT_LEAD ? t('shift_lead', settings.language)
+        : currentUser?.role === Role.STAGING_SUPERVISOR ? t('staging', settings.language)
+            : currentUser?.role === Role.LOADING_SUPERVISOR ? t('loading', settings.language)
+                : t('admin', settings.language);
 
     const SidebarContent = ({ isMobile = false }) => (
         <>
@@ -54,17 +55,23 @@ export default function RootLayout() {
                 <NavItem
                     to="/"
                     icon={LayoutDashboard}
-                    label="Dashboard"
+                    label={t('dashboard', settings.language)}
                     collapsed={collapsed && !isMobile}
                     active={location.pathname === '/'}
                 />
-                <NavItem
-                    to="/database"
-                    icon={Database}
-                    label="Database"
-                    collapsed={collapsed && !isMobile}
-                    active={location.pathname === '/database'}
-                />
+
+                {/* USERS (Admin Only) */}
+                {currentUser?.role === Role.ADMIN && (
+                    <NavItem
+                        to="/admin?tab=users"
+                        icon={Users}
+                        label={t('users', settings.language)}
+                        collapsed={collapsed && !isMobile}
+                        active={location.pathname === '/admin' && location.search.includes('tab=users')}
+                    />
+                )}
+
+                {/* ADMIN DASHBOARD (Shield) */}
                 <NavItem
                     to="/admin"
                     icon={Shield}
@@ -72,34 +79,35 @@ export default function RootLayout() {
                     collapsed={collapsed && !isMobile}
                     active={location.pathname === '/admin' && !location.search.includes('tab=users') && !location.search.includes('tab=audit_logs')}
                 />
+
+                {/* SETTINGS */}
                 <NavItem
                     to="/settings"
                     icon={Settings}
-                    label="Settings"
+                    label={t('settings', settings.language)}
                     collapsed={collapsed && !isMobile}
                     active={location.pathname === '/settings'}
                 />
 
-                {/* ADMIN ONLY EXTENSIONS */}
-                {currentUser?.role === Role.ADMIN && (
-                    <NavItem
-                        to="/admin?tab=users"
-                        icon={Users}
-                        label="Users"
-                        collapsed={collapsed && !isMobile}
-                        active={location.pathname === '/admin' && location.search.includes('tab=users')}
-                    />
-                )}
-
+                {/* AUDIT LOGS */}
                 {(currentUser?.role === Role.ADMIN || currentUser?.role === Role.SHIFT_LEAD) && (
                     <NavItem
                         to="/admin?tab=audit_logs"
                         icon={FileText}
-                        label="Audit Logs"
+                        label={t('audit_logs', settings.language)}
                         collapsed={collapsed && !isMobile}
                         active={location.pathname === '/admin' && location.search.includes('tab=audit_logs')}
                     />
                 )}
+
+                {/* DATABASE (Moving to bottom as it was omitted from priority list but essential) */}
+                <NavItem
+                    to="/database"
+                    icon={Database}
+                    label={t('database', settings.language)}
+                    collapsed={collapsed && !isMobile}
+                    active={location.pathname === '/database'}
+                />
             </nav>
 
 
@@ -107,7 +115,7 @@ export default function RootLayout() {
             <div className="p-4 mt-auto">
                 <button onClick={handleSignOut} className="flex items-center gap-3 w-full p-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/10 transition-all">
                     <LogOut size={20} />
-                    {(!collapsed || isMobile) && <span className="font-medium">Sign Out</span>}
+                    {(!collapsed || isMobile) && <span className="font-medium">{t('sign_out', settings.language)}</span>}
                 </button>
             </div>
         </>
@@ -138,6 +146,13 @@ export default function RootLayout() {
 
             {/* Main Content */}
             <main className="flex-1 relative overflow-hidden flex flex-col print:h-auto print:overflow-visible">
+                {/* Offline Banner */}
+                {!isOnline && (
+                    <div className="bg-red-500 text-white text-[10px] py-1 px-4 flex items-center justify-center gap-2 animate-in slide-in-from-top duration-300">
+                        <WifiOff size={12} />
+                        <span className="font-bold uppercase tracking-wider">{t('offline_mode', settings.language)} - Data Sync Paused</span>
+                    </div>
+                )}
                 {/* Header */}
                 <header className="h-16 bg-background/50 backdrop-blur flex items-center justify-between px-4 md:px-8 print:hidden shrink-0">
 

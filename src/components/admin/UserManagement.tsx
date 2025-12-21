@@ -6,18 +6,25 @@ import { useToast } from "@/contexts/ToastContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search, UserPlus, Trash2, KeyRound, CheckCircle, XCircle, X, Loader2, FileText, Clock } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion } from "framer-motion";
+import { useData } from '@/contexts/DataContext';
+import { t } from '@/lib/i18n';
 
 interface UserManagementProps {
     users: User[];
-    currentUser: User | null;
     refreshUsers: () => Promise<void>;
     sheets: SheetData[];
 }
 
-export function UserManagement({ users, currentUser, refreshUsers, sheets }: UserManagementProps) {
+export function UserManagement({ users, refreshUsers, sheets }: UserManagementProps) {
     const { addToast } = useToast();
+    const { settings, currentUser } = useData();
     const [searchParams, setSearchParams] = useSearchParams();
+
+    // STRICT GUARD: Admin only
+    if (currentUser?.role !== Role.ADMIN) {
+        return <div className="p-8 text-center text-red-500 font-bold uppercase tracking-widest">{t('access_denied', settings.language)}</div>;
+    }
 
     // --- User Management State ---
     const [userSearchQuery, setUserSearchQuery] = useState('');
@@ -54,7 +61,7 @@ export function UserManagement({ users, currentUser, refreshUsers, sheets }: Use
         empCode: '',
         email: '',
         password: '',
-        role: Role.STAGING_SUPERVISOR
+        role: '' as Role
     });
     // Password Reset State
     const [passwordResetUser, setPasswordResetUser] = useState<User | null>(null);
@@ -89,15 +96,15 @@ export function UserManagement({ users, currentUser, refreshUsers, sheets }: Use
     }, [sheets]);
 
     const getTimeAgo = (timestamp: number | undefined) => {
-        if (!timestamp) return 'Never';
+        if (!timestamp) return t('never', settings.language);
         const diff = Date.now() - timestamp;
         const minutes = Math.floor(diff / 60000);
-        if (minutes < 1) return 'Just now';
-        if (minutes < 60) return `${minutes}m ago`;
+        if (minutes < 1) return t('just_now', settings.language);
+        if (minutes < 60) return `${minutes}${t('minutes_ago', settings.language)} `;
         const hours = Math.floor(minutes / 60);
-        if (hours < 24) return `${hours}h ago`;
+        if (hours < 24) return `${hours}${t('hours_ago', settings.language)} `;
         const days = Math.floor(hours / 24);
-        return `${days}d ago`;
+        return `${days}${t('days_ago', settings.language)} `;
     };
 
 
@@ -130,38 +137,41 @@ export function UserManagement({ users, currentUser, refreshUsers, sheets }: Use
         try {
             const { error } = await supabase.from('users').update({ data: editingUser }).eq('id', editingUser.id);
             if (error) throw error;
-            addToast('success', `User ${editingUser.username} updated successfully`);
+            addToast('success', `${editingUser.username} ${t('user_updated_successfully', settings.language)} `);
             setEditingUser(null);
             await refreshUsers();
         } catch (error: any) {
-            addToast('error', "Failed to update user: " + error.message);
+            addToast('error', t('failed_to_update_user', settings.language) + ": " + error.message);
         }
     };
 
     const handleDeleteUser = async (userToDelete: User) => {
         const { id: userId, username, isApproved, role } = userToDelete;
 
-        // 1. Enforce Inactive Status (Blocking Alert)
-        if (isApproved) {
-            alert(`Cannot Delete Active User!\n\nPlease switch "${username}" to 'Inactive' first.\n(Click the status button in the table)`);
+        // 1. SELF-DELETION PROTECTION
+        if (userId === currentUser?.id) {
+            alert(t('cannot_delete_self', settings.language));
             return;
         }
 
-        // 2. Confirmation (Blocking Confirm)
-        if (!window.confirm(`Are you sure you want to PERMANENTLY delete user "${username}"?\n\nThis action cannot be undone.`)) return;
+        // 2. ENFORCE INACTIVE STATUS (Strict Rule)
+        if (isApproved) {
+            alert(`${t('delete_active_user_error', settings.language)}\n\n${t('switch_inactive_first', settings.language)}`);
+            return;
+        }
+
+        // 3. CONFIRMATION
+        if (!window.confirm(t('delete_user_confirm', settings.language))) {
+            return;
+        }
 
         try {
             // SPECIAL HANDLING FOR ADMINS: Demote first to bypass potential RLS/Constraint
             if (role === Role.ADMIN) {
-                console.log("[Delete] Target is Admin. Demoting to STAGING_SUPERVISOR first...");
-                const { error: demoteError } = await supabase
+                await supabase
                     .from('users')
-                    .update({ data: { ...userToDelete, role: 'STAGING_SUPERVISOR', isApproved: false } })
+                    .update({ data: { ...userToDelete, role: Role.STAGING_SUPERVISOR, isApproved: false } })
                     .eq('id', userId);
-
-                if (demoteError) {
-                    console.warn("[Delete] Failed to demote admin. Proceeding with standard delete anyway...", demoteError);
-                }
             }
 
             // Attempt Hard Delete - EXPLICITLY SELECT DATA TO VERIFY
@@ -170,17 +180,14 @@ export function UserManagement({ users, currentUser, refreshUsers, sheets }: Use
             // Check for Silent Failure (0 rows deleted)
             const silentFailure = !error && (!deleteData || deleteData.length === 0);
 
-            // If Hard Delete fails or does nothing (RLS), fallback to Soft Delete
             if (error || silentFailure) {
-                console.warn(`Hard delete failed (Silent: ${silentFailure}). Attempting soft delete fallback...`, error);
-
                 const { data: currentUserData } = await supabase.from('users').select('data').eq('id', userId).single();
 
                 if (currentUserData) {
                     const softDeletedData = {
                         ...currentUserData.data,
                         isDeleted: true,
-                        role: 'STAGING_SUPERVISOR', // Ensure role is not ADMIN in the tombstone
+                        role: Role.STAGING_SUPERVISOR, // Ensure role is not ADMIN in the tombstone
                         username: `${username}_deleted_${Date.now()}`
                     };
 
@@ -190,10 +197,8 @@ export function UserManagement({ users, currentUser, refreshUsers, sheets }: Use
                         .eq('id', userId)
                         .select();
 
-                    // Check if Soft Delete ALSO failed silently
                     if (softError || !softData || softData.length === 0) {
                         const reason = softError?.message || "Permission Denied (0 rows updated)";
-                        console.error("Soft delete also failed", reason);
                         alert(`DELETE FAILED\n\nCould not delete user. Database permissions might be restricted.\n\nReason: ${reason}`);
                         return;
                     }
@@ -204,11 +209,10 @@ export function UserManagement({ users, currentUser, refreshUsers, sheets }: Use
             }
 
             // Success feedback
-            addToast('success', `User ${username} deleted.`);
+            addToast('success', `${username} ${t('user_deleted', settings.language)}`);
             await refreshUsers();
 
         } catch (error: any) {
-            console.error("Delete failed completely", error);
             // Blocking Alert for Unexpected Error
             alert(`SYSTEM ERROR\n\nFailed to delete user: ${error.message || "Unknown error"}`);
         }
@@ -226,21 +230,18 @@ export function UserManagement({ users, currentUser, refreshUsers, sheets }: Use
                 .select();
 
             if (error) {
-                console.error("[RCA] Update Error:", error);
                 throw error;
             }
 
             // RCA: Check if any row was actually updated
             if (!data || data.length === 0) {
-                console.error("[RCA] Silent Failure: No rows updated. Likely RLS blocking.");
                 throw new Error("Permission Denied: Database policy prevented this change (0 rows updated).");
             }
 
-            addToast('success', `User ${user.username} is now ${updatedUser.isApproved ? 'Active' : 'Inactive'}`);
+            addToast('success', `User ${user.username} is now ${updatedUser.isApproved ? t('active', settings.language) : t('inactive', settings.language)} `);
             await refreshUsers();
         } catch (error: any) {
-            console.error("[RCA] Toggle exception:", error);
-            alert(`STATUS CHANGE FAILED\n\nReason: ${error.message || "Unknown Error"}\n\nTroubleshooting: You might not have permission to modify this user.`);
+            alert(`STATUS CHANGE FAILED\n\nReason: ${error.message || "Unknown Error"} \n\nTroubleshooting: You might not have permission to modify this user.`);
         }
     };
 
@@ -252,12 +253,12 @@ export function UserManagement({ users, currentUser, refreshUsers, sheets }: Use
             const updatedUser = { ...passwordResetUser, password: newPassword };
             const { error } = await supabase.from('users').update({ data: updatedUser }).eq('id', passwordResetUser.id);
             if (error) throw error;
-            addToast('success', `Password updated for ${passwordResetUser.username}`);
+            addToast('success', `${t('password', settings.language)} ${t('user_updated_successfully', settings.language)}: ${passwordResetUser.username} `);
             setPasswordResetUser(null);
             setNewPassword('');
             await refreshUsers();
         } catch (error: any) {
-            addToast('error', "Failed to update password");
+            addToast('error', t('failed_to_update_user', settings.language));
         }
     };
 
@@ -266,6 +267,7 @@ export function UserManagement({ users, currentUser, refreshUsers, sheets }: Use
         setNewUserLoading(true);
         try {
             if (!newUser.username || !newUser.password) throw new Error("Username and Password are required.");
+            if (!newUser.role) throw new Error("Please select a role.");
             const userData = {
                 id: crypto.randomUUID(),
                 username: newUser.username,
@@ -278,10 +280,10 @@ export function UserManagement({ users, currentUser, refreshUsers, sheets }: Use
             };
             const { error } = await supabase.from('users').insert({ id: userData.id, data: userData });
             if (error) throw error;
-            addToast('success', `User ${newUser.username} created successfully!`);
+            addToast('success', `${newUser.username} ${t('user_created_successfully', settings.language)} `);
             await refreshUsers();
             setIsAddingUser(false);
-            setNewUser({ username: '', fullName: '', empCode: '', email: '', password: '', role: Role.STAGING_SUPERVISOR });
+            setNewUser({ username: '', fullName: '', empCode: '', email: '', password: '', role: '' as Role });
         } catch (error: any) {
             addToast('error', error.message || "Failed to create user");
         } finally {
@@ -293,7 +295,7 @@ export function UserManagement({ users, currentUser, refreshUsers, sheets }: Use
     return (
         <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
             <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold text-foreground">User Management</h3>
+                <h3 className="text-xl font-bold text-foreground">{t('user_management', settings.language)}</h3>
 
                 {/* User Filter Tabs */}
                 <div className="flex bg-muted p-1 rounded-lg gap-1 overflow-x-auto">
@@ -301,32 +303,32 @@ export function UserManagement({ users, currentUser, refreshUsers, sheets }: Use
                         onClick={() => setFilter('ALL')}
                         className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${userFilter === 'ALL' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                     >
-                        All
+                        {t('all', settings.language)}
                     </button>
                     <button
                         onClick={() => setFilter('PENDING')}
                         className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${userFilter === 'PENDING' ? 'bg-background shadow-sm text-destructive' : 'text-muted-foreground hover:text-foreground'}`}
                     >
-                        Pending
+                        {t('pending', settings.language)}
                     </button>
                     <div className="w-px bg-border my-1" />
                     <button
                         onClick={() => setFilter(Role.STAGING_SUPERVISOR)}
                         className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${userFilter === Role.STAGING_SUPERVISOR ? 'bg-background shadow-sm text-blue-600' : 'text-muted-foreground hover:text-foreground'}`}
                     >
-                        Staging
+                        {t('staging', settings.language)}
                     </button>
                     <button
                         onClick={() => setFilter(Role.LOADING_SUPERVISOR)}
                         className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${userFilter === Role.LOADING_SUPERVISOR ? 'bg-background shadow-sm text-orange-600' : 'text-muted-foreground hover:text-foreground'}`}
                     >
-                        Loading
+                        {t('loading', settings.language)}
                     </button>
                     <button
                         onClick={() => setFilter(Role.SHIFT_LEAD)}
                         className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${userFilter === Role.SHIFT_LEAD ? 'bg-background shadow-sm text-purple-600' : 'text-muted-foreground hover:text-foreground'}`}
                     >
-                        Shift Lead
+                        {t('shift_lead', settings.language)}
                     </button>
                 </div>
             </div>
@@ -338,11 +340,11 @@ export function UserManagement({ users, currentUser, refreshUsers, sheets }: Use
                         value={userSearchQuery}
                         onChange={(e) => setUserSearchQuery(e.target.value)}
                         className="bg-muted/50 border border-border rounded-lg pl-9 pr-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:border-primary/50 focus:outline-none w-64"
-                        placeholder="Search users..."
+                        placeholder={t('search_users_placeholder', settings.language)}
                     />
                 </div>
                 <Button onClick={() => setIsAddingUser(true)} className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground">
-                    <UserPlus size={16} /> Add User
+                    <UserPlus size={16} /> {t('add_user', settings.language)}
                 </Button>
             </div>
 
@@ -350,17 +352,17 @@ export function UserManagement({ users, currentUser, refreshUsers, sheets }: Use
                 <table className="w-full text-left text-sm min-w-[700px]">
                     <thead>
                         <tr className="bg-muted text-muted-foreground border-b border-border sticky top-0 z-10 backdrop-blur-sm shadow-sm">
-                            <th className="py-3 pl-4 font-medium">User</th>
-                            <th className="py-3 font-medium">Role</th>
-                            <th className="py-3 font-medium">EMP</th>
-                            <th className="py-3 font-medium">Last Active</th>
-                            <th className="py-3 font-medium">Status</th>
-                            <th className="py-3 pr-4 text-right font-medium">Actions</th>
+                            <th className="py-3 pl-4 font-medium">{t('user', settings.language)}</th>
+                            <th className="py-3 font-medium">{t('role', settings.language)}</th>
+                            <th className="py-3 font-medium">{t('emp', settings.language)}</th>
+                            <th className="py-3 font-medium">{t('last_active', settings.language)}</th>
+                            <th className="py-3 font-medium">{t('status', settings.language)}</th>
+                            <th className="py-3 pr-4 text-right font-medium">{t('actions', settings.language)}</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
                         {filteredUsers.length === 0 ? (
-                            <tr><td colSpan={6} className="py-8 text-center text-muted-foreground">No users found.</td></tr>
+                            <tr><td colSpan={6} className="py-8 text-center text-muted-foreground">{t('no_users_found', settings.language)}</td></tr>
                         ) : filteredUsers.map((user) => {
                             const lastActive = lastActiveMap.get(user.username);
                             return (
@@ -368,7 +370,7 @@ export function UserManagement({ users, currentUser, refreshUsers, sheets }: Use
                                     <td className="py-3 pl-4 font-medium text-foreground">{user.fullName} <div className="text-xs text-muted-foreground font-normal sm:hidden">{user.username}</div></td>
                                     <td className="py-3">
                                         <Badge variant="secondary" className="text-xs font-normal">
-                                            {user.role.replace(/_/g, ' ')}
+                                            {user.role}
                                         </Badge>
                                     </td>
                                     <td className="py-3 text-muted-foreground text-xs">{user.empCode || '-'}</td>
@@ -387,9 +389,9 @@ export function UserManagement({ users, currentUser, refreshUsers, sheets }: Use
                                                 }`}
                                         >
                                             {user.isApproved ? (
-                                                <> <CheckCircle size={12} /> Active </>
+                                                <><CheckCircle size={12} /> {t('active', settings.language)}</>
                                             ) : (
-                                                <> <XCircle size={12} /> Inactive </>
+                                                <><XCircle size={12} /> {t('inactive', settings.language)}</>
                                             )}
                                         </button>
                                     </td>
@@ -399,7 +401,7 @@ export function UserManagement({ users, currentUser, refreshUsers, sheets }: Use
                                             size="sm"
                                             className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
                                             onClick={() => setPasswordResetUser(user)}
-                                            title="Reset Password"
+                                            title={t('reset_password', settings.language)}
                                         >
                                             <KeyRound size={14} />
                                         </Button>
@@ -408,22 +410,22 @@ export function UserManagement({ users, currentUser, refreshUsers, sheets }: Use
                                             size="sm"
                                             className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
                                             onClick={() => setEditingUser(user)}
-                                            title="Edit User"
+                                            title={t('edit_user', settings.language)}
                                         >
                                             <FileText size={14} />
                                         </Button>
                                         <Button
                                             variant="ghost"
                                             size="sm"
-                                            className="h-8 w-8 p-0 text-destructive/50 hover:text-destructive hover:bg-destructive/10"
+                                            className="h-8 w-8 p-0 text-destructive/50 hover:text-destructive hover:bg-destructive/10 cursor-pointer"
                                             onClick={() => handleDeleteUser(user)}
-                                            title="Delete User"
+                                            title={t('delete_user', settings.language)}
                                         >
-                                            <Trash2 size={14} />
+                                            <Trash2 size={14} className="pointer-events-none" />
                                         </Button>
                                     </td>
                                 </tr>
-                            )
+                            );
                         })}
                     </tbody>
                 </table>
@@ -434,153 +436,164 @@ export function UserManagement({ users, currentUser, refreshUsers, sheets }: Use
                 <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
                     <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="bg-card border border-border w-full max-w-md rounded-xl shadow-2xl overflow-hidden">
                         <div className="p-4 border-b border-border flex justify-between items-center bg-muted/50">
-                            <h3 className="font-bold text-lg">Add New User</h3>
+                            <h3 className="font-bold text-lg">{t('add_new_user', settings.language)}</h3>
                             <button onClick={() => setIsAddingUser(false)} className="text-muted-foreground hover:text-foreground"><X size={20} /></button>
                         </div>
                         <form onSubmit={handleAddUser} className="p-4 space-y-4">
                             <div>
-                                <label className="text-xs font-bold uppercase text-muted-foreground mb-1 block">Role</label>
+                                <label className="text-xs font-bold uppercase text-muted-foreground mb-1 block">{t('role', settings.language)}</label>
                                 <select
                                     value={newUser.role}
                                     onChange={(e) => setNewUser({ ...newUser, role: e.target.value as Role })}
-                                    className="w-full bg-background border border-border p-2 rounded-lg"
+                                    className="w-full bg-background border border-border p-2 rounded-lg font-bold"
                                 >
-                                    {Object.values(Role).map(r => <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>)}
+                                    <option value="" disabled>Select Role</option>
+                                    {Object.values(Role).map(r => (
+                                        <option key={r} value={r} className="font-bold">
+                                            {r}
+                                        </option>
+                                    ))}
                                 </select>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="text-xs font-bold uppercase text-muted-foreground mb-1 block">Username *</label>
-                                    <input required value={newUser.username} onChange={e => setNewUser({ ...newUser, username: e.target.value })} className="w-full bg-background border border-border p-2 rounded-lg" placeholder="jdoe" />
+                                    <label className="text-xs font-bold uppercase text-muted-foreground mb-1 block">{t('username', settings.language)} *</label>
+                                    <input required value={newUser.username} onChange={e => setNewUser({ ...newUser, username: e.target.value })} className="w-full bg-background border border-border p-2 rounded-lg" />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-bold uppercase text-muted-foreground mb-1 block">Full Name</label>
-                                    <input value={newUser.fullName} onChange={e => setNewUser({ ...newUser, fullName: e.target.value })} className="w-full bg-background border border-border p-2 rounded-lg" placeholder="John Doe" />
+                                    <label className="text-xs font-bold uppercase text-muted-foreground mb-1 block">{t('full_name', settings.language)}</label>
+                                    <input value={newUser.fullName} onChange={e => setNewUser({ ...newUser, fullName: e.target.value })} className="w-full bg-background border border-border p-2 rounded-lg" />
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="text-xs font-bold uppercase text-muted-foreground mb-1 block">Password *</label>
-                                    <input required type="text" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} className="w-full bg-background border border-border p-2 rounded-lg" placeholder="Secret123" />
+                                    <label className="text-xs font-bold uppercase text-muted-foreground mb-1 block">{t('password', settings.language)} *</label>
+                                    <input required type="text" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} className="w-full bg-background border border-border p-2 rounded-lg" />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-bold uppercase text-muted-foreground mb-1 block">Emp Code</label>
-                                    <input value={newUser.empCode} onChange={e => setNewUser({ ...newUser, empCode: e.target.value })} className="w-full bg-background border border-border p-2 rounded-lg" placeholder="EMP001" />
+                                    <label className="text-xs font-bold uppercase text-muted-foreground mb-1 block">{t('emp_code', settings.language)}</label>
+                                    <input value={newUser.empCode} onChange={e => setNewUser({ ...newUser, empCode: e.target.value })} className="w-full bg-background border border-border p-2 rounded-lg" />
                                 </div>
                             </div>
                             <div>
-                                <label className="text-xs font-bold uppercase text-muted-foreground mb-1 block">Email</label>
-                                <input type="email" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} className="w-full bg-background border border-border p-2 rounded-lg" placeholder="john@example.com" />
+                                <label className="text-xs font-bold uppercase text-muted-foreground mb-1 block">{t('email', settings.language)}</label>
+                                <input type="email" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} className="w-full bg-background border border-border p-2 rounded-lg" />
                             </div>
 
                             <div className="pt-2 flex justify-end gap-2">
-                                <Button type="button" variant="ghost" onClick={() => setIsAddingUser(false)}>Cancel</Button>
+                                <Button type="button" variant="ghost" onClick={() => setIsAddingUser(false)}>{t('cancel', settings.language)}</Button>
                                 <Button type="submit" disabled={newUserLoading} className="bg-primary text-primary-foreground">
-                                    {newUserLoading && <Loader2 className="animate-spin mr-2" size={16} />} Create User
+                                    {newUserLoading && <Loader2 className="animate-spin mr-2" size={16} />} {t('create_user', settings.language)}
                                 </Button>
                             </div>
                         </form>
                     </motion.div>
                 </div>
-            )}
+            )
+            }
 
             {/* PASSWORD RESET MODAL */}
-            {passwordResetUser && (
-                <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-sm rounded-xl shadow-2xl p-6">
-                        <h3 className="font-bold text-lg mb-2">Reset Password</h3>
-                        <p className="text-sm text-slate-500 mb-4">Enter new password for <strong>{passwordResetUser.username}</strong></p>
-                        <form onSubmit={handlePasswordReset}>
-                            <input
-                                type="text"
-                                className="w-full border p-2 rounded mb-4 bg-slate-50 dark:bg-slate-950 dark:border-slate-800"
-                                placeholder="New Password"
-                                value={newPassword}
-                                onChange={(e) => setNewPassword(e.target.value)}
-                                autoFocus
-                            />
-                            <div className="flex justify-end gap-2">
-                                <Button type="button" variant="ghost" onClick={() => setPasswordResetUser(null)}>Cancel</Button>
-                                <Button type="submit">Update Password</Button>
-                            </div>
-                        </form>
+            {
+                passwordResetUser && (
+                    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+                        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-sm rounded-xl shadow-2xl p-6">
+                            <h3 className="font-bold text-lg mb-2">{t('reset_password', settings.language)}</h3>
+                            <p className="text-sm text-slate-500 mb-4">{t('enter_new_password_for', settings.language)} <strong>{passwordResetUser.username}</strong></p>
+                            <form onSubmit={handlePasswordReset}>
+                                <input
+                                    type="text"
+                                    className="w-full border p-2 rounded mb-4 bg-slate-50 dark:bg-slate-950 dark:border-slate-800"
+                                    placeholder={t('password', settings.language)}
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    autoFocus
+                                />
+                                <div className="flex justify-end gap-2">
+                                    <Button type="button" variant="ghost" onClick={() => setPasswordResetUser(null)}>{t('cancel', settings.language)}</Button>
+                                    <Button type="submit">{t('update_password', settings.language)}</Button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* EDIT USER MODAL */}
-            {editingUser && (
-                <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in zoom-in-95">
-                    <div className="bg-background border border-border w-full max-w-md rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                        <div className="p-4 border-b border-border flex justify-between items-center bg-muted/30">
-                            <h3 className="font-bold text-lg flex items-center gap-2">
-                                <FileText size={18} className="text-primary" /> Edit User
-                            </h3>
-                            <button onClick={() => setEditingUser(null)} className="text-muted-foreground hover:text-foreground p-1 hover:bg-muted rounded-full transition-colors">
-                                <X size={20} />
-                            </button>
+            {
+                editingUser && (
+                    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in zoom-in-95">
+                        <div className="bg-background border border-border w-full max-w-md rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                            <div className="p-4 border-b border-border flex justify-between items-center bg-muted/30">
+                                <h3 className="font-bold text-lg flex items-center gap-2">
+                                    <FileText size={18} className="text-primary" /> {t('edit_user', settings.language)}
+                                </h3>
+                                <button onClick={() => setEditingUser(null)} className="text-muted-foreground hover:text-foreground p-1 hover:bg-muted rounded-full transition-colors">
+                                    <X size={20} />
+                                </button>
+                            </div>
+                            <form onSubmit={handleUpdateUser} className="p-6 space-y-5 overflow-y-auto">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-bold uppercase text-muted-foreground tracking-wider">{t('username', settings.language)}</label>
+                                        <input
+                                            value={editingUser!.username}
+                                            onChange={(e) => setEditingUser({ ...editingUser!, username: e.target.value })}
+                                            className="w-full bg-background border border-border p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-bold uppercase text-muted-foreground tracking-wider">{t('full_name', settings.language)}</label>
+                                        <input
+                                            value={editingUser!.fullName}
+                                            onChange={(e) => setEditingUser({ ...editingUser!, fullName: e.target.value })}
+                                            className="w-full bg-background border border-border p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold uppercase text-muted-foreground tracking-wider">{t('role_assignment', settings.language)}</label>
+                                    <select
+                                        value={editingUser!.role}
+                                        onChange={(e) => setEditingUser({ ...editingUser!, role: e.target.value as Role })}
+                                        className="w-full bg-background border border-border p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all appearance-none font-bold"
+                                    >
+                                        {Object.values(Role).map(r => (
+                                            <option key={r} value={r} className="font-bold">
+                                                {r}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-bold uppercase text-muted-foreground tracking-wider">{t('employee_code', settings.language)}</label>
+                                        <input
+                                            value={editingUser!.empCode}
+                                            onChange={(e) => setEditingUser({ ...editingUser!, empCode: e.target.value })}
+                                            className="w-full bg-background border border-border p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-bold uppercase text-muted-foreground tracking-wider">{t('email_address', settings.language)}</label>
+                                        <input
+                                            type="email"
+                                            value={editingUser!.email}
+                                            onChange={(e) => setEditingUser({ ...editingUser!, email: e.target.value })}
+                                            className="w-full bg-background border border-border p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="pt-4 flex gap-3 justify-end border-t border-border mt-2">
+                                    <Button type="button" variant="outline" onClick={() => setEditingUser(null)} className="border-border text-foreground hover:bg-muted">{t('cancel', settings.language)}</Button>
+                                    <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90 px-6">{t('save_changes', settings.language)}</Button>
+                                </div>
+                            </form>
                         </div>
-                        <form onSubmit={handleUpdateUser} className="p-6 space-y-5 overflow-y-auto">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Username</label>
-                                    <input
-                                        value={editingUser.username}
-                                        onChange={(e) => setEditingUser({ ...editingUser, username: e.target.value })}
-                                        className="w-full bg-background border border-border p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Full Name</label>
-                                    <input
-                                        value={editingUser.fullName}
-                                        onChange={(e) => setEditingUser({ ...editingUser, fullName: e.target.value })}
-                                        className="w-full bg-background border border-border p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Role Assignment</label>
-                                <select
-                                    value={editingUser.role}
-                                    onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value as Role })}
-                                    className="w-full bg-background border border-border p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all appearance-none"
-                                >
-                                    {Object.values(Role).map(r => (
-                                        <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Employee Code</label>
-                                    <input
-                                        value={editingUser.empCode}
-                                        onChange={(e) => setEditingUser({ ...editingUser, empCode: e.target.value })}
-                                        className="w-full bg-background border border-border p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Email Address</label>
-                                    <input
-                                        type="email"
-                                        value={editingUser.email}
-                                        onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
-                                        className="w-full bg-background border border-border p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="pt-4 flex gap-3 justify-end border-t border-border mt-2">
-                                <Button type="button" variant="outline" onClick={() => setEditingUser(null)} className="border-border text-foreground hover:bg-muted">Cancel</Button>
-                                <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90 px-6">Save Changes</Button>
-                            </div>
-                        </form>
                     </div>
-                </div>
-            )}
+                )}
         </div>
     );
 }

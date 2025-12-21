@@ -19,7 +19,8 @@ import {
     Container,
     Plus,
     AlertTriangle,
-    Image as ImageIcon
+    Image as ImageIcon,
+    X
 } from 'lucide-react';
 
 
@@ -34,6 +35,53 @@ const HeaderField = ({ label, icon: Icon, hasError, children }: any) => (
         </div>
     </div>
 );
+
+
+const DismissibleAlert = ({ comments }: { comments: any[] }) => {
+    const [isVisible, setIsVisible] = useState(true);
+    if (!isVisible) return null;
+    return (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex gap-4 animate-in fade-in slide-in-from-top-2 relative mb-4 print:hidden">
+            <button onClick={() => setIsVisible(false)} className="absolute top-2 right-2 text-red-400 hover:text-red-700"><X size={16} /></button>
+            <div className="bg-red-100 p-2 rounded-lg h-fit text-red-600"><AlertTriangle size={20} /></div>
+            <div>
+                <h3 className="font-bold text-red-800 text-sm mb-1">Feedback / Shift Lead Message</h3>
+                <div className="space-y-2">
+                    {comments.map((comment, i) => (
+                        <div key={i} className="text-sm text-red-700 border-l-2 border-red-300 pl-3">
+                            <span className="font-semibold text-red-900 mr-2">{comment.author}</span>
+                            <span className="text-red-400 text-xs">{new Date(comment.timestamp).toLocaleString()}</span>
+                            <p className="mt-0.5">{comment.text}</p>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const RejectionSection = ({ reason, comments }: { reason?: string | null, comments?: any[] }) => {
+    if (!reason) return null;
+    return (
+        <div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg shadow-sm animate-in fade-in slide-in-from-top-2 print:hidden">
+            <div className="flex items-start gap-4">
+                <div className="p-2 bg-red-100 rounded-full text-red-600">
+                    <AlertTriangle size={24} />
+                </div>
+                <div className="flex-1">
+                    <h3 className="text-lg font-bold text-red-800 flex items-center gap-2">
+                        <AlertTriangle size={20} className="hidden" />
+                        ACTION REQUIRED: Sheet Rejected
+                    </h3>
+                    <div className="mt-2 text-red-700 font-medium">
+                        <span className="uppercase text-xs font-bold text-red-500 tracking-wider block mb-1">Rejection Reason:</span>
+                        <p className="text-base bg-white/50 p-3 rounded border border-red-200">{reason}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 export default function LoadingSheet() {
     const { id } = useParams();
@@ -76,13 +124,12 @@ export default function LoadingSheet() {
     // Controls to hide Submit / Show Print after completion
     const isCompleted = currentSheet?.status === SheetStatus.COMPLETED;
     const isPendingVerification = currentSheet?.status === SheetStatus.LOADING_VERIFICATION_PENDING;
-    const canApprove = (currentUser?.role === Role.SHIFT_LEAD || currentUser?.role === Role.ADMIN) && isPendingVerification;
+    const canApprove = currentUser?.role === Role.SHIFT_LEAD && isPendingVerification;
     // Lock edits if completed or pending verification (unless rejecting)
     // STRICT RULE: If completed, it is READ ONLY for everyone.
     const isLocked = isCompleted || (isPendingVerification && currentUser?.role !== Role.ADMIN);
 
-    // Print Preview State
-    const [isPreview, setIsPreview] = useState(false);
+
 
     // Header inputs
     const [transporter, setTransporter] = useState('');
@@ -460,8 +507,7 @@ export default function LoadingSheet() {
 
     if (loading || !currentSheet) return <div className="p-8 text-center text-slate-500">Loading Sheet Data...</div>;
 
-    const togglePreview = () => setIsPreview(!isPreview);
-    const printNow = () => window.print();
+
 
     // Totals
     const totalLoadedMain = currentSheet.loadingItems?.reduce((acc, li) => acc + li.total, 0) || 0;
@@ -477,19 +523,10 @@ export default function LoadingSheet() {
 
     return (
         <div className="flex flex-col gap-4 max-w-5xl mx-auto pb-24 print:w-full print:max-w-none print:pb-0 print:gap-1">
-            {/* Preview Controls */}
-            {isPreview && (
-                <div className="bg-slate-800 text-white p-4 rounded-xl shadow-lg flex justify-between items-center print:hidden sticky top-4 z-50">
-                    <div className="flex items-center gap-3">
-                        {/* Incident Button REMOVED here */}
-                        <div className="bg-blue-600 p-2 rounded-lg"><Printer size={20} /></div><div><h3 className="font-bold">Print Preview Mode</h3></div>
-                    </div>
-                    <div className="flex gap-3"><button type="button" onClick={togglePreview} className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">Back</button><button type="button" onClick={printNow} className="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-bold flex items-center gap-2"><Printer size={16} /> Print</button></div>
-                </div>
-            )}
+
 
             {/* Screen Header */}
-            <div className={`flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200 ${isPreview ? 'hidden' : 'block'} print:hidden`}>
+            <div className={`flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200 print:hidden`}>
                 <div className="flex items-center gap-4"><button type="button" onClick={() => navigate(-1)} className="text-slate-500 hover:text-blue-600"><ArrowLeft size={20} /></button>
                     <div>
                         <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
@@ -500,13 +537,13 @@ export default function LoadingSheet() {
                     </div></div>
                 <div className="flex gap-2">
                     {/* Fixed: Print button always available now */}
-                    <button type="button" onClick={togglePreview} className="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm hover:bg-slate-800 transition-colors"><Printer size={16} /> Print / PDF</button>
+                    <button type="button" onClick={() => window.print()} className="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm hover:bg-slate-800 transition-colors"><Printer size={16} /> Print / PDF</button>
                     {!isLocked && <button type="button" onClick={handleSaveProgress} className="bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-slate-50 transition-colors"><Save size={16} /> Save Progress</button>}
                 </div>
             </div>
 
             {/* EXCEL PRINT LAYOUT (Legacy Ported) */}
-            <div className={`${isPreview ? 'block' : 'hidden'} print:block font-sans text-[10px] w-full text-black bg-white p-4 print:p-0 overflow-auto`}>
+            <div className={`hidden print:block font-sans text-[10px] w-full text-black bg-white p-4 print:p-0 overflow-auto`}>
                 <div className="min-w-[800px]">
 
 
@@ -737,8 +774,16 @@ export default function LoadingSheet() {
                 </div>
             </div>
 
+            {/* Rejection Alert - Visible on Screen & Print */}
+            <RejectionSection reason={currentSheet.rejectionReason} comments={currentSheet.comments} />
+
+            {/* Comments History - Visible on Screen for Shift Lead during Verification */}
+            {currentSheet.comments && currentSheet.comments.length > 0 && currentSheet.status === SheetStatus.LOADING_VERIFICATION_PENDING && (
+                <DismissibleAlert comments={currentSheet.comments} />
+            )}
+
             {/* MAIN FORM */}
-            <div className={`${isPreview ? 'hidden' : 'block'} bg-white shadow-xl shadow-slate-200 rounded-xl overflow-hidden border border-slate-200 print:hidden`}>
+            <div className={`bg-white shadow-xl shadow-slate-200 rounded-xl overflow-hidden border border-slate-200 print:hidden`}>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 p-4 md:p-6 bg-slate-50/50 border-b border-slate-200">
                     <HeaderField label="Shift" icon={Calendar}>
                         <select value={shift} onChange={e => setShift(e.target.value)} disabled={isCompleted} className="w-full bg-transparent text-sm font-medium text-slate-700 outline-none"><option value="A">A</option><option value="B">B</option><option value="C">C</option></select>
@@ -914,7 +959,7 @@ export default function LoadingSheet() {
                     </div>
                 </div>
 
-                {!isLocked && !isCompleted && !cameraActive && !isPendingVerification && (
+                {!isLocked && !isCompleted && !cameraActive && !isPendingVerification && currentUser?.role !== Role.ADMIN && (
                     <div className="fixed bottom-0 left-0 w-full p-4 bg-white/90 backdrop-blur-md border-t border-slate-200 shadow flex justify-center gap-4 z-50 lg:pl-64 no-print">
                         <button type="button" id="cameraButton" onClick={startCamera} className="px-6 py-2.5 bg-slate-100 text-slate-700 border border-slate-300 rounded-lg flex items-center gap-2 cursor-pointer hover:bg-slate-200 transition-colors pointer-events-auto"><Camera size={18} /> Add Photo</button>
                         <button type="button" id="submitButton" onClick={handleSubmit} className="px-8 py-2.5 bg-green-600 text-white rounded-lg flex items-center gap-2 font-bold shadow-lg cursor-pointer hover:bg-green-700 transition-colors pointer-events-auto"><CheckCircle size={18} /> Request Verification</button>

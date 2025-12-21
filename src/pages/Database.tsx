@@ -1,15 +1,17 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useData } from "@/contexts/DataContext";
+
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Filter, RefreshCw, Download, X } from "lucide-react";
-import { SheetStatus } from "@/types";
+import { Plus, Search, RefreshCw, Download, X, XCircle, Layers, Package, CheckCircle, LayoutGrid, FileText, Database as DbIcon } from "lucide-react";
+import { SheetData, SheetStatus, Role } from "@/types";
+import { t } from "@/lib/i18n";
 import * as XLSX from 'xlsx';
 
 export default function DatabasePage() {
-    const { sheets, loading, refreshSheets, loadMoreArchived } = useData();
+    const { sheets, loading, refreshSheets, loadMoreArchived, settings, currentUser, updateSheet } = useData();
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const activeFilter = searchParams.get('filter');
@@ -17,57 +19,59 @@ export default function DatabasePage() {
     // Local State
     const [searchQuery, setSearchQuery] = useState('');
     const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const [stageFilter, setStageFilter] = useState<'ALL' | 'STAGING' | 'LOADING' | 'COMPLETED'>('ALL');
 
-    if (loading && sheets.length === 0) return <div className="p-8 text-slate-400">Loading Database...</div>;
-
-    const getStatusVariant = (status: SheetStatus) => {
-        switch (status) {
-            case SheetStatus.COMPLETED: return "success";
-            case SheetStatus.LOCKED: return "info";
-            case SheetStatus.STAGING_VERIFICATION_PENDING: return "warning";
-            case SheetStatus.LOADING_VERIFICATION_PENDING: return "warning";
-            default: return "secondary";
-        }
-    };
+    if (loading && sheets.length === 0) return <div className="p-8 text-slate-400 font-medium animate-pulse">{t('loading_dots', settings.language)}</div>;
 
     // Filter Logic
-    const filteredSheets = sheets.filter(sheet => {
+    const filteredSheets = useMemo<SheetData[]>(() => {
+        let relevantSheets = [...sheets];
+
+        // 0. Role-Based Pre-filtering
+        if (currentUser?.role !== Role.ADMIN) {
+            // Supervisors see all sheets (read-only)
+            // But we could add specific restrictions here if needed.
+        }
+
+        // 0. Stage Filtering
+        if (stageFilter !== 'ALL') {
+            relevantSheets = relevantSheets.filter(sheet => {
+                if (stageFilter === 'STAGING') return sheet.status === SheetStatus.DRAFT || sheet.status === SheetStatus.STAGING_VERIFICATION_PENDING;
+                if (stageFilter === 'LOADING') return sheet.status === SheetStatus.LOCKED || sheet.status === SheetStatus.LOADING_VERIFICATION_PENDING;
+                if (stageFilter === 'COMPLETED') return sheet.status === SheetStatus.COMPLETED;
+                return true;
+            });
+        }
+
         // 1. Search Query Filter
         if (searchQuery) {
             const query = searchQuery.toLowerCase();
-            const matchesId = sheet.id.toLowerCase().includes(query);
-            const matchesSupervisor = sheet.supervisorName?.toLowerCase().includes(query);
-            const matchesDest = sheet.destination?.toLowerCase().includes(query);
-            if (!matchesId && !matchesSupervisor && !matchesDest) return false;
+            relevantSheets = relevantSheets.filter(s => {
+                const matchesId = s.id.toLowerCase().includes(query);
+                const matchesSupervisor = s.supervisorName?.toLowerCase().includes(query);
+                const matchesLoader = s.loadingSvName?.toLowerCase().includes(query);
+                const matchesApprover = s.verifiedBy?.toLowerCase().includes(query);
+                const matchesDest = s.destination?.toLowerCase().includes(query);
+                return matchesId || matchesSupervisor || matchesLoader || matchesApprover || matchesDest;
+            });
         }
 
         // 2. Tab/Status Filter
-        if (!activeFilter) return true;
-
-        // Exact Status Match
-        if (Object.values(SheetStatus).includes(activeFilter as SheetStatus)) {
-            return sheet.status === activeFilter;
+        if (activeFilter) {
+            if (Object.values(SheetStatus).includes(activeFilter as SheetStatus)) {
+                relevantSheets = relevantSheets.filter(s => s.status === activeFilter);
+            } else if (activeFilter === 'READY') {
+                relevantSheets = relevantSheets.filter(s => s.status === SheetStatus.LOCKED);
+            }
         }
 
-        // Custom Filters for Shift Lead Dashboard
-        if (activeFilter === 'REJECTED_STAGING') {
-            return (sheet.status === SheetStatus.DRAFT || sheet.status === SheetStatus.STAGING_VERIFICATION_PENDING) &&
-                sheet.rejectionReason && sheet.rejectionReason.trim() !== '';
-        }
-        if (activeFilter === 'REJECTED_LOADING') {
-            return (sheet.status === SheetStatus.LOCKED || sheet.status === SheetStatus.LOADING_VERIFICATION_PENDING) &&
-                sheet.rejectionReason && sheet.rejectionReason.trim() !== '';
-        }
-
-        // Add more custom filters as needed (e.g., READY, LOCKED for Admin if not handled by status)
-        if (activeFilter === 'READY') return sheet.status === SheetStatus.LOCKED;
-
-        return true;
-    });
+        return relevantSheets;
+    }, [sheets, stageFilter, searchQuery, activeFilter]);
 
     const clearFilter = () => {
         setSearchParams({});
         setSearchQuery('');
+        setStageFilter('ALL');
     };
 
     const handleLoadMore = async () => {
@@ -76,119 +80,278 @@ export default function DatabasePage() {
         setIsLoadingMore(false);
     };
 
+    const handleUpdateStatus = async (sheetId: string, newStatus: SheetStatus) => {
+        try {
+            const currentSheet = sheets.find(s => s.id === sheetId);
+            if (!currentSheet) {
+                console.error("Sheet not found for update");
+                return;
+            }
+
+            const updatedSheet = {
+                ...currentSheet,
+                status: newStatus,
+                verifiedBy: currentUser?.fullName,
+                verifiedAt: new Date().toISOString()
+            };
+
+            await updateSheet(updatedSheet);
+            // Context handles cache invalidation
+        } catch (error: unknown) {
+            console.error("Failed to update status", error instanceof Error ? error.message : String(error));
+        }
+    };
+
     const handleExport = () => {
         const exportData = filteredSheets.map(sheet => ({
             ID: sheet.id,
             Date: new Date(sheet.date).toLocaleDateString(),
-            Supervisor: sheet.supervisorName,
+            Staging_SV: sheet.supervisorName,
+            Loading_SV: sheet.loadingSvName || 'N/A',
+            Approved_By: sheet.verifiedBy || 'N/A',
             Destination: sheet.destination,
-            Vehicle: sheet.vehicleNo || 'N/A',
-            Status: sheet.status,
-            Cases: sheet.stagingItems?.reduce((acc, item) => acc + (item.ttlCases || 0), 0) || 0
+            Status: sheet.status
         }));
 
         const ws = XLSX.utils.json_to_sheet(exportData);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Operations");
-        XLSX.writeFile(wb, "operations_data.xlsx");
+        XLSX.writeFile(wb, `Operations_Report_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    };
+
+    const stats = useMemo(() => {
+        return {
+            total: sheets.length,
+            staging: sheets.filter(s => s.status === SheetStatus.DRAFT || s.status === SheetStatus.STAGING_VERIFICATION_PENDING).length,
+            loading: sheets.filter(s => s.status === SheetStatus.LOCKED || s.status === SheetStatus.LOADING_VERIFICATION_PENDING).length,
+            completed: sheets.filter(s => s.status === SheetStatus.COMPLETED).length
+        };
+    }, [sheets]);
+
+    const getDuration = (sheet: SheetData) => {
+        if (!sheet.createdAt || !sheet.updatedAt) return '-';
+        const start = new Date(sheet.createdAt).getTime();
+        const end = new Date(sheet.updatedAt).getTime();
+        const diff = end - start;
+        if (diff < 0) return '-';
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        return `${hours}h ${minutes}m`;
     };
 
     return (
-        <div className="p-8 space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-3xl font-bold text-foreground tracking-tight">Database</h2>
-                    <p className="text-muted-foreground">Manage staging and loading sheets.</p>
+        <div className="p-8 space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-700 bg-slate-50/50 dark:bg-slate-950/20 min-h-screen">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+                <div className="space-y-2">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 bg-primary/10 rounded-2xl">
+                            <DbIcon className="w-8 h-8 text-primary" />
+                        </div>
+                        <div>
+                            <h2 className="text-4xl font-extrabold text-foreground tracking-tight">
+                                {t('database', settings.language)}
+                            </h2>
+                            <p className="text-muted-foreground text-lg font-medium">{t('database_desc', settings.language)}</p>
+                        </div>
+                    </div>
                 </div>
-                {(activeFilter || searchQuery) && (
-                    <Button variant="ghost" onClick={clearFilter} className="text-red-400 hover:text-red-300 hover:bg-red-900/10 gap-2">
-                        <X size={16} /> Clear Filters
+
+                <div className="flex flex-wrap gap-3">
+                    <Button variant="outline" onClick={() => refreshSheets()} className="border-slate-200 dark:border-white/10 text-muted-foreground hover:text-foreground h-12 px-5 rounded-xl shadow-sm bg-white dark:bg-slate-900/50">
+                        <RefreshCw size={18} className={loading ? "animate-spin mr-2" : "mr-2"} /> {t('refresh', settings.language)}
                     </Button>
-                )}
-            </div>
-            <div className="flex gap-2">
-                <Button variant="outline" size="icon" onClick={() => refreshSheets()} className="border-border text-muted-foreground hover:text-foreground">
-                    <RefreshCw size={16} />
-                </Button>
-                <Button variant="outline" onClick={handleExport} className="gap-2 border-border text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10">
-                    <Download size={16} /> Export
-                </Button>
-                <Button onClick={() => navigate('/sheets/staging/new')} className="gap-2 bg-blue-600 hover:bg-blue-500">
-                    <Plus size={16} /> New Sheet
-                </Button>
-            </div>
-
-
-            {/* Filters */}
-            <div className="flex gap-4">
-                <div className="relative flex-1 max-w-sm">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
-                    <input
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full bg-background border border-input rounded-lg pl-10 pr-4 py-2 text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        placeholder="Search by ID, Supervisor, Destination..."
-                    />
+                    <Button variant="outline" onClick={handleExport} className="gap-2 border-slate-200 dark:border-white/10 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10 h-12 px-5 rounded-xl font-bold shadow-sm bg-white dark:bg-slate-900/50">
+                        <Download size={18} /> {t('export_excel', settings.language)}
+                    </Button>
+                    {(currentUser?.role === Role.ADMIN || currentUser?.role === Role.STAGING_SUPERVISOR) && (
+                        <Button onClick={() => navigate('/sheets/staging/new')} className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground h-12 px-8 rounded-xl shadow-lg shadow-primary/25 font-bold transition-all hover:scale-105 active:scale-95">
+                            <Plus size={18} /> {t('new_sheet', settings.language)}
+                        </Button>
+                    )}
                 </div>
-                {/* <Button variant="outline" className="gap-2">
-                    <Filter size={16} /> Filter
-                </Button> */}
             </div>
 
-            <div className="rounded-xl border border-border overflow-hidden">
+            {/* Quick Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatCard icon={<FileText className="text-blue-500" />} label="Total Records" value={stats.total} color="blue" />
+                <StatCard icon={<Layers className="text-amber-500" />} label="Staging Area" value={stats.staging} color="amber" />
+                <StatCard icon={<Package className="text-indigo-500" />} label="In Loading" value={stats.loading} color="indigo" />
+                <StatCard icon={<CheckCircle className="text-emerald-500" />} label="Completed" value={stats.completed} color="emerald" />
+            </div>
+
+            {/* Premium Filter Bar */}
+            <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-white/5 rounded-2xl p-6 shadow-xl shadow-slate-200/50 dark:shadow-none backdrop-blur-xl space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-6">
+                    <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl border border-slate-200/50 dark:border-white/5 shadow-inner">
+                        <FilterButton
+                            active={stageFilter === 'ALL'}
+                            onClick={() => setStageFilter('ALL')}
+                            icon={<LayoutGrid size={16} />}
+                            label={t('all', settings.language)}
+                        />
+                        <FilterButton
+                            active={stageFilter === 'STAGING'}
+                            onClick={() => setStageFilter('STAGING')}
+                            icon={<Layers size={16} />}
+                            label={t('staging', settings.language)}
+                        />
+                        <FilterButton
+                            active={stageFilter === 'LOADING'}
+                            onClick={() => setStageFilter('LOADING')}
+                            icon={<Package size={16} />}
+                            label={t('loading', settings.language)}
+                        />
+                        <FilterButton
+                            active={stageFilter === 'COMPLETED'}
+                            onClick={() => setStageFilter('COMPLETED')}
+                            icon={<CheckCircle size={16} />}
+                            label={t('completed', settings.language)}
+                        />
+                    </div>
+
+                    <div className="flex items-center gap-4 flex-1 max-w-xl group">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" size={20} />
+                            <input
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-xl pl-12 pr-4 py-3.5 text-foreground placeholder-muted-foreground focus:ring-4 focus:ring-primary/10 focus:border-primary focus:outline-none transition-all font-medium shadow-sm"
+                                placeholder={t('database_search_placeholder', settings.language)}
+                            />
+                        </div>
+                        {(activeFilter || searchQuery || stageFilter !== 'ALL') && (
+                            <Button variant="ghost" onClick={clearFilter} className="text-red-500 hover:text-red-600 hover:bg-red-500/5 font-bold h-12 rounded-xl group px-4">
+                                <X size={20} className="mr-2 group-hover:rotate-90 transition-transform" /> {t('clear', settings.language)}
+                            </Button>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            <div className="rounded-2xl border border-border overflow-hidden bg-card shadow-xl">
                 <Table>
-                    <TableHeader className="bg-muted/50">
-                        <TableRow className="hover:bg-transparent">
-                            <TableHead className="text-foreground font-bold">ID</TableHead>
-                            <TableHead className="text-foreground font-bold">Supervisor</TableHead>
-                            <TableHead className="text-foreground font-bold">Destination</TableHead>
-                            <TableHead className="text-foreground font-bold">Date</TableHead>
-                            <TableHead className="text-foreground font-bold">Status</TableHead>
-                            <TableHead className="text-right text-foreground font-bold">Actions</TableHead>
+                    <TableHeader className="bg-muted/30">
+                        <TableRow className="hover:bg-transparent border-b border-border/50">
+                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground pl-6 h-14 w-[100px]">{t('id', settings.language)}</TableHead>
+                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground h-14 w-[220px]">{t('worker_timeline', settings.language)}</TableHead>
+                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground h-14 w-[180px]">{t('destination', settings.language)}</TableHead>
+                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground h-14 w-[120px]">{t('date', settings.language)}</TableHead>
+                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground h-14 w-[100px]">{t('duration', settings.language)}</TableHead>
+                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground h-14 w-[150px]">{t('status', settings.language)}</TableHead>
+                            <TableHead className="text-right text-[10px] font-black uppercase tracking-widest text-muted-foreground h-14 pr-6 w-[120px]">{t('actions', settings.language)}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {filteredSheets.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={6} className="text-center h-24 text-slate-500">
-                                    No sheets found matching filter.
+                                <TableCell colSpan={6} className="text-center h-48 text-muted-foreground animate-pulse font-medium">
+                                    {t('no_sheets_found_matching', settings.language)}
                                 </TableCell>
                             </TableRow>
                         ) : (
                             filteredSheets.map((sheet) => (
                                 <TableRow
                                     key={sheet.id}
-                                    className="cursor-pointer hover:bg-white/5"
+                                    className="cursor-pointer hover:bg-primary/5 transition-all group border-b border-slate-100 dark:border-white/5 relative"
                                     onClick={() => {
                                         const isStaging = sheet.status === SheetStatus.DRAFT || sheet.status === SheetStatus.STAGING_VERIFICATION_PENDING;
                                         navigate(isStaging ? `/sheets/staging/${sheet.id}` : `/sheets/loading/${sheet.id}`);
                                     }}
                                 >
-                                    <TableCell className="font-medium text-foreground">{sheet.id}</TableCell>
-                                    <TableCell>{sheet.supervisorName}</TableCell>
-                                    <TableCell>{sheet.destination}</TableCell>
-                                    <TableCell>{new Date(sheet.date).toLocaleDateString()}</TableCell>
+                                    <TableCell className="pl-6 group-hover:pl-7 transition-all">
+                                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary scale-y-0 group-hover:scale-y-100 transition-transform origin-top duration-300" />
+                                        <span className="font-mono text-xs text-muted-foreground group-hover:text-primary font-bold">
+                                            #{sheet.id.slice(-6).toUpperCase()}
+                                        </span>
+                                    </TableCell>
+
+                                    {/* Worker Timeline in Table Cells */}
                                     <TableCell>
-                                        <div className="flex items-center gap-2">
-                                            <Badge variant={getStatusVariant(sheet.status)}>
-                                                {sheet.status.replace(/_/g, ' ')}
-                                            </Badge>
-                                            {sheet.rejectionReason && (
-                                                <Badge variant="destructive" className="text-[10px] px-1.5 py-0.5">REJECTED</Badge>
-                                            )}
+                                        <div className="flex items-center gap-0 overflow-hidden py-1">
+                                            <div className="flex flex-col items-center shrink-0">
+                                                <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black border-2 border-slate-200" title={`Staging: ${sheet.supervisorName}`}>
+                                                    {sheet.supervisorName?.charAt(0).toUpperCase()}
+                                                </div>
+                                                <span className="text-[7px] font-black uppercase tracking-tighter mt-1 opacity-40">Staging</span>
+                                            </div>
+                                            <div className="w-2 h-0.5 bg-slate-200 mt-[-8px]" />
+                                            <div className="flex flex-col items-center shrink-0">
+                                                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black border-2 ${sheet.loadingSvName ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-slate-50 border-dashed border-slate-200 text-slate-300'}`} title={`Loading: ${sheet.loadingSvName || 'Pending'}`}>
+                                                    {sheet.loadingSvName ? sheet.loadingSvName.charAt(0).toUpperCase() : '—'}
+                                                </div>
+                                                <span className={`text-[7px] font-black uppercase tracking-tighter mt-1 ${sheet.loadingSvName ? 'text-blue-600' : 'opacity-40'}`}>Loading</span>
+                                            </div>
+                                            <div className="w-2 h-0.5 bg-slate-200 mt-[-8px]" />
+                                            <div className="flex flex-col items-center shrink-0">
+                                                {(() => {
+                                                    const approver = sheet.verifiedBy || sheet.completedBy || sheet.loadingApprovedBy;
+                                                    return (
+                                                        <>
+                                                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black border-2 ${approver ? 'bg-purple-50 border-purple-200 text-purple-700' : 'bg-slate-50 border-dashed border-slate-200 text-slate-300'}`} title={`Approval: ${approver || 'Pending'}`}>
+                                                                {approver ? approver.charAt(0).toUpperCase() : '—'}
+                                                            </div>
+                                                            <span className={`text-[7px] font-black uppercase tracking-tighter mt-1 ${approver ? 'text-purple-600' : 'opacity-40'}`}>Approval</span>
+                                                        </>
+                                                    );
+                                                })()}
+                                            </div>
+
                                         </div>
                                     </TableCell>
-                                    <TableCell className="text-right">
+
+                                    <TableCell className="font-bold text-slate-700">{sheet.destination}</TableCell>
+                                    <TableCell className="text-sm font-medium text-muted-foreground">{new Date(sheet.date).toLocaleDateString()}</TableCell>
+                                    <TableCell className="text-xs font-mono text-slate-500">{getDuration(sheet)}</TableCell>
+                                    <TableCell>
+                                        <Badge variant="outline" className={`
+                                            px-4 py-1.5 font-extrabold text-[10px] uppercase tracking-tight rounded-full border-2
+                                            ${sheet.status === SheetStatus.COMPLETED ? 'text-emerald-600 border-emerald-500/20 bg-emerald-500/10 dark:text-emerald-400' :
+                                                sheet.status === SheetStatus.LOCKED ? 'text-indigo-600 border-indigo-500/20 bg-indigo-500/10 dark:text-indigo-400' :
+                                                    'text-amber-600 border-amber-500/20 bg-amber-500/10 dark:text-amber-400'}
+                                        `}>
+                                            {sheet.status.replace(/_/g, ' ')}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right pr-6 flex justify-end gap-2">
+                                        {currentUser?.role === Role.ADMIN && (sheet.status === SheetStatus.STAGING_VERIFICATION_PENDING || sheet.status === SheetStatus.LOADING_VERIFICATION_PENDING) && (
+                                            <>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-8 w-8 p-0 text-amber-500 hover:bg-amber-500/10"
+                                                    title={t('reject', settings.language)}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleUpdateStatus(sheet.id, sheet.status === SheetStatus.STAGING_VERIFICATION_PENDING ? SheetStatus.DRAFT : SheetStatus.LOCKED);
+                                                    }}
+                                                >
+                                                    <XCircle size={14} />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-8 w-8 p-0 text-emerald-500 hover:bg-emerald-500/10"
+                                                    title={t('approve', settings.language)}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleUpdateStatus(sheet.id, sheet.status === SheetStatus.STAGING_VERIFICATION_PENDING ? SheetStatus.LOCKED : SheetStatus.COMPLETED);
+                                                    }}
+                                                >
+                                                    <CheckCircle size={14} />
+                                                </Button>
+                                            </>
+                                        )}
                                         <Button
-                                            variant="ghost"
+                                            variant="secondary"
                                             size="sm"
+                                            className="font-black text-[10px] uppercase tracking-widest bg-muted/50 hover:bg-primary hover:text-white transition-all rounded-lg"
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 const isStaging = sheet.status === SheetStatus.DRAFT || sheet.status === SheetStatus.STAGING_VERIFICATION_PENDING;
                                                 navigate(isStaging ? `/sheets/staging/${sheet.id}` : `/sheets/loading/${sheet.id}`);
                                             }}
                                         >
-                                            View
+                                            {t('view_sheet', settings.language)}
                                         </Button>
                                     </TableCell>
                                 </TableRow>
@@ -198,12 +361,58 @@ export default function DatabasePage() {
                 </Table>
             </div>
 
-            <div className="flex justify-center pt-4">
-                <Button variant="ghost" onClick={handleLoadMore} disabled={isLoadingMore} className="text-slate-500 hover:text-slate-900">
-                    {isLoadingMore ? <RefreshCw className="animate-spin mr-2" size={16} /> : null}
-                    {isLoadingMore ? "Loading..." : "Load Older Sheets"}
+            <div className="flex justify-center pt-8">
+                <Button
+                    variant="ghost"
+                    onClick={handleLoadMore}
+                    disabled={isLoadingMore}
+                    className="text-muted-foreground hover:text-foreground h-12 px-8 font-black uppercase tracking-widest rounded-xl hover:bg-muted"
+                >
+                    {isLoadingMore ? <RefreshCw className="animate-spin mr-3" size={20} /> : null}
+                    {isLoadingMore ? t('loading_dots', settings.language) : t('load_older_sheets_database', settings.language)}
                 </Button>
             </div>
         </div >
+    );
+}
+
+function StatCard({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: number; color: string }) {
+    const colorClasses: Record<string, string> = {
+        blue: "bg-blue-500/10 border-blue-500/20",
+        amber: "bg-amber-500/10 border-amber-500/20",
+        indigo: "bg-indigo-500/10 border-indigo-500/20",
+        emerald: "bg-emerald-500/10 border-emerald-500/20",
+    };
+
+    return (
+        <div className={`p-5 rounded-2xl border ${colorClasses[color]} bg-white dark:bg-slate-900/60 shadow-sm transition-all hover:translate-y-[-4px] hover:shadow-lg`}>
+            <div className="flex items-center gap-4">
+                <div className="p-3 bg-white dark:bg-slate-800 rounded-xl shadow-sm">
+                    {icon}
+                </div>
+                <div>
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{label}</p>
+                    <p className="text-2xl font-black text-foreground">{value}</p>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function FilterButton({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
+    return (
+        <button
+            onClick={onClick}
+            className={`
+                flex items-center gap-2 px-6 py-2.5 text-xs font-black uppercase tracking-widest rounded-xl transition-all 
+                ${active
+                    ? 'bg-white dark:bg-slate-700 shadow-xl text-primary ring-1 ring-slate-200 dark:ring-white/10 scale-105'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-slate-200/50 dark:hover:bg-white/5'
+                }
+            `}
+        >
+            {icon}
+            {label}
+        </button>
     );
 }

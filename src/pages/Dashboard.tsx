@@ -1,12 +1,13 @@
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Users } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useData } from '@/contexts/DataContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SheetStatus, Role } from '@/types';
 import { StageColumn } from '@/components/dashboard/StageColumn';
 import { WorkflowRailway } from '@/components/dashboard/WorkflowRailway';
+import { t } from '@/lib/i18n';
 
 export default function DashboardOverview() {
     const { sheets, currentUser, settings, users } = useData();
@@ -50,8 +51,8 @@ export default function DashboardOverview() {
             if (currentUser?.role === Role.ADMIN || currentUser?.role === Role.STAGING_SUPERVISOR) {
 
                 const draftCount = relevantSheets.filter(s => s.status === SheetStatus.DRAFT && !isRejected(s)).length;
-                const pendingCount = relevantSheets.filter(s => s.status === SheetStatus.STAGING_VERIFICATION_PENDING).length;
-                const lockedCount = relevantSheets.filter(s => s.status === SheetStatus.LOCKED).length;
+                const pendingCount = sheets.filter(s => s.status === SheetStatus.STAGING_VERIFICATION_PENDING).length;
+                const lockedCount = sheets.filter(s => s.status === SheetStatus.LOCKED).length;
                 const rejectedCount = relevantSheets.filter(s => s.status === SheetStatus.DRAFT && isRejected(s)).length;
 
                 // GLOBAL STATS (Requested by User: See all users' totals)
@@ -60,12 +61,12 @@ export default function DashboardOverview() {
                 const totalStagingCount = sheets.length;
 
                 return [
-                    { label: 'Total Staging', count: totalStagingCount, link: '/database', color: 'bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold' },
-                    { label: 'Draft', count: draftCount, link: '/admin?tab=staging_db&filter=DRAFT', color: 'bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-400 font-bold' },
-                    { label: 'Pending', count: pendingCount, link: '/admin?tab=staging_db&filter=PENDING', color: 'bg-orange-100 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-500/30 text-orange-900 dark:text-orange-400 font-bold' },
-                    { label: 'Locked', count: lockedCount, link: '/admin?tab=staging_db&filter=LOCKED', color: 'bg-purple-100 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-500/30 text-purple-900 dark:text-purple-400 font-bold' },
-                    { label: 'Completed', count: completedCount, link: '/admin?tab=staging_db&filter=COMPLETED', color: 'bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold' },
-                    { label: 'Rejected', count: rejectedCount, link: '/admin?tab=staging_db&filter=REJECTED', color: 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold' }
+                    { label: t('total_staging', settings.language), count: totalStagingCount, link: '/database', color: 'bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold' },
+                    { label: t('draft', settings.language), count: draftCount, link: '/admin?tab=staging_db&filter=DRAFT', color: 'bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-400 font-bold' },
+                    { label: t('pending_verification', settings.language), count: pendingCount, link: '/admin?tab=staging_db&filter=PENDING', color: 'bg-orange-100 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-500/30 text-orange-900 dark:text-orange-400 font-bold' },
+                    { label: t('locked_not_editable', settings.language), count: lockedCount, link: '/admin?tab=staging_db&filter=LOCKED', color: 'bg-purple-100 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-500/30 text-purple-900 dark:text-purple-400 font-bold' },
+                    { label: t('completed', settings.language), count: completedCount, link: '/admin?tab=staging_db&filter=COMPLETED', color: 'bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold' },
+                    { label: t('rejected', settings.language), count: rejectedCount, link: '/admin?tab=staging_db&filter=REJECTED', color: 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold' }
                 ];
             }
 
@@ -75,7 +76,7 @@ export default function DashboardOverview() {
 
             if (rejectedCount === 0) return [];
             return [
-                { label: 'Rejected', count: rejectedCount, link: '/admin?tab=shift_lead_db&filter=STAGING_REJECTED', color: 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold' }
+                { label: t('rejected', settings.language), count: rejectedCount, link: '/admin?tab=shift_lead_db&filter=STAGING_REJECTED', color: 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold' }
             ];
         }
 
@@ -99,11 +100,11 @@ export default function DashboardOverview() {
                 const rejectedCount = loadingSheets.filter(s => s.status === SheetStatus.LOCKED && isRejected(s)).length;
 
                 return [
-                    { label: 'Total Loading', count: totalLoadingCount, link: '/database', color: 'bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold' },
-                    { label: 'Ready to Load', count: readyCount, link: '/admin?tab=loading_db&filter=READY', color: 'bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 text-blue-900 dark:text-blue-400 font-bold' },
-                    { label: 'Locked (Pending Ver.)', count: pendingVerCount, link: '/admin?tab=loading_db&filter=LOCKED', color: 'bg-orange-100 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-500/30 text-orange-900 dark:text-orange-400 font-bold' },
-                    { label: 'Completed', count: completedCount, link: '/admin?tab=loading_db&filter=COMPLETED', color: 'bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold' },
-                    { label: 'Rejected', count: rejectedCount, link: '/admin?tab=loading_db&filter=REJECTED', color: 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold' }
+                    { label: t('total_loading', settings.language), count: totalLoadingCount, link: '/database', color: 'bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold' },
+                    { label: t('ready_to_load', settings.language), count: readyCount, link: '/admin?tab=loading_db&filter=READY', color: 'bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 text-blue-900 dark:text-blue-400 font-bold' },
+                    { label: t('pending_verification', settings.language), count: pendingVerCount, link: '/admin?tab=loading_db&filter=LOCKED', color: 'bg-orange-100 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-500/30 text-orange-900 dark:text-orange-400 font-bold' },
+                    { label: t('completed', settings.language), count: completedCount, link: '/admin?tab=loading_db&filter=COMPLETED', color: 'bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold' },
+                    { label: t('rejected', settings.language), count: rejectedCount, link: '/admin?tab=loading_db&filter=REJECTED', color: 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold' }
                 ];
             }
             return [];
@@ -123,13 +124,13 @@ export default function DashboardOverview() {
             const allDoneCount = relevantSheets.filter(s => s.status === SheetStatus.COMPLETED).length;
 
             return [
-                { label: 'Total Approvals', count: approvalCount, link: '/admin?tab=shift_lead_db', color: 'bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold' },
-                { label: 'Staging Approvals', count: stagingApprCount, link: '/admin?tab=shift_lead_db&filter=STAGING_APPROVALS', color: 'bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 text-blue-900 dark:text-blue-400 font-bold' },
-                { label: 'Loading Approvals', count: loadingApprCount, link: '/admin?tab=shift_lead_db&filter=LOADING_APPROVALS', color: 'bg-orange-100 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-500/30 text-orange-900 dark:text-orange-400 font-bold' },
-                { label: 'Completed', count: completedCount, link: '/admin?tab=shift_lead_db&filter=COMPLETED', color: 'bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold' },
-                { label: 'Staging Rejected', count: stagingRejCount, link: '/admin?tab=shift_lead_db&filter=STAGING_REJECTED', color: 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold' },
-                { label: 'Loading Rejected', count: loadingRejCount, link: '/admin?tab=shift_lead_db&filter=LOADING_REJECTED', color: 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold' },
-                { label: 'All Done', count: allDoneCount, link: '/database', color: 'bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold shadow-sm' }
+                { label: t('total_approvals', settings.language), count: approvalCount, link: '/admin?tab=shift_lead_db', color: 'bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold' },
+                { label: t('staging_approvals', settings.language), count: stagingApprCount, link: '/admin?tab=shift_lead_db&filter=STAGING_APPROVALS', color: 'bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 text-blue-900 dark:text-blue-400 font-bold' },
+                { label: t('loading_approvals', settings.language), count: loadingApprCount, link: '/admin?tab=shift_lead_db&filter=LOADING_APPROVALS', color: 'bg-orange-100 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-500/30 text-orange-900 dark:text-orange-400 font-bold' },
+                { label: t('completed', settings.language), count: completedCount, link: '/admin?tab=shift_lead_db&filter=COMPLETED', color: 'bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold' },
+                { label: t('staging_rejected', settings.language), count: stagingRejCount, link: '/admin?tab=shift_lead_db&filter=STAGING_REJECTED', color: 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold' },
+                { label: t('loading_rejected', settings.language), count: loadingRejCount, link: '/admin?tab=shift_lead_db&filter=LOADING_REJECTED', color: 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold' },
+                { label: t('all_done', settings.language), count: allDoneCount, link: '/database', color: 'bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold shadow-sm' }
             ];
         }
 
@@ -141,10 +142,10 @@ export default function DashboardOverview() {
             const rejectedCount = relevantSheets.filter(isRejected).length;
 
             return [
-                { label: 'Total Sheets', count: allCount, link: '/database', color: 'bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold' },
-                { label: 'Completed', count: completedCount, link: '/database?filter=COMPLETED', color: 'bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold' },
-                { label: 'Active', count: activeCount, link: '/database?filter=ACTIVE', color: 'bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 text-blue-900 dark:text-blue-400 font-bold' },
-                { label: 'Rejected', count: rejectedCount, link: '/database?filter=REJECTED', color: 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold' },
+                { label: t('total_sheets', settings.language), count: allCount, link: '/database', color: 'bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold' },
+                { label: t('completed', settings.language), count: completedCount, link: '/database?filter=COMPLETED', color: 'bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold' },
+                { label: t('active', settings.language), count: activeCount, link: '/database?filter=ACTIVE', color: 'bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 text-blue-900 dark:text-blue-400 font-bold' },
+                { label: t('rejected', settings.language), count: rejectedCount, link: '/database?filter=REJECTED', color: 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold' },
             ];
         }
 
@@ -174,7 +175,7 @@ export default function DashboardOverview() {
                 className="flex items-center justify-between"
             >
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-foreground mb-1">Dashboard</h1>
+                    <h1 className="text-3xl font-bold tracking-tight text-foreground mb-1">{t('dashboard', settings.language)}</h1>
 
                 </div>
                 {/* New Sheet Button for Staging Supervisor */}
@@ -184,7 +185,7 @@ export default function DashboardOverview() {
                         className="gap-2 bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20"
                     >
                         <Plus size={18} />
-                        New Staging Sheet
+                        {t('new_staging_sheet', settings.language)}
                     </Button>
                 )}
             </motion.div>
@@ -228,21 +229,18 @@ export default function DashboardOverview() {
                         {/* 4th Column: Users (Moved & Updated) */}
                         <div className={`rounded-lg border border-indigo-200 dark:border-indigo-500/20 ${settings?.density === 'compact' ? 'p-2' : 'p-3'} flex flex-col gap-2 transition-colors relative group hover:bg-slate-50 dark:hover:bg-white/[0.02]`}>
                             <div className={`flex items-center justify-between border-b border-slate-200 dark:border-white/5 ${settings?.density === 'compact' ? 'pb-1' : 'pb-2'}`}>
-                                <h3 className="text-xs font-bold uppercase tracking-wider opacity-70">Users</h3>
+                                <h3 className="text-xs font-bold uppercase tracking-wider opacity-70">{t('users', settings.language)}</h3>
                                 <span className="text-xs font-mono opacity-50">{users.length}</span>
                             </div>
 
-                            {/* User Stats Grid */}
                             <div className="grid grid-cols-2 gap-2">
                                 {/* Total Users (Full Width) */}
                                 <button
                                     onClick={() => navigate('/admin?tab=users')}
-                                    className="col-span-2 flex items-center justify-start gap-3 p-2 rounded bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold hover:scale-[1.02] transition-all group min-h-[40px]"
+                                    className="col-span-2 flex items-center justify-between px-4 py-2 rounded bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold hover:scale-[1.02] transition-all group min-h-[40px]"
                                 >
-                                    <div className="text-left pl-1">
-                                        <span className="font-bold text-base block leading-none">{userStats?.total || 0}</span>
-                                        <span className="text-[9px] uppercase font-bold tracking-wider opacity-70 block leading-none mt-1">Total Users</span>
-                                    </div>
+                                    <span className="text-[10px] uppercase font-bold tracking-wider opacity-70">{t('total_users', settings.language)}</span>
+                                    <span className="font-bold text-2xl">{userStats?.total || 0}</span>
                                 </button>
 
                                 {/* Pending (Alert) */}
@@ -252,7 +250,7 @@ export default function DashboardOverview() {
                                 >
                                     <div className="absolute top-0 right-0 p-1 opacity-20"><Plus size={24} /></div>
                                     <span className="font-bold text-lg">{users.filter(u => !u.isApproved).length}</span>
-                                    <span className="text-[9px] opacity-80 uppercase mt-1">Pending</span>
+                                    <span className="text-[9px] opacity-80 uppercase mt-1">{t('pending', settings.language)}</span>
                                 </button>
 
                                 {/* Staging */}
@@ -261,7 +259,7 @@ export default function DashboardOverview() {
                                     className="flex flex-col items-center justify-center p-2 rounded bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 text-blue-900 dark:text-blue-400 font-bold hover:scale-[1.02] transition-all"
                                 >
                                     <span className="font-bold text-lg">{userStats?.staging || 0}</span>
-                                    <span className="text-[9px] opacity-80 uppercase mt-1">Staging</span>
+                                    <span className="text-[9px] opacity-80 uppercase mt-1">{t('staging', settings.language)}</span>
                                 </button>
 
                                 {/* Loading */}
@@ -270,7 +268,7 @@ export default function DashboardOverview() {
                                     className="flex flex-col items-center justify-center p-2 rounded bg-orange-100 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-500/30 text-orange-900 dark:text-orange-400 font-bold hover:scale-[1.02] transition-all"
                                 >
                                     <span className="font-bold text-lg">{userStats?.loading || 0}</span>
-                                    <span className="text-[9px] opacity-80 uppercase mt-1">Loading</span>
+                                    <span className="text-[9px] opacity-80 uppercase mt-1">{t('loading', settings.language)}</span>
                                 </button>
 
                                 {/* Leads */}
@@ -279,7 +277,7 @@ export default function DashboardOverview() {
                                     className="flex flex-col items-center justify-center p-2 rounded bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold hover:scale-[1.02] transition-all"
                                 >
                                     <span className="font-bold text-lg">{userStats?.shift || 0}</span>
-                                    <span className="text-[9px] opacity-80 uppercase mt-1">Leads</span>
+                                    <span className="text-[9px] opacity-80 uppercase mt-1">{t('leads', settings.language)}</span>
                                 </button>
                             </div>
 
@@ -290,7 +288,7 @@ export default function DashboardOverview() {
                     {/* Row 2: Total Sheets (Full Width) */}
                     <div className="w-full">
                         <StageColumn
-                            title="Total Sheets"
+                            title={t('total_sheets', settings.language)}
                             color="border-emerald-500/20"
                             items={relevantSheets.filter(s => s.status === SheetStatus.COMPLETED)}
                             linkTo="/database"
@@ -300,7 +298,7 @@ export default function DashboardOverview() {
                             hideItems={true}
                         />
                     </div>
-                </div>
+                </div >
 
             ) : (
                 // SUPERVISOR / DEFAULT LAYOUT (Grid)
@@ -360,29 +358,30 @@ export default function DashboardOverview() {
                         </div>
                     )}
                 </div>
-            )}
+            )
+            }
 
 
             {/* Recent Sheets Table */}
             <Card className="border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/20 shadow-sm dark:shadow-none">
                 <CardHeader className={`${settings?.density === 'compact' ? 'py-2' : 'pb-2'}`}>
-                    <CardTitle className="text-lg text-slate-800 dark:text-white">Recent Activity {currentUser?.role !== Role.ADMIN && '(My Tasks)'}</CardTitle>
+                    <CardTitle className="text-lg text-slate-800 dark:text-white">{t('recent_activity', settings.language)} {currentUser?.role !== Role.ADMIN && `(${t('users', settings.language)})`}</CardTitle>
                 </CardHeader>
                 <CardContent className={`${settings?.density === 'compact' ? 'pb-2' : ''}`}>
                     <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-white/5">
                         <table className="w-full text-xs text-left text-slate-600 dark:text-slate-400">
                             <thead className="bg-slate-50 dark:bg-slate-950/50 text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-500 sticky top-0 z-10 backdrop-blur-sm">
                                 <tr>
-                                    <th className={`p-2 ${settings?.density === 'compact' ? 'py-1' : ''}`}>Sheet ID</th>
-                                    <th className={`p-2 ${settings?.density === 'compact' ? 'py-1' : ''}`}>Supervisor</th>
-                                    <th className={`p-2 ${settings?.density === 'compact' ? 'py-1' : ''}`}>Status</th>
-                                    <th className={`p-2 ${settings?.density === 'compact' ? 'py-1' : ''}`}>Date</th>
-                                    <th className={`p-2 text-right ${settings?.density === 'compact' ? 'py-1' : ''}`}>Action</th>
+                                    <th className={`p-2 ${settings?.density === 'compact' ? 'py-1' : ''}`}>{t('sheet_id', settings.language)}</th>
+                                    <th className={`p-2 ${settings?.density === 'compact' ? 'py-1' : ''}`}>{t('supervisor', settings.language)}</th>
+                                    <th className={`p-2 ${settings?.density === 'compact' ? 'py-1' : ''}`}>{t('status', settings.language)}</th>
+                                    <th className={`p-2 ${settings?.density === 'compact' ? 'py-1' : ''}`}>{t('date', settings.language)}</th>
+                                    <th className={`p-2 text-right ${settings?.density === 'compact' ? 'py-1' : ''}`}>{t('action', settings.language)}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-white/5">
                                 {relevantSheets.length === 0 ? (
-                                    <tr><td colSpan={5} className="p-6 text-center opacity-50">No recent activity found.</td></tr>
+                                    <tr><td colSpan={5} className="p-6 text-center opacity-50">{t('no_activity', settings.language)}</td></tr>
                                 ) : (
                                     relevantSheets.filter(s => {
                                         if (currentUser?.role === Role.STAGING_SUPERVISOR) {
@@ -423,7 +422,7 @@ export default function DashboardOverview() {
                                                         navigate(isStaging ? `/sheets/staging/${sheet.id}` : `/sheets/loading/${sheet.id}`);
                                                     }}
                                                 >
-                                                    Open
+                                                    {t('open', settings.language)}
                                                 </Button>
                                             </td>
                                         </tr>
@@ -434,7 +433,7 @@ export default function DashboardOverview() {
                     </div>
                 </CardContent>
             </Card>
-        </div>
+        </div >
     );
 }
 

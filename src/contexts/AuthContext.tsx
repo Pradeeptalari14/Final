@@ -16,13 +16,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Safe session fetching with error handling
+        // 1. Check SessionStorage (Tab Isolated) FIRST
+        const localUser = sessionStorage.getItem('currentUser');
+        if (localUser) {
+            try {
+                const parsed = JSON.parse(localUser);
+                // Create a fake session structure for compatibility
+                const fakeSession: any = {
+                    user: parsed,
+                    access_token: 'local-session',
+                };
+                setSession(fakeSession);
+                setLoading(false);
+                return; // SKIP Supabase check if we have a local user
+            } catch (e) {
+                console.error("Invalid local session", e);
+            }
+        }
+
+        // 2. Fallback to Supabase (Global) Check
         supabase.auth.getSession().then(({ data, error }: { data: { session: Session | null }, error: any }) => {
             if (error) {
                 console.error("AuthCheck Failed:", error.message);
             }
-            // Even if error, data.session might be null, which is fine
-            setSession(data?.session ?? null);
+            if (!localUser) { // Only set if no local user found
+                setSession(data?.session ?? null);
+            }
             setLoading(false);
         }).catch((err: any) => {
             console.error("Unexpected Auth Error:", err);
@@ -32,7 +51,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const {
             data: { subscription },
         } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
-            setSession(session);
+            // Only update if we don't have a forced local session override
+            if (!sessionStorage.getItem('currentUser')) {
+                setSession(session);
+            }
             setLoading(false);
         });
 
