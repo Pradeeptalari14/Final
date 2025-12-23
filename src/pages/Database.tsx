@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Search, RefreshCw, Download, X, XCircle, Layers, Package, CheckCircle, LayoutGrid, FileText, Database as DbIcon } from "lucide-react";
 import { SheetData, SheetStatus, Role } from "@/types";
 import { t } from "@/lib/i18n";
-import * as XLSX from 'xlsx';
+import { exportToExcelGeneric } from '@/lib/excelExport';
 
 export default function DatabasePage() {
     const { sheets, loading, refreshSheets, loadMoreArchived, settings, currentUser, updateSheet } = useData();
@@ -113,10 +113,7 @@ export default function DatabasePage() {
             Status: sheet.status
         }));
 
-        const ws = XLSX.utils.json_to_sheet(exportData);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Operations");
-        XLSX.writeFile(wb, `Operations_Report_${new Date().toISOString().slice(0, 10)}.xlsx`);
+        exportToExcelGeneric(exportData, "Operations_Report", "Operations");
     };
 
     const stats = useMemo(() => {

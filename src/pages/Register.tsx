@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Role } from '@/types';
 import { supabase } from '@/lib/supabase';
-import { Eye, EyeOff, Loader2, ArrowLeft, User } from 'lucide-react';
+import { Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function RegisterPage() {
@@ -17,6 +17,10 @@ export default function RegisterPage() {
         confirmPassword: '',
         role: Role.STAGING_SUPERVISOR
     });
+
+    const formatRole = (role: string) => {
+        return role.replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+    };
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -65,140 +69,148 @@ export default function RegisterPage() {
     };
 
     return (
-        <div className="relative h-screen w-full overflow-hidden font-sans">
-            {/* Background Image */}
-            <div
-                className="absolute inset-0 z-0"
-                style={{
-                    backgroundImage: `url('/bg-v2.png')`,
-                    backgroundSize: '100% 100%',
-                    backgroundPosition: 'center',
-                    backgroundRepeat: 'no-repeat'
-                }}
-            />
-            {/* Dark Overlay */}
-            <div className="absolute inset-0 z-0 bg-black/40" />
+        <div className="relative h-screen w-full font-sans overflow-hidden bg-[#fce4ec]">
+            {/* Premium Sricity Background */}
+            <div className="absolute inset-0 z-0">
+                <div
+                    className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity duration-1000"
+                    style={{ backgroundImage: "url('/sricity-bg.png')" }}
+                />
+                <div className="absolute inset-0 bg-slate-900/5 backdrop-blur-[1px]" />
+                <div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{ background: 'radial-gradient(circle at center, transparent 0%, rgba(2,6,23,0.1) 100%)' }}
+                />
+            </div>
 
-            {/* Content Container - Two Column Layout */}
-            <div className="relative z-10 h-full w-full flex flex-col md:flex-row min-h-screen">
-
-                {/* Left Side: Spacer */}
-                <div className="hidden md:flex flex-1 flex-col justify-center px-16 lg:px-24">
+            {/* Header Content - Top Left Branding */}
+            <motion.div
+                initial={{ opacity: 0, x: -30 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="absolute top-10 left-12 z-20 flex items-center gap-5"
+            >
+                <img src="/unicharm-logo.png" alt="Unicharm" className="w-14 h-auto drop-shadow-2xl brightness-110" />
+                <div className="flex flex-col">
+                    <h1 className="text-2xl font-serif font-black text-slate-800 tracking-tight leading-none">
+                        Unicharm Operations
+                    </h1>
+                    <p className="text-[10px] uppercase tracking-[0.4em] font-bold text-slate-500 mt-1.5 opacity-80">
+                        Supply Chain Management
+                    </p>
                 </div>
+            </motion.div>
 
-                {/* Right Side: Register Card */}
-                <div className="flex-1 flex items-center justify-center px-4 md:px-16 lg:justify-end lg:pr-32">
-                    <motion.div
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.6, ease: "easeOut" }}
-                        className="w-full max-w-[420px]"
-                    >
-                        {/* Consistent Styling with Login */}
-                        <div className="relative bg-card/60 backdrop-blur-md border border-border rounded-3xl p-8 shadow-2xl overflow-hidden ring-1 ring-border/20">
+            {/* Header Content - Top Right Welcome */}
+            <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="absolute top-12 right-12 z-20 text-right"
+            >
+                <h2 className="text-5xl font-serif text-slate-800 font-light tracking-tighter italic leading-tight">
+                    Welcome to Sricity
+                </h2>
+                <p className="text-sm font-bold text-slate-600 tracking-[0.3em] uppercase opacity-40 mt-1">
+                    SCM-FG Operations
+                </p>
+            </motion.div>
 
-                            {/* Decor header line */}
-                            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-400 via-purple-400 to-emerald-400 opacity-90" />
+            {/* CENTER: Register Form Card */}
+            <div className="absolute inset-0 z-30 flex items-center justify-center">
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    className="w-full max-w-[420px] p-8 rounded-[2.5rem] bg-slate-950/85 backdrop-blur-2xl border border-white/10 shadow-[0_50px_100px_rgba(0,0,0,0.6)] ring-1 ring-white/10"
+                >
+                    <div className="text-center mb-10">
+                        <div className="inline-flex items-center justify-center px-4 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 mb-4">
+                            <span className="text-[8px] font-black uppercase tracking-[0.4em] text-blue-400">
+                                Access Request Portal
+                            </span>
+                        </div>
+                        <h2 className="text-3xl font-bold text-white tracking-tight">Create Account</h2>
+                    </div>
 
-                            {/* Header */}
-                            <div className="text-center mb-6 mt-2">
-                                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-600/80 to-pink-600/80 shadow-lg shadow-purple-500/20 mb-4 ring-2 ring-white/20">
-                                    <User className="w-7 h-7 text-white" />
-                                </div>
-                                <h1 className="text-2xl font-bold text-foreground tracking-tight mb-1 drop-shadow-md">Create Account</h1>
-                                <p className="text-muted-foreground text-sm font-medium">Join Unicharm Operations</p>
-                            </div>
+                    <form onSubmit={handleRegister} className="space-y-4">
+                        <div className="space-y-1">
+                            <input
+                                type="text"
+                                placeholder="Username"
+                                value={formData.username}
+                                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                                className="w-full h-12 bg-white/5 border border-white/10 rounded-xl px-4 text-white placeholder-white/20 focus:outline-none focus:border-blue-500/50 transition-all text-sm font-medium"
+                                required
+                            />
+                        </div>
 
-                            <form onSubmit={handleRegister} className="space-y-4">
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-muted-foreground ml-1 uppercase tracking-wider shadow-sm">Username</label>
-                                    <input
-                                        type="text"
-                                        placeholder="Choose a username"
-                                        value={formData.username}
-                                        onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                                        className="w-full h-11 bg-background/50 border border-input rounded-xl px-4 text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary focus:bg-background/80 transition-all text-sm backdrop-blur-sm"
-                                        required
-                                    />
-                                </div>
-
-                                <div className="space-y-1 relative">
-                                    <label className="text-xs font-bold text-muted-foreground ml-1 uppercase tracking-wider shadow-sm">Password</label>
-                                    <div className="relative">
-                                        <input
-                                            type={showPassword ? "text" : "password"}
-                                            placeholder="Create a password"
-                                            value={formData.password}
-                                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                            className="w-full h-11 bg-background/50 border border-input rounded-xl px-4 pr-12 text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary focus:bg-background/80 transition-all text-sm backdrop-blur-sm"
-                                            required
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/20 transition-colors"
-                                        >
-                                            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1 relative">
-                                    <label className="text-xs font-bold text-muted-foreground ml-1 uppercase tracking-wider shadow-sm">Confirm Password</label>
-                                    <input
-                                        type="password"
-                                        placeholder="Confirm password"
-                                        value={formData.confirmPassword}
-                                        onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                                        className="w-full h-11 bg-background/50 border border-input rounded-xl px-4 text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary focus:bg-background/80 transition-all text-sm backdrop-blur-sm"
-                                        required
-                                    />
-                                </div>
-
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-muted-foreground ml-1 uppercase tracking-wider shadow-sm">Role Request</label>
-                                    <div className="relative">
-                                        <select
-                                            value={formData.role}
-                                            onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
-                                            className="w-full h-11 bg-background/50 border border-input rounded-xl px-4 text-foreground focus:outline-none focus:border-primary focus:bg-background/80 transition-all text-sm appearance-none cursor-pointer backdrop-blur-sm"
-                                        >
-                                            {Object.values(Role).map(role => (
-                                                <option key={role} value={role} className="bg-popover text-popover-foreground py-2">
-                                                    {role.replace(/_/g, ' ')}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground">
-                                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                                            </svg>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <Button
-                                    type="submit"
-                                    disabled={loading}
-                                    className="w-full h-12 mt-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold rounded-xl text-base shadow-lg shadow-purple-500/30 border-none transition-all duration-300 transform active:scale-[0.98]"
-                                >
-                                    {loading ? <Loader2 className="animate-spin" /> : <span className="flex items-center gap-2">Create Account <User size={18} /></span>}
-                                </Button>
-                            </form>
-
-                            <div className="mt-6 pt-4 border-t border-border/20 text-center">
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="relative">
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    placeholder="Password"
+                                    value={formData.password}
+                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                    className="w-full h-12 bg-white/5 border border-white/10 rounded-xl px-4 text-white text-[13px] focus:outline-none focus:border-blue-500/50 transition-all placeholder:text-white/20 font-medium"
+                                    required
+                                />
                                 <button
-                                    onClick={() => navigate('/login')}
-                                    className="text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center gap-2 w-full text-sm group"
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-white/20"
                                 >
-                                    <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-                                    Back to Login
+                                    {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                                 </button>
                             </div>
-
+                            <div className="relative">
+                                <input
+                                    type="password"
+                                    placeholder="Confirm"
+                                    value={formData.confirmPassword}
+                                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                                    className="w-full h-12 bg-white/5 border border-white/10 rounded-xl px-4 text-white text-[13px] focus:outline-none focus:border-blue-500/50 transition-all placeholder:text-white/20 font-medium"
+                                    required
+                                />
+                            </div>
                         </div>
-                    </motion.div>
-                </div>
+
+                        <div className="relative">
+                            <select
+                                value={formData.role}
+                                onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
+                                className="w-full h-12 bg-white/5 border border-white/10 rounded-xl px-4 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-all appearance-none cursor-pointer font-medium"
+                            >
+                                {Object.values(Role).map(role => (
+                                    <option key={role} value={role} className="text-black">
+                                        {formatRole(role)}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <Button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full h-14 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl shadow-2xl transition-all active:scale-[0.98] mt-4 flex items-center justify-center uppercase tracking-[0.2em] text-xs"
+                        >
+                            {loading ? <Loader2 className="animate-spin w-5 h-5" /> : "Request Access"}
+                        </Button>
+                    </form>
+
+                    <div className="mt-8 text-center border-t border-white/5 pt-6">
+                        <button
+                            onClick={() => navigate('/login')}
+                            className="flex items-center justify-center gap-2 mx-auto text-[10px] font-bold text-white/20 hover:text-blue-400 transition-all uppercase tracking-[0.3em]"
+                        >
+                            <ArrowLeft size={14} /> Back to Sign In
+                        </button>
+                    </div>
+                </motion.div>
+            </div>
+
+            {/* Bottom Content: Premium Product Brands */}
+            <div className="absolute bottom-12 left-0 right-0 z-20 flex justify-center gap-16 md:gap-24 opacity-30 grayscale contrast-150">
+                <img src="/brand-mamypoko.png" alt="MamyPoko" className="h-10 md:h-12 w-auto" />
+                <img src="/brand-sofy.png" alt="SOFY" className="h-8 md:h-10 w-auto" />
+                <img src="/brand-lifree.png" alt="Lifree" className="h-8 md:h-10 w-auto" />
             </div>
         </div>
     );

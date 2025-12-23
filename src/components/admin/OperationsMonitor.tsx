@@ -34,7 +34,9 @@ export function OperationsMonitor({ sheets, onRefresh }: OperationsMonitorProps)
     const [searchQuery, setSearchQuery] = useState('');
     const [supervisorFilter, setSupervisorFilter] = useState('ALL');
     const [shiftFilter, setShiftFilter] = useState('ALL');
-    const [dateFilter, setDateFilter] = useState('');
+    const [timeFilter, setTimeFilter] = useState<'ALL' | '30D' | '90D' | 'CUSTOM'>('ALL');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
     const [isRefreshing, setIsRefreshing] = useState(false);
 
     const handleRefresh = async () => {
@@ -58,7 +60,22 @@ export function OperationsMonitor({ sheets, onRefresh }: OperationsMonitorProps)
 
     const filteredSheets = useMemo(() => {
         return sheets.filter(sheet => {
-            if (sheet.status === SheetStatus.COMPLETED && !dateFilter) return false;
+            // 0. Time Filtering
+            if (timeFilter !== 'ALL') {
+                const sheetTime = new Date(sheet.createdAt).getTime();
+                if (timeFilter === 'CUSTOM') {
+                    if (startDate && sheetTime < new Date(startDate).getTime()) return false;
+                    if (endDate && sheetTime > new Date(endDate).getTime()) return false;
+                } else {
+                    const now = new Date();
+                    const days = timeFilter === '30D' ? 30 : 90;
+                    const threshold = new Date(now.setDate(now.getDate() - days)).getTime();
+                    if (sheetTime < threshold) return false;
+                }
+            }
+
+            // Fallback: don't show completed sheets unless filtered by time
+            if (sheet.status === SheetStatus.COMPLETED && timeFilter === 'ALL') return false;
 
             const matchesSearch = searchQuery === '' ||
                 sheet.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -67,11 +84,10 @@ export function OperationsMonitor({ sheets, onRefresh }: OperationsMonitorProps)
 
             const matchesSupervisor = supervisorFilter === 'ALL' || sheet.supervisorName === supervisorFilter;
             const matchesShift = shiftFilter === 'ALL' || sheet.shift === shiftFilter;
-            const matchesDate = dateFilter === '' || (sheet.date && sheet.date.includes(dateFilter));
 
-            return matchesSearch && matchesSupervisor && matchesShift && matchesDate;
+            return matchesSearch && matchesSupervisor && matchesShift;
         }).sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime());
-    }, [sheets, searchQuery, supervisorFilter, shiftFilter, dateFilter]);
+    }, [sheets, searchQuery, supervisorFilter, shiftFilter, timeFilter, startDate, endDate]);
 
     const stats = useMemo(() => {
         const active = filteredSheets.filter(s => s.status !== SheetStatus.COMPLETED);
@@ -161,7 +177,7 @@ export function OperationsMonitor({ sheets, onRefresh }: OperationsMonitorProps)
                     <select
                         value={supervisorFilter}
                         onChange={(e) => setSupervisorFilter(e.target.value)}
-                        className="bg-transparent border-none text-sm outline-none pr-4 font-medium"
+                        className="bg-transparent border-none text-xs outline-none pr-4 font-bold uppercase tracking-wider"
                     >
                         <option value="ALL">{t('all_supervisors', settings.language)}</option>
                         {supervisors.map(s => <option key={s} value={s}>{s}</option>)}
@@ -173,28 +189,68 @@ export function OperationsMonitor({ sheets, onRefresh }: OperationsMonitorProps)
                     <select
                         value={shiftFilter}
                         onChange={(e) => setShiftFilter(e.target.value)}
-                        className="bg-transparent border-none text-sm outline-none pr-4 font-medium"
+                        className="bg-transparent border-none text-xs outline-none pr-4 font-bold uppercase tracking-wider"
                     >
                         <option value="ALL">{t('all_shifts', settings.language)}</option>
                         {shifts.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                 </div>
 
-                <div className="flex items-center gap-2 bg-background/50 p-1.5 rounded-xl border border-border/50">
-                    <Calendar size={14} className="ml-2 text-muted-foreground" />
-                    <input
-                        type="date"
-                        value={dateFilter}
-                        onChange={(e) => setDateFilter(e.target.value)}
-                        className="bg-transparent border-none text-sm outline-none px-2 font-medium"
-                    />
+                <div className="flex bg-background/50 p-1 rounded-xl border border-border/50">
+                    {(['ALL', '30D', '90D', 'CUSTOM'] as const).map((range) => (
+                        <button
+                            key={range}
+                            onClick={() => setTimeFilter(range)}
+                            className={`px-3 py-1.5 rounded-lg text-[9px] uppercase font-black transition-all ${timeFilter === range ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                        >
+                            {range === 'ALL' ? 'All Time' : range === '30D' ? '30 Days' : range === '90D' ? '3 Months' : 'Custom'}
+                        </button>
+                    ))}
                 </div>
 
-                {(searchQuery || supervisorFilter !== 'ALL' || shiftFilter !== 'ALL' || dateFilter) && (
+                {timeFilter === 'CUSTOM' && (
+                    <div className="flex items-center gap-1 animate-in slide-in-from-right-2 duration-300">
+                        <div className="flex items-center bg-background/80 dark:bg-slate-900 rounded-xl border border-border/50 shadow-sm overflow-hidden group focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+                            <div className="flex items-center gap-2 px-3 py-1.5 border-r border-border/50">
+                                <Calendar className="w-3.5 h-3.5 text-primary" />
+                                <div className="flex flex-col">
+                                    <span className="text-[7px] uppercase font-bold text-muted-foreground leading-tight">Start Time</span>
+                                    <input
+                                        type="datetime-local"
+                                        value={startDate}
+                                        onChange={(e) => setStartDate(e.target.value)}
+                                        className="bg-transparent text-[11px] font-bold outline-none w-[145px] cursor-pointer"
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 px-3 py-1.5">
+                                <Clock className="w-3.5 h-3.5 text-primary" />
+                                <div className="flex flex-col">
+                                    <span className="text-[7px] uppercase font-bold text-muted-foreground leading-tight">End Time</span>
+                                    <input
+                                        type="datetime-local"
+                                        value={endDate}
+                                        onChange={(e) => setEndDate(e.target.value)}
+                                        className="bg-transparent text-[11px] font-bold outline-none w-[145px] cursor-pointer"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {(searchQuery || supervisorFilter !== 'ALL' || shiftFilter !== 'ALL' || timeFilter !== 'ALL') && (
                     <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => { setSearchQuery(''); setSupervisorFilter('ALL'); setShiftFilter('ALL'); setDateFilter(''); }}
+                        onClick={() => {
+                            setSearchQuery('');
+                            setSupervisorFilter('ALL');
+                            setShiftFilter('ALL');
+                            setTimeFilter('ALL');
+                            setStartDate('');
+                            setEndDate('');
+                        }}
                         className="text-muted-foreground hover:text-foreground h-9"
                     >
                         <X size={16} className="mr-2" /> {t('clear_filters', settings.language)}

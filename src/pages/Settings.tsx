@@ -193,8 +193,8 @@ export default function SettingsPage() {
                 </CardContent>
             </Card>
 
-            {/* DEVELOPER TOOLS (Compacted) - ADMIN ONLY */}
-            {currentUser?.role === Role.ADMIN && (
+            {/* DEVELOPER TOOLS (Compacted) - ADMIN ONLY - DEV ONLY */}
+            {currentUser?.role === Role.ADMIN && import.meta.env.DEV && (
                 <Card className="border-border bg-card opacity-75 hover:opacity-100 transition-opacity">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2 text-sm uppercase tracking-wider text-muted-foreground">

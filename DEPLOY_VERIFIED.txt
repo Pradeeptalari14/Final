@@ -1,5 +1,0 @@
-This file verifies that the deployment at [TIMESTAMP] was successful.
-Repo: https://github.com/Pradeeptalari14/Project.git
-Branch: main
-
-Check the file creation time or commit history to confirm.

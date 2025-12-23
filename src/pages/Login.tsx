@@ -9,7 +9,7 @@ import RegisterModal from '@/components/auth/RegisterModal';
 
 export default function LoginPage() {
     const navigate = useNavigate();
-    const { setDevRole, users, setCurrentUser } = useData();
+    const { setDevRole, users, setCurrentUser, logSecurityEvent, updateUser } = useData();
 
 
     const [loading, setLoading] = useState(false);
@@ -17,6 +17,8 @@ export default function LoginPage() {
     const [showRegister, setShowRegister] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isRoleOpen, setIsRoleOpen] = useState(false);
+    const [failedAttempts, setFailedAttempts] = useState(0);
+    const [lockoutTime, setLockoutTime] = useState<number | null>(null);
     const [formData, setFormData] = useState({
         username: '',
         password: '',
@@ -26,50 +28,83 @@ export default function LoginPage() {
     const formatRole = (role: Role | '') => {
         if (!role) return "";
         switch (role) {
-            case Role.STAGING_SUPERVISOR: return "Staging Supervisor";
-            case Role.LOADING_SUPERVISOR: return "Loading Supervisor";
-            case Role.SHIFT_LEAD: return "Shift Lead";
-            case Role.ADMIN: return "Admin";
+            case Role.STAGING_SUPERVISOR: return "STAGING SUPERVISOR";
+            case Role.LOADING_SUPERVISOR: return "LOADING SUPERVISOR";
+            case Role.SHIFT_LEAD: return "SHIFT LEAD";
+            case Role.ADMIN: return "ADMIN";
             default: return role;
         }
     };
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // 1. Check Global/Timer Lockout
+        if (lockoutTime && Date.now() < lockoutTime) {
+            const remaining = Math.ceil((lockoutTime - Date.now()) / 1000);
+            setError(`Account/Interface locked. Try again in ${remaining}s.`);
+            return;
+        }
+
         setLoading(true);
         setError(null);
 
-        // Validate Role Selection
+        // 2. Validate Role Selection
         if (!formData.role) {
             setError("Please select a role.");
             setLoading(false);
             return;
         }
 
-        // Find user
+        // 3. Find user
         const foundUser = users.find(u => u.username.toLowerCase() === formData.username.toLowerCase());
 
-        // Simple password check (Mock auth for now as per legacy, or check stored password)
-        // If user exists, we check if password matches (assuming cleartext in this simulated env, or just allow if username matches for now)
-        // User request "edit passowrds" implies passwords matter.
-        // Let's check matching password if it exists on the user object.
-
         if (foundUser) {
-            // Strict Password Check
+            // 4. Check Persistent Lock
+            if (foundUser.isLocked) {
+                setError("Account is permanently locked due to security risks. Contact Administrator.");
+                setLoading(false);
+                logSecurityEvent('LOGIN_ATTEMPT_LOCKED', `Locked user ${foundUser.username} tried to login`, foundUser.username, 'MEDIUM');
+                return;
+            }
+
+            // 5. Strict Password Check
             if (!foundUser.password || foundUser.password !== formData.password) {
-                setError("Invalid password");
+                const attempts = failedAttempts + 1;
+                setFailedAttempts(attempts);
+
+                const isAdminAttempt = formData.role === Role.ADMIN;
+                const maxAttempts = 5;
+
+                if (attempts >= maxAttempts) {
+                    if (isAdminAttempt) {
+                        // Admin gets a 60s timer lockout (Requested by User)
+                        const lockUntil = Date.now() + 60000;
+                        setLockoutTime(lockUntil);
+                        setError("Too many failed attempts. Admin security cooldown: 60 seconds.");
+                        logSecurityEvent('ADMIN_LOCKOUT_TIMER', `Admin ${formData.username} triggered 60s cooldown`, formData.username, 'HIGH');
+                    } else {
+                        // Others get HARD LOCKED (Database update)
+                        await updateUser({ ...foundUser, isLocked: true });
+                        setError("Too many failed attempts. Account has been SECURELY LOCKED.");
+                        logSecurityEvent('USER_HARD_LOCKED', `User ${formData.username} was hard-locked after 5 failures`, formData.username, 'CRITICAL');
+                    }
+                } else {
+                    setError(`Invalid password. ${maxAttempts - attempts} attempts remaining.`);
+                    logSecurityEvent('LOGIN_FAILED', `Failed login attempt for ${formData.username}`, formData.username, 'LOW');
+                }
                 setLoading(false);
                 return;
             }
 
-            // Strict Approval Check
+            // 6. Strict Approval Check
             if (!foundUser.isApproved) {
                 setError("Account is pending Admin approval.");
                 setLoading(false);
                 return;
             }
 
-            // Strict Role Check (Requested by User)
+            // 7. Strict Role Check
             if (foundUser.role !== formData.role) {
                 setError(`Incorrect role selected. This user is a ${foundUser.role}.`);
                 setLoading(false);
@@ -80,9 +115,11 @@ export default function LoginPage() {
 
             setTimeout(() => {
                 setLoading(false);
+                setFailedAttempts(0);
+                setLockoutTime(null);
                 setDevRole(finalRole);
                 setCurrentUser(foundUser);
-                navigate('/'); // Always go to Dashboard Overview first
+                navigate('/');
             }, 500);
 
         } else {
@@ -92,196 +129,233 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="relative h-screen w-full font-sans overflow-hidden">
+        <div className="relative w-full min-h-screen lg:h-screen lg:overflow-hidden bg-[#fce4ec] font-sans">
             <RegisterModal isOpen={showRegister} onClose={() => setShowRegister(false)} initialRole={formData.role as Role} />
 
-            {/* Background Image - Full Screen Cover */}
-            <div
-                className="absolute inset-0 z-0"
-                style={{
-                    backgroundImage: "url('/bg-v2.png')",
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    backgroundRepeat: 'no-repeat'
-                }}
-            />
-            {/* Subtle Overlay */}
-            <div className="absolute inset-0 z-0 bg-black/20" />
+            {/* Premium Sricity Background */}
+            <div className="fixed inset-0 z-0">
+                <div
+                    className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity duration-1000"
+                    style={{ backgroundImage: "url('/sricity-bg.png')" }}
+                />
+                <div className="absolute inset-0 bg-slate-900/10 backdrop-blur-[2px]" />
+                <div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{ background: 'radial-gradient(circle at 40% 50%, transparent 0%, rgba(2,6,23,0.15) 100%)' }}
+                />
+            </div>
 
-            {/* Main Layout Container */}
-            <div className="relative z-10 w-full h-full flex">
+            {/* Header Content - Top Left Branding */}
+            <motion.div
+                initial={{ opacity: 0, x: -30 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="absolute top-6 left-6 lg:top-10 lg:left-12 z-20 flex items-center gap-4 max-w-[80%]"
+            >
+                <div className="relative group shrink-0">
+                    <img src="/unicharm-logo.png" alt="Unicharm" className="relative w-12 lg:w-16 h-auto drop-shadow-2xl brightness-110" />
+                </div>
+                <div className="flex flex-col">
+                    <h1 className="text-xl lg:text-3xl font-serif font-black text-slate-800 tracking-tight leading-none">
+                        Unicharm Operations
+                    </h1>
+                    <p className="text-[10px] lg:text-xs uppercase tracking-[0.3em] font-bold text-slate-500 mt-1.5 opacity-80">
+                        Supply Chain Management
+                    </p>
+                </div>
+            </motion.div>
 
-                {/* Left Side (Empty to show background content) */}
-                <div className="hidden md:flex flex-1"></div>
+            {/* MAIN CONTENT - STRICT 50/50 GRID */}
+            {/* Using h-full on the grid ensures it fills the viewport height exactly on Desktop */}
+            <div className="relative z-10 w-full h-full grid grid-cols-1 lg:grid-cols-2">
 
-                {/* Right Side - Full Height Glass Sidebar */}
-                <motion.div
-                    initial={{ x: 100, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ duration: 0.5, ease: "circOut" }}
-                    // Increased transparency: bg-black/40 instead of brown/80
-                    // Removed overflow-y-auto to enforce fit
-                    className="w-full md:w-[450px] h-full bg-black/40 backdrop-blur-xl border-l border-white/10 shadow-2xl flex flex-col justify-center px-6 md:px-10 relative"
-                >
-                    {/* Decorative Top Accent - Thinner */}
-                    <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-500/50 via-orange-400/50 to-amber-300/50" />
-
-                    <div className="w-full max-w-sm mx-auto flex flex-col h-full justify-center max-h-[800px]">
-
-                        {/* Header */}
-                        <div className="text-center space-y-3 mb-6">
-                            {/* Straight Logo - No Rotation */}
-                            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/5 shadow-inner ring-1 ring-white/10 backdrop-blur-md">
-                                <img src="/unicharm-logo.png" alt="Logo" className="w-10 h-auto drop-shadow-md brightness-110" />
-                            </div>
-                            <div className="space-y-0.5">
-                                <h1 className="text-2xl font-serif font-bold text-[#fcf5eb] tracking-tight">Unicharm Operations</h1>
-                                <p className="text-[#d8c5b0] text-[9px] uppercase tracking-[0.3em] font-bold opacity-70">Supply Chain Management</p>
-                            </div>
-                        </div>
-
-                        {/* Divider */}
-                        <div className="w-12 h-px bg-white/10 mx-auto mb-6" />
-
-                        {/* Error Message */}
-                        {error && (
-                            <motion.div
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="mb-4 p-2.5 rounded-lg bg-red-900/30 border border-red-500/20 flex items-center gap-3"
-                            >
-                                <AlertCircle size={14} className="text-red-200" />
-                                <p className="text-[11px] text-red-100 font-medium">{error}</p>
-                            </motion.div>
-                        )}
-
-                        {/* Form - Tighter Spacing */}
-                        <form onSubmit={handleLogin} className="space-y-4">
-                            <div className="space-y-1">
-                                <label className="text-[10px] font-bold text-[#e8d5c4] uppercase tracking-widest pl-1 opacity-80">Username</label>
-                                <div className="group relative">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-white/20 group-focus-within:bg-amber-400 transition-colors" />
-                                    </div>
-                                    <input
-                                        type="text"
-                                        value={formData.username}
-                                        onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                                        className="w-full h-11 bg-black/20 border border-white/5 rounded-xl pl-8 pr-4 text-[#fcf5eb] placeholder-[#e8d5c4]/20 focus:outline-none focus:border-amber-500/30 focus:bg-black/30 transition-all text-sm backdrop-blur-sm"
-                                        required
-                                        placeholder="Enter ID"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-1">
-                                <label className="text-[10px] font-bold text-[#e8d5c4] uppercase tracking-widest pl-1 opacity-80">Password</label>
-                                <div className="group relative">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-white/20 group-focus-within:bg-amber-400 transition-colors" />
-                                    </div>
-                                    <input
-                                        type={showPassword ? "text" : "password"}
-                                        value={formData.password}
-                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                        className="w-full h-11 bg-black/20 border border-white/5 rounded-xl pl-8 pr-12 text-[#fcf5eb] placeholder-[#e8d5c4]/20 focus:outline-none focus:border-amber-500/30 focus:bg-black/30 transition-all text-sm backdrop-blur-sm"
-                                        required
-                                        placeholder="••••••••"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-white/30 hover:text-white transition-colors"
-                                    >
-                                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Role Section - High Z-Index to overlap everything */}
-                            <div className="space-y-1 relative z-50">
-                                <label className="text-[10px] font-bold text-[#e8d5c4] uppercase tracking-widest pl-1 opacity-80">Role</label>
-                                <div className="relative group">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-20">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-white/20 group-focus-within:bg-amber-400 transition-colors" />
-                                    </div>
-
-                                    {/* Custom Select Trigger */}
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsRoleOpen(!isRoleOpen)}
-                                        className={`w-full h-11 border border-white/5 pl-8 pr-4 text-left text-[#fcf5eb] focus:outline-none focus:border-amber-500/30 transition-all text-sm flex items-center justify-between backdrop-blur-sm relative z-50
-                                            ${isRoleOpen
-                                                ? 'bg-[#1a1a1a] rounded-t-xl rounded-b-none border-b-transparent'
-                                                : 'bg-black/20 rounded-xl hover:bg-black/30'
-                                            }
-                                        `}
-                                    >
-                                        <span className="truncate font-medium">
-                                            {formatRole(formData.role) || "Select Role"}
-                                        </span>
-                                        <div className={`transition-transform duration-200 ${isRoleOpen ? 'rotate-180' : ''} text-white/40`}>
-                                            <svg width="10" height="10" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                                            </svg>
-                                        </div>
-                                    </button>
-
-                                    {/* Custom Dropdown Menu */}
-                                    {isRoleOpen && (
-                                        <>
-                                            {/* Click outside closer */}
-                                            <div className="fixed inset-0 z-0" onClick={() => setIsRoleOpen(false)} />
-
-                                            <motion.div
-                                                initial={{ opacity: 0, y: -10 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0, y: -10 }}
-                                                className="absolute top-full left-0 right-0 bg-[#1a1a1a] border border-white/5 border-t-0 rounded-b-xl overflow-hidden shadow-2xl z-50 ring-1 ring-black/50"
-                                            >
-                                                {[Role.STAGING_SUPERVISOR, Role.LOADING_SUPERVISOR, Role.SHIFT_LEAD, Role.ADMIN].map((role) => (
-                                                    <button
-                                                        key={role}
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setFormData({ ...formData, role });
-                                                            setIsRoleOpen(false);
-                                                        }}
-                                                        className={`w-full text-left px-4 py-3 text-sm transition-all flex items-center gap-3 border-b border-white/5 last:border-0
-                                                                ${formData.role === role ? 'bg-amber-500/10 text-amber-100 font-medium' : 'text-slate-400 hover:bg-white/5 hover:text-white'}
-                                                            `}
-                                                    >
-                                                        <div className={`w-2 h-2 rounded-full shadow-sm ${formData.role === role ? 'bg-amber-500 shadow-amber-500/50' : 'bg-white/10'}`} />
-                                                        {formatRole(role)}
-                                                    </button>
-                                                ))}
-                                            </motion.div>
-                                        </>
-                                    )}
-                                </div>
-                            </div>
-
-                            <Button
-                                type="submit"
-                                disabled={loading}
-                                className="w-full h-12 mt-6 bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-500 hover:to-orange-600 text-white font-bold rounded-xl text-sm shadow-xl shadow-orange-900/20 border-t border-white/10 transition-all duration-300 transform active:scale-[0.98] tracking-widest uppercase"
-                            >
-                                {loading ? <Loader2 className="animate-spin" /> : <span className="flex items-center gap-3">Sign In <LogIn size={16} /></span>}
-                            </Button>
-                        </form>
-
-                        {/* Register Option */}
-                        <div className="text-center pt-6">
-                            <button
-                                onClick={() => setShowRegister(true)}
-                                className="text-[11px] text-[#d8c5b0]/60 hover:text-[#fcf5eb] transition-colors"
-                            >
-                                New user? <span className="font-bold text-[#e8d5c4] ml-1 border-b border-transparent hover:border-[#e8d5c4]">Create Account</span>
-                            </button>
-                        </div>
+                {/* LEFT COLUMN: Premium Products - POSITIONED BELOW HEADER */}
+                {/* top padding ensures it clears the absolute header; justify-start keeps it from floating up */}
+                <div className="flex flex-col justify-end lg:justify-start items-center p-8 lg:pt-32 h-[45vh] lg:h-full order-2 lg:order-1">
+                    <div className="flex flex-col items-center mb-4 lg:mt-12 lg:mb-4 opacity-90">
+                        <span className="text-xs lg:text-sm font-bold italic text-slate-700 tracking-[0.6em] uppercase text-center" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                            Premium Products
+                        </span>
+                        <div className="h-[2px] w-32 bg-gradient-to-r from-transparent via-slate-600 to-transparent mt-3" />
                     </div>
-                </motion.div>
+
+                    <div className="flex flex-row flex-wrap justify-center items-center gap-10 lg:gap-24 w-full max-w-full px-4">
+                        {/* MamyPoko */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.4 }}
+                            className="group relative shrink-0 transition-all duration-500 hover:-translate-y-4 hover:scale-140 z-10 hover:z-50"
+                        >
+                            <img src="/brand-mamypoko.png" alt="MamyPoko" className="h-20 lg:h-40 w-auto drop-shadow-2xl filter brightness-105 relative z-10" />
+                            {/* Water Reflection */}
+                            <div className="absolute -bottom-10 lg:-bottom-20 left-0 right-0 h-10 lg:h-20 overflow-hidden pointer-events-none opacity-[0.25] transform scale-y-[-1] blur-[2px] transition-all duration-500 group-hover:opacity-40 group-hover:blur-[1px]">
+                                <img src="/brand-mamypoko.png" className="h-20 lg:h-40 w-auto mx-auto" alt="" />
+                            </div>
+                        </motion.div>
+
+                        {/* SOFY */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.5 }}
+                            className="group relative shrink-0 transition-all duration-500 hover:-translate-y-4 hover:scale-140 z-10 hover:z-50"
+                        >
+                            <img src="/brand-sofy.png" alt="SOFY" className="h-16 lg:h-32 w-auto drop-shadow-2xl filter brightness-105 relative z-10" />
+                            {/* Water Reflection */}
+                            <div className="absolute -bottom-8 lg:-bottom-16 left-0 right-0 h-8 lg:h-16 overflow-hidden pointer-events-none opacity-[0.25] transform scale-y-[-1] blur-[2px] transition-all duration-500 group-hover:opacity-40 group-hover:blur-[1px]">
+                                <img src="/brand-sofy.png" className="h-16 lg:h-32 w-auto mx-auto" alt="" />
+                            </div>
+                        </motion.div>
+
+                        {/* Lifree */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.6 }}
+                            className="group relative shrink-0 transition-all duration-500 hover:-translate-y-4 hover:scale-140 z-10 hover:z-50"
+                        >
+                            <img src="/brand-lifree.png" alt="Lifree" className="h-16 lg:h-32 w-auto drop-shadow-2xl filter brightness-105 relative z-10" />
+                            {/* Water Reflection */}
+                            <div className="absolute -bottom-8 lg:-bottom-16 left-0 right-0 h-8 lg:h-16 overflow-hidden pointer-events-none opacity-[0.25] transform scale-y-[-1] blur-[2px] transition-all duration-500 group-hover:opacity-40 group-hover:blur-[1px]">
+                                <img src="/brand-lifree.png" className="h-16 lg:h-32 w-auto mx-auto" alt="" />
+                            </div>
+                        </motion.div>
+                    </div>
+                </div>
+
+                {/* RIGHT COLUMN: Login Portal - MEDIUM SIZE */}
+                {/* Centered vertically, aligned right on desktop */}
+                <div className="flex flex-col justify-center items-center lg:items-end p-8 lg:pr-32 h-[55vh] lg:h-full order-1 lg:order-2">
+                    <div className="w-full max-w-[320px] lg:max-w-[380px]">
+                        {/* Header Text - Scaled Down */}
+                        <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="mb-6 lg:mb-8 text-center lg:text-right"
+                        >
+                            <h1 className="text-3xl lg:text-5xl tracking-tight leading-none text-slate-900" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                                <span className="font-light block lg:inline mb-1 lg:mb-0 lg:mr-2">Welcome to</span>
+                                <span className="font-black text-[#003366]">Sricity</span>
+                            </h1>
+                        </motion.div>
+
+                        {/* Login Card - Premium Glass Effect */}
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            transition={{ duration: 0.6, ease: "circOut" }}
+                            className="w-full p-6 lg:p-8 rounded-[2rem] bg-black/40 backdrop-blur-xl border border-white/20 shadow-[0_20px_40px_-12px_rgba(0,0,0,0.5)] relative overflow-hidden"
+                        >
+                            <div className="relative z-10">
+                                <div className="text-center mb-5 lg:mb-6">
+                                    <div className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 mb-3">
+                                        <span className="text-[8px] lg:text-[9px] font-black uppercase tracking-[0.3em] text-blue-400">
+                                            Secure Authentication
+                                        </span>
+                                    </div>
+                                    <h3 className="text-lg lg:text-xl font-bold text-white tracking-tight font-sans">Login Portal</h3>
+                                    <p className="text-[10px] lg:text-xs font-bold text-blue-400/50 tracking-[0.3em] uppercase mt-2">
+                                        SCM-FG Operations
+                                    </p>
+                                </div>
+
+                                {error && (
+                                    <motion.div
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: 'auto' }}
+                                        className="mb-5 p-3 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center gap-3"
+                                    >
+                                        <AlertCircle size={14} className="text-red-400 shrink-0" />
+                                        <p className="text-[10px] lg:text-xs text-red-100 font-medium leading-tight">{error}</p>
+                                    </motion.div>
+                                )}
+
+                                <form onSubmit={handleLogin} className="space-y-3 lg:space-y-4">
+                                    <div className="space-y-3 lg:space-y-4">
+                                        <div className="relative">
+                                            <input
+                                                type="text"
+                                                placeholder="Username"
+                                                value={formData.username}
+                                                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                                                className="w-full h-10 lg:h-11 bg-white/5 border border-white/10 rounded-xl px-4 text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all text-xs lg:text-sm font-semibold"
+                                                required
+                                            />
+                                        </div>
+                                        <div className="relative">
+                                            <input
+                                                type={showPassword ? "text" : "password"}
+                                                placeholder="Password"
+                                                value={formData.password}
+                                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                                className="w-full h-10 lg:h-11 bg-white/5 border border-white/10 rounded-xl px-4 pr-12 text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all text-xs lg:text-sm font-semibold"
+                                                required
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPassword(!showPassword)}
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-lg text-white/20 hover:text-white transition-colors"
+                                            >
+                                                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                            </button>
+                                        </div>
+                                        <div className="relative">
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsRoleOpen(!isRoleOpen)}
+                                                className={`w-full h-10 lg:h-11 border border-white/10 px-4 text-left text-white focus:outline-none transition-all text-xs lg:text-sm font-semibold flex items-center justify-between
+                                                    ${isRoleOpen ? 'bg-slate-800 rounded-t-xl border-b-transparent' : 'bg-white/5 rounded-xl hover:bg-white/10'}
+                                                `}
+                                            >
+                                                <span className="text-white/70">
+                                                    {formatRole(formData.role) || "Select Role"}
+                                                </span>
+                                                <LogIn size={16} className={`transition-all ${isRoleOpen ? 'text-blue-400' : 'text-white/20'}`} />
+                                            </button>
+
+                                            {isRoleOpen && (
+                                                <div className="absolute top-full left-0 right-0 bg-slate-800 border border-white/10 border-t-0 rounded-b-xl shadow-2xl overflow-hidden z-[50]">
+                                                    {[Role.STAGING_SUPERVISOR, Role.LOADING_SUPERVISOR, Role.SHIFT_LEAD, Role.ADMIN].map((role) => (
+                                                        <button
+                                                            key={role}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setFormData({ ...formData, role });
+                                                                setIsRoleOpen(false);
+                                                            }}
+                                                            className="w-full text-left px-4 py-3 text-[10px] lg:text-xs font-medium hover:bg-white/5 transition-colors text-white/50 hover:text-white border-b border-white/5 last:border-0"
+                                                        >
+                                                            {formatRole(role)}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <Button
+                                        type="submit"
+                                        disabled={loading}
+                                        className="w-full h-11 lg:h-12 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white font-black rounded-xl shadow-lg hover:shadow-blue-500/25 transition-all transform active:scale-[0.98] flex items-center justify-center uppercase tracking-[0.2em] text-[10px] lg:text-xs mt-5"
+                                    >
+                                        {loading ? <Loader2 className="animate-spin w-4 h-4 lg:w-5 lg:h-5" /> : "Sign In"}
+                                    </Button>
+                                </form>
+
+                                <div className="mt-6 lg:mt-8 text-center border-t border-white/5 pt-5 lg:pt-6">
+                                    <button
+                                        onClick={() => setShowRegister(true)}
+                                        className="text-[9px] lg:text-[10px] font-bold text-white/30 hover:text-blue-400 transition-all uppercase tracking-[0.2em]"
+                                    >
+                                        New user? <span className="text-white/50 ml-1">Request Account</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                </div>
             </div>
         </div>
     );
+
 }

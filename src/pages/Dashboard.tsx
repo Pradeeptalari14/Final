@@ -62,11 +62,11 @@ export default function DashboardOverview() {
 
                 return [
                     { label: t('total_staging', settings.language), count: totalStagingCount, link: '/database', color: 'bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold' },
-                    { label: t('draft', settings.language), count: draftCount, link: '/admin?tab=staging_db&filter=DRAFT', color: 'bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-400 font-bold' },
-                    { label: t('pending_verification', settings.language), count: pendingCount, link: '/admin?tab=staging_db&filter=PENDING', color: 'bg-orange-100 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-500/30 text-orange-900 dark:text-orange-400 font-bold' },
-                    { label: t('locked_not_editable', settings.language), count: lockedCount, link: '/admin?tab=staging_db&filter=LOCKED', color: 'bg-purple-100 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-500/30 text-purple-900 dark:text-purple-400 font-bold' },
-                    { label: t('completed', settings.language), count: completedCount, link: '/admin?tab=staging_db&filter=COMPLETED', color: 'bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold' },
-                    { label: t('rejected', settings.language), count: rejectedCount, link: '/admin?tab=staging_db&filter=REJECTED', color: 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold' }
+                    { label: t('draft', settings.language), count: draftCount, link: '/admin?section=staging_db&view_mode=VIEW_STAGING_DRAFT', color: 'bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-400 font-bold' },
+                    { label: t('pending_verification', settings.language), count: pendingCount, link: '/admin?section=staging_db&view_mode=VIEW_STAGING_VERIFY', color: 'bg-orange-100 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-500/30 text-orange-900 dark:text-orange-400 font-bold' },
+                    { label: t('locked_not_editable', settings.language), count: lockedCount, link: '/admin?section=staging_db&view_mode=VIEW_LOCKED', color: 'bg-purple-100 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-500/30 text-purple-900 dark:text-purple-400 font-bold' },
+                    { label: t('completed', settings.language), count: completedCount, link: '/admin?section=staging_db&view_mode=VIEW_COMPLETED', color: 'bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold' },
+                    { label: t('rejected', settings.language), count: rejectedCount, link: '/admin?section=staging_db&view_mode=VIEW_STAGING_REJECTED', color: 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold' }
                 ];
             }
 
@@ -76,7 +76,7 @@ export default function DashboardOverview() {
 
             if (rejectedCount === 0) return [];
             return [
-                { label: t('rejected', settings.language), count: rejectedCount, link: '/admin?tab=shift_lead_db&filter=STAGING_REJECTED', color: 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold' }
+                { label: t('rejected', settings.language), count: rejectedCount, link: '/admin?section=shift_lead_db&view_mode=VIEW_STAGING_REJECTED', color: 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold' }
             ];
         }
 
@@ -101,10 +101,10 @@ export default function DashboardOverview() {
 
                 return [
                     { label: t('total_loading', settings.language), count: totalLoadingCount, link: '/database', color: 'bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold' },
-                    { label: t('ready_to_load', settings.language), count: readyCount, link: '/admin?tab=loading_db&filter=READY', color: 'bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 text-blue-900 dark:text-blue-400 font-bold' },
-                    { label: t('pending_verification', settings.language), count: pendingVerCount, link: '/admin?tab=loading_db&filter=LOCKED', color: 'bg-orange-100 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-500/30 text-orange-900 dark:text-orange-400 font-bold' },
-                    { label: t('completed', settings.language), count: completedCount, link: '/admin?tab=loading_db&filter=COMPLETED', color: 'bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold' },
-                    { label: t('rejected', settings.language), count: rejectedCount, link: '/admin?tab=loading_db&filter=REJECTED', color: 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold' }
+                    { label: t('ready_to_load', settings.language), count: readyCount, link: '/admin?section=loading_db&view_mode=VIEW_LOADING_READY', color: 'bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 text-blue-900 dark:text-blue-400 font-bold' },
+                    { label: t('pending_verification', settings.language), count: pendingVerCount, link: '/admin?section=loading_db&view_mode=VIEW_LOADING_VERIFY', color: 'bg-orange-100 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-500/30 text-orange-900 dark:text-orange-400 font-bold' },
+                    { label: t('completed', settings.language), count: completedCount, link: '/admin?section=loading_db&view_mode=VIEW_COMPLETED', color: 'bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold' },
+                    { label: t('rejected', settings.language), count: rejectedCount, link: '/admin?section=loading_db&view_mode=VIEW_LOADING_REJECTED', color: 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold' }
                 ];
             }
             return [];
@@ -124,12 +124,12 @@ export default function DashboardOverview() {
             const allDoneCount = relevantSheets.filter(s => s.status === SheetStatus.COMPLETED).length;
 
             return [
-                { label: t('total_approvals', settings.language), count: approvalCount, link: '/admin?tab=shift_lead_db', color: 'bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold' },
-                { label: t('staging_approvals', settings.language), count: stagingApprCount, link: '/admin?tab=shift_lead_db&filter=STAGING_APPROVALS', color: 'bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 text-blue-900 dark:text-blue-400 font-bold' },
-                { label: t('loading_approvals', settings.language), count: loadingApprCount, link: '/admin?tab=shift_lead_db&filter=LOADING_APPROVALS', color: 'bg-orange-100 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-500/30 text-orange-900 dark:text-orange-400 font-bold' },
-                { label: t('completed', settings.language), count: completedCount, link: '/admin?tab=shift_lead_db&filter=COMPLETED', color: 'bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold' },
-                { label: t('staging_rejected', settings.language), count: stagingRejCount, link: '/admin?tab=shift_lead_db&filter=STAGING_REJECTED', color: 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold' },
-                { label: t('loading_rejected', settings.language), count: loadingRejCount, link: '/admin?tab=shift_lead_db&filter=LOADING_REJECTED', color: 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold' },
+                { label: t('total_approvals', settings.language), count: approvalCount, link: '/admin?section=shift_lead_db', color: 'bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold' },
+                { label: t('staging_approvals', settings.language), count: stagingApprCount, link: '/admin?section=shift_lead_db&view_mode=VIEW_STAGING_VERIFY', color: 'bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 text-blue-900 dark:text-blue-400 font-bold' },
+                { label: t('loading_approvals', settings.language), count: loadingApprCount, link: '/admin?section=shift_lead_db&view_mode=VIEW_LOADING_VERIFY', color: 'bg-orange-100 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-500/30 text-orange-900 dark:text-orange-400 font-bold' },
+                { label: t('completed', settings.language), count: completedCount, link: '/admin?section=shift_lead_db&view_mode=VIEW_COMPLETED', color: 'bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold' },
+                { label: t('staging_rejected', settings.language), count: stagingRejCount, link: '/admin?section=shift_lead_db&view_mode=VIEW_STAGING_REJECTED', color: 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold' },
+                { label: t('loading_rejected', settings.language), count: loadingRejCount, link: '/admin?section=shift_lead_db&view_mode=VIEW_LOADING_REJECTED', color: 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold' },
                 { label: t('all_done', settings.language), count: allDoneCount, link: '/database', color: 'bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold shadow-sm' }
             ];
         }
@@ -205,7 +205,7 @@ export default function DashboardOverview() {
                             title="Staging"
                             color="border-slate-200 dark:border-white/10"
                             items={relevantSheets.filter(s => s.status === SheetStatus.DRAFT || s.status === SheetStatus.STAGING_VERIFICATION_PENDING)}
-                            linkTo="/admin?tab=staging_db"
+                            linkTo="/admin?section=staging_db"
                             filters={getFilterLinks('STAGING')}
                             density={settings?.density}
                         />
@@ -213,7 +213,7 @@ export default function DashboardOverview() {
                             title="Loading"
                             color="border-blue-500/20"
                             items={relevantSheets.filter(s => s.status === SheetStatus.LOCKED || s.status === SheetStatus.LOADING_VERIFICATION_PENDING)}
-                            linkTo="/admin?tab=loading_db"
+                            linkTo="/admin?section=loading_db"
                             filters={getFilterLinks('LOADING')}
                             density={settings?.density}
                         />
@@ -221,7 +221,7 @@ export default function DashboardOverview() {
                             title="Shift Lead"
                             color="border-purple-500/20"
                             items={relevantSheets.filter(s => s.status === SheetStatus.STAGING_VERIFICATION_PENDING)}
-                            linkTo="/admin?tab=shift_lead_db"
+                            linkTo="/admin?section=shift_lead_db"
                             filters={getFilterLinks('SHIFT_LEAD')}
                             density={settings?.density}
                         />
@@ -236,7 +236,7 @@ export default function DashboardOverview() {
                             <div className="grid grid-cols-2 gap-2">
                                 {/* Total Users (Full Width) */}
                                 <button
-                                    onClick={() => navigate('/admin?tab=users')}
+                                    onClick={() => navigate('/admin?section=users')}
                                     className="col-span-2 flex items-center justify-between px-4 py-2 rounded bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold hover:scale-[1.02] transition-all group min-h-[40px]"
                                 >
                                     <span className="text-[10px] uppercase font-bold tracking-wider opacity-70">{t('total_users', settings.language)}</span>
@@ -245,7 +245,7 @@ export default function DashboardOverview() {
 
                                 {/* Pending (Alert) */}
                                 <button
-                                    onClick={() => navigate('/admin?tab=users&filter=PENDING')}
+                                    onClick={() => navigate('/admin?section=users&filter=PENDING')}
                                     className="flex flex-col items-center justify-center p-2 rounded bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold hover:scale-[1.02] transition-all relative overflow-hidden"
                                 >
                                     <div className="absolute top-0 right-0 p-1 opacity-20"><Plus size={24} /></div>
@@ -255,7 +255,7 @@ export default function DashboardOverview() {
 
                                 {/* Staging */}
                                 <button
-                                    onClick={() => navigate('/admin?tab=users&filter=STAGING_SUPERVISOR')}
+                                    onClick={() => navigate('/admin?section=users&filter=STAGING_SUPERVISOR')}
                                     className="flex flex-col items-center justify-center p-2 rounded bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 text-blue-900 dark:text-blue-400 font-bold hover:scale-[1.02] transition-all"
                                 >
                                     <span className="font-bold text-lg">{userStats?.staging || 0}</span>
@@ -264,7 +264,7 @@ export default function DashboardOverview() {
 
                                 {/* Loading */}
                                 <button
-                                    onClick={() => navigate('/admin?tab=users&filter=LOADING_SUPERVISOR')}
+                                    onClick={() => navigate('/admin?section=users&filter=LOADING_SUPERVISOR')}
                                     className="flex flex-col items-center justify-center p-2 rounded bg-orange-100 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-500/30 text-orange-900 dark:text-orange-400 font-bold hover:scale-[1.02] transition-all"
                                 >
                                     <span className="font-bold text-lg">{userStats?.loading || 0}</span>
@@ -273,7 +273,7 @@ export default function DashboardOverview() {
 
                                 {/* Leads */}
                                 <button
-                                    onClick={() => navigate('/admin?tab=users&filter=SHIFT_LEAD')}
+                                    onClick={() => navigate('/admin?section=users&filter=SHIFT_LEAD')}
                                     className="flex flex-col items-center justify-center p-2 rounded bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold hover:scale-[1.02] transition-all"
                                 >
                                     <span className="font-bold text-lg">{userStats?.shift || 0}</span>
@@ -311,7 +311,7 @@ export default function DashboardOverview() {
                             title="Staging"
                             color="border-slate-200 dark:border-white/10"
                             items={relevantSheets.filter(s => s.status === SheetStatus.DRAFT || s.status === SheetStatus.STAGING_VERIFICATION_PENDING)}
-                            linkTo={currentUser?.role === Role.ADMIN || currentUser?.role === Role.STAGING_SUPERVISOR ? "/admin?tab=staging_db" : undefined}
+                            linkTo={currentUser?.role === Role.ADMIN || currentUser?.role === Role.STAGING_SUPERVISOR ? "/admin?section=staging_db" : undefined}
                             filters={getFilterLinks('STAGING')}
                             density={settings?.density}
                             fullWidth={isStagingSupervisor}
@@ -324,7 +324,7 @@ export default function DashboardOverview() {
                             title="Loading"
                             color="border-blue-500/20"
                             items={relevantSheets.filter(s => s.status === SheetStatus.LOCKED || s.status === SheetStatus.LOADING_VERIFICATION_PENDING)}
-                            linkTo={currentUser?.role === Role.ADMIN ? "/admin?tab=loading_db" : currentUser?.role === Role.LOADING_SUPERVISOR ? "/admin?tab=loading_db" : "/admin?tab=shift_lead_db&filter=LOADING_APPROVALS"}
+                            linkTo={currentUser?.role === Role.ADMIN ? "/admin?section=loading_db" : currentUser?.role === Role.LOADING_SUPERVISOR ? "/admin?section=loading_db" : "/admin?section=shift_lead_db&view_mode=VIEW_LOADING_VERIFY"}
                             filters={getFilterLinks('LOADING')}
                             density={settings?.density}
                             fullWidth={isLoadingSupervisor}
@@ -337,7 +337,7 @@ export default function DashboardOverview() {
                             title="Shift Lead"
                             color="border-purple-500/20"
                             items={relevantSheets.filter(s => s.status === SheetStatus.STAGING_VERIFICATION_PENDING)}
-                            linkTo="/admin?tab=shift_lead_db"
+                            linkTo="/admin?section=shift_lead_db"
                             filters={getFilterLinks('SHIFT_LEAD')}
                             density={settings?.density}
                             fullWidth={isShiftLead}

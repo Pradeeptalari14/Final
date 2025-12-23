@@ -137,6 +137,7 @@ export default function RegisterModal({ isOpen, onClose, initialRole }: Register
                                                 value={formData.username}
                                                 onChange={e => setFormData({ ...formData, username: e.target.value })}
                                                 className="w-full bg-background border border-input rounded-lg px-3 py-2 text-foreground focus:ring-2 focus:ring-primary/50 outline-none text-sm transition-all"
+                                                autoComplete="off"
                                             />
                                         </div>
                                         <div className="space-y-1">
@@ -145,6 +146,7 @@ export default function RegisterModal({ isOpen, onClose, initialRole }: Register
                                                 value={formData.fullName}
                                                 onChange={e => setFormData({ ...formData, fullName: e.target.value })}
                                                 className="w-full bg-background border border-input rounded-lg px-3 py-2 text-foreground focus:ring-2 focus:ring-primary/50 outline-none text-sm transition-all"
+                                                autoComplete="name"
                                             />
                                         </div>
                                     </div>
@@ -159,6 +161,7 @@ export default function RegisterModal({ isOpen, onClose, initialRole }: Register
                                                 value={formData.email}
                                                 onChange={e => setFormData({ ...formData, email: e.target.value })}
                                                 className="w-full bg-background border border-input rounded-lg px-3 py-2 text-foreground focus:ring-2 focus:ring-primary/50 outline-none text-sm transition-all"
+                                                autoComplete="email"
                                             />
                                         </div>
                                         <div className="space-y-1">
@@ -181,6 +184,7 @@ export default function RegisterModal({ isOpen, onClose, initialRole }: Register
                                                 value={formData.password}
                                                 onChange={e => setFormData({ ...formData, password: e.target.value })}
                                                 className="w-full bg-background border border-input rounded-lg px-3 py-2 pr-10 text-foreground focus:ring-2 focus:ring-primary/50 outline-none text-sm transition-all"
+                                                autoComplete="new-password"
                                             />
                                             <button
                                                 type="button"
@@ -200,6 +204,7 @@ export default function RegisterModal({ isOpen, onClose, initialRole }: Register
                                             value={formData.confirmPassword}
                                             onChange={e => setFormData({ ...formData, confirmPassword: e.target.value })}
                                             className="w-full bg-background border border-input rounded-lg px-3 py-2 text-foreground focus:ring-2 focus:ring-primary/50 outline-none text-sm transition-all"
+                                            autoComplete="new-password"
                                         />
                                     </div>
 

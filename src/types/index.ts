@@ -21,6 +21,7 @@ export interface User {
     role: Role;
     email?: string;
     isApproved: boolean;
+    isLocked?: boolean;
     isDeleted?: boolean;
     password?: string; // Only used for legacy simple auth comparison
 }
@@ -32,6 +33,8 @@ export interface StagingItem {
     fullPlt: number;
     loose: number;
     ttlCases: number;
+    isRejected?: boolean;
+    rejectionReason?: string;
 }
 
 export interface LoadingCell {
@@ -40,12 +43,14 @@ export interface LoadingCell {
     value: number;
 }
 
-export interface LoadingItemData {
+export interface LoadingItem {
     skuSrNo: number;
     cells: LoadingCell[];
     looseInput?: number;
     total: number;
     balance: number;
+    isRejected?: boolean;
+    rejectionReason?: string;
 }
 
 export interface AdditionalItem {
@@ -86,7 +91,7 @@ export interface SheetData {
     sealNo?: string;
     regSerialNo?: string; // Container No
     driverName?: string;
-    loadingItems?: LoadingItemData[];
+    loadingItems?: LoadingItem[];
     additionalItems?: AdditionalItem[];
 
     // Detailed Loading Info

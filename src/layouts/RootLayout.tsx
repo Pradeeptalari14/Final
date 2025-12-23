@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { Role } from '@/types';
 import { t } from '@/lib/i18n';
+import { NotificationBell } from '@/components/ui/NotificationBell';
 
 export default function RootLayout() {
     const { devRole, setDevRole, currentUser, settings, updateSettings, isOnline } = useData();
@@ -63,11 +64,11 @@ export default function RootLayout() {
                 {/* USERS (Admin Only) */}
                 {currentUser?.role === Role.ADMIN && (
                     <NavItem
-                        to="/admin?tab=users"
+                        to="/admin?section=users"
                         icon={Users}
                         label={t('users', settings.language)}
                         collapsed={collapsed && !isMobile}
-                        active={location.pathname === '/admin' && location.search.includes('tab=users')}
+                        active={location.pathname === '/admin' && location.search.includes('section=users')}
                     />
                 )}
 
@@ -77,7 +78,7 @@ export default function RootLayout() {
                     icon={Shield}
                     label={adminLabel}
                     collapsed={collapsed && !isMobile}
-                    active={location.pathname === '/admin' && !location.search.includes('tab=users') && !location.search.includes('tab=audit_logs')}
+                    active={location.pathname === '/admin' && !location.search.includes('section=users') && !location.search.includes('section=audit_logs') && !location.search.includes('section=reports')}
                 />
 
                 {/* SETTINGS */}
@@ -92,11 +93,22 @@ export default function RootLayout() {
                 {/* AUDIT LOGS */}
                 {(currentUser?.role === Role.ADMIN || currentUser?.role === Role.SHIFT_LEAD) && (
                     <NavItem
-                        to="/admin?tab=audit_logs"
+                        to="/admin?section=audit_logs"
                         icon={FileText}
                         label={t('audit_logs', settings.language)}
                         collapsed={collapsed && !isMobile}
-                        active={location.pathname === '/admin' && location.search.includes('tab=audit_logs')}
+                        active={location.pathname === '/admin' && location.search.includes('section=audit_logs')}
+                    />
+                )}
+
+                {/* REPORTS (Power BI) */}
+                {(currentUser?.role === Role.ADMIN || currentUser?.role === Role.SHIFT_LEAD) && (
+                    <NavItem
+                        to="/admin?section=reports"
+                        icon={LayoutDashboard}
+                        label={t('reports', settings.language)}
+                        collapsed={collapsed && !isMobile}
+                        active={location.pathname === '/admin' && location.search.includes('section=reports')}
                     />
                 )}
 
@@ -167,6 +179,7 @@ export default function RootLayout() {
                     </button>
 
                     <div className="flex items-center gap-4">
+                        <NotificationBell />
                         <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center overflow-hidden border border-border">
                             <img src="/unicharm-logo.png" alt="Profile" className="w-full h-full object-contain p-1" />
                         </div>

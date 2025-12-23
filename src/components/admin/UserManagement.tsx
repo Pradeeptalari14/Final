@@ -1,14 +1,39 @@
-import { useState, useMemo, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { supabase } from "@/lib/supabase";
+import { useState, useMemo } from 'react';
 import { Role, User, SheetData } from "@/types";
-import { useToast } from "@/contexts/ToastContext";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Search, UserPlus, Trash2, KeyRound, CheckCircle, XCircle, X, Loader2, FileText, Clock } from 'lucide-react';
-import { motion } from "framer-motion";
+import {
+    Search,
+    UserPlus,
+    Users,
+    Shield,
+    UserCheck,
+    Star,
+    Clock,
+    LayoutGrid,
+    Filter,
+    ArrowUpDown,
+    Download,
+    ChevronDown
+} from 'lucide-react';
 import { useData } from '@/contexts/DataContext';
 import { t } from '@/lib/i18n';
+import { useUserManagement } from '@/hooks/useUserManagement';
+import { UserTable } from './users/UserTable';
+import { AddUserModal } from './users/AddUserModal';
+import { EditUserModal } from './users/EditUserModal';
+import { PasswordResetModal } from './users/PasswordResetModal';
+import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { saveAs } from 'file-saver';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem,
+} from "@/components/ui/dropdown-menu";
 
 interface UserManagementProps {
     users: User[];
@@ -16,586 +41,283 @@ interface UserManagementProps {
     sheets: SheetData[];
 }
 
+type SortKey = 'name' | 'role' | 'lastActive' | 'status';
+type SortDirection = 'asc' | 'desc';
+
 export function UserManagement({ users, refreshUsers, sheets }: UserManagementProps) {
-    const { addToast } = useToast();
-    const { settings, currentUser } = useData();
-    const [searchParams, setSearchParams] = useSearchParams();
+    const { currentUser, settings } = useData();
 
     // STRICT GUARD: Admin only
     if (currentUser?.role !== Role.ADMIN) {
         return <div className="p-8 text-center text-red-500 font-bold uppercase tracking-widest">{t('access_denied', settings.language)}</div>;
     }
 
-    // --- User Management State ---
-    const [userSearchQuery, setUserSearchQuery] = useState('');
-    // Initialize filter from URL param if present, otherwise default to 'ALL'
-    const [userFilter, setUserFilter] = useState<'ALL' | 'PENDING' | Role>(
-        (searchParams.get('filter') as 'ALL' | 'PENDING' | Role) || 'ALL'
-    );
+    const {
+        userSearchQuery,
+        setUserSearchQuery,
+        userFilter,
+        setFilter,
+        isAddingUser,
+        setIsAddingUser,
+        passwordResetUser,
+        setPasswordResetUser,
+        editingUser,
+        setEditingUser,
+        lastActiveMap,
+        filteredUsers, // Base filtered list (Role + Search)
+        handleDeleteUser,
+        toggleUserStatus,
+        handleUnlockUser
+    } = useUserManagement(users, refreshUsers, sheets);
 
-    // Sync filter with URL
-    useEffect(() => {
-        const filterParam = searchParams.get('filter');
-        if (filterParam) {
-            setUserFilter(filterParam as any);
-        } else {
-            setUserFilter('ALL');
-        }
-    }, [searchParams]);
-
-    // Helper to update filter and URL
-    const setFilter = (newFilter: 'ALL' | 'PENDING' | Role) => {
-        setUserFilter(newFilter);
-        // Optional: Update URL to reflect change (keeps state shareable)
-        setSearchParams(prev => {
-            prev.set('filter', newFilter);
-            return prev;
-        });
-    }
-
-    const [isAddingUser, setIsAddingUser] = useState(false);
-    const [newUserLoading, setNewUserLoading] = useState(false);
-    const [newUser, setNewUser] = useState({
-        username: '',
-        fullName: '',
-        empCode: '',
-        email: '',
-        password: '',
-        role: '' as Role
+    // --- NEW: Local Sort & Filter State ---
+    const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'LOCKED'>('ALL');
+    const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection }>({
+        key: 'lastActive',
+        direction: 'desc'
     });
-    // Password Reset State
-    const [passwordResetUser, setPasswordResetUser] = useState<User | null>(null);
-    const [newPassword, setNewPassword] = useState('');
 
-    // Edit User State
-    const [editingUser, setEditingUser] = useState<User | null>(null);
+    // --- Compute Final List ---
+    const processedUsers = useMemo(() => {
+        let result = [...filteredUsers];
 
-    // --- Compute Last Active Logic ---
-    const lastActiveMap = useMemo(() => {
-        const map = new Map<string, number>();
-        if (!sheets) return map;
+        // 1. Status Filter
+        if (statusFilter === 'ACTIVE') {
+            result = result.filter(u => u.isApproved && !u.isLocked);
+        } else if (statusFilter === 'LOCKED') {
+            result = result.filter(u => u.isLocked);
+        }
 
-        sheets.forEach(sheet => {
-            // Check creation time
-            if (sheet.supervisorName) {
-                const t = new Date(sheet.createdAt).getTime();
-                if (t > (map.get(sheet.supervisorName) || 0)) map.set(sheet.supervisorName, t);
+        // 2. Sorting
+        result.sort((a, b) => {
+            let comparison = 0;
+            switch (sortConfig.key) {
+                case 'name':
+                    comparison = a.fullName.localeCompare(b.fullName);
+                    break;
+                case 'role':
+                    comparison = a.role.localeCompare(b.role);
+                    break;
+                case 'status':
+                    // Sort order: Locked > Active > Pending
+                    const getStatusWeight = (u: User) => u.isLocked ? 3 : (u.isApproved ? 2 : 1);
+                    comparison = getStatusWeight(a) - getStatusWeight(b);
+                    break;
+                case 'lastActive':
+                    const timeA = lastActiveMap.get(a.username) || 0;
+                    const timeB = lastActiveMap.get(b.username) || 0;
+                    comparison = timeA - timeB;
+                    break;
             }
-
-            // Check history logs
-            if (sheet.history) {
-                sheet.history.forEach(log => {
-                    if (log.actor) {
-                        const t = new Date(log.timestamp).getTime();
-                        if (t > (map.get(log.actor) || 0)) map.set(log.actor, t);
-                    }
-                });
-            }
+            return sortConfig.direction === 'asc' ? comparison : -comparison;
         });
-        return map;
-    }, [sheets]);
 
-    const getTimeAgo = (timestamp: number | undefined) => {
-        if (!timestamp) return t('never', settings.language);
-        const diff = Date.now() - timestamp;
-        const minutes = Math.floor(diff / 60000);
-        if (minutes < 1) return t('just_now', settings.language);
-        if (minutes < 60) return `${minutes}${t('minutes_ago', settings.language)} `;
-        const hours = Math.floor(minutes / 60);
-        if (hours < 24) return `${hours}${t('hours_ago', settings.language)} `;
-        const days = Math.floor(hours / 24);
-        return `${days}${t('days_ago', settings.language)} `;
+        return result;
+    }, [filteredUsers, statusFilter, sortConfig, lastActiveMap]);
+
+    // --- Export Handler ---
+    const handleExport = () => {
+        const csvHeader = "ID,Full Name,Username,Role,Employee Code,Status,Role Status,Last Active\n";
+        const csvRows = processedUsers.map(user => {
+            const lastActive = lastActiveMap.get(user.username);
+            const lastActiveStr = lastActive ? new Date(lastActive).toISOString() : "Never";
+            const status = user.isLocked ? "LOCKED" : (user.isApproved ? "ACTIVE" : "PENDING");
+
+            return [
+                user.id,
+                `"${user.fullName}"`, // Quote names to handle commas
+                user.username,
+                user.role,
+                user.empCode || "N/A",
+                status,
+                user.isDeleted ? "DELETED" : "LIVE",
+                lastActiveStr
+            ].join(",");
+        }).join("\n");
+
+        const blob = new Blob([csvHeader + csvRows], { type: "text/csv;charset=utf-8" });
+        saveAs(blob, `user_directory_export_${new Date().toISOString().split('T')[0]}.csv`);
     };
 
-
-    const filteredUsers = useMemo(() => {
-        let res = users;
-        // 1. Tab/Role Context Filter
-        if (userFilter === 'PENDING') {
-            res = res.filter(u => !u.isApproved);
-        } else if (userFilter === Role.STAGING_SUPERVISOR) {
-            res = res.filter(u => u.role === Role.STAGING_SUPERVISOR);
-        } else if (userFilter === Role.LOADING_SUPERVISOR) {
-            res = res.filter(u => u.role === Role.LOADING_SUPERVISOR);
-        } else if (userFilter === Role.SHIFT_LEAD) {
-            res = res.filter(u => u.role === Role.SHIFT_LEAD);
-        }
-
-        // 2. Search Query Filter
-        return res.filter(user =>
-            user.username.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
-            (user.fullName && user.fullName.toLowerCase().includes(userSearchQuery.toLowerCase())) ||
-            (user.email && user.email.toLowerCase().includes(userSearchQuery.toLowerCase())) ||
-            user.role.toLowerCase().includes(userSearchQuery.toLowerCase())
-        );
-    }, [users, userSearchQuery, userFilter]);
-
-    // --- Handlers ---
-    const handleUpdateUser = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!editingUser) return;
-        try {
-            const { error } = await supabase.from('users').update({ data: editingUser }).eq('id', editingUser.id);
-            if (error) throw error;
-            addToast('success', `${editingUser.username} ${t('user_updated_successfully', settings.language)} `);
-            setEditingUser(null);
-            await refreshUsers();
-        } catch (error: any) {
-            addToast('error', t('failed_to_update_user', settings.language) + ": " + error.message);
-        }
-    };
-
-    const handleDeleteUser = async (userToDelete: User) => {
-        const { id: userId, username, isApproved, role } = userToDelete;
-
-        // 1. SELF-DELETION PROTECTION
-        if (userId === currentUser?.id) {
-            alert(t('cannot_delete_self', settings.language));
-            return;
-        }
-
-        // 2. ENFORCE INACTIVE STATUS (Strict Rule)
-        if (isApproved) {
-            alert(`${t('delete_active_user_error', settings.language)}\n\n${t('switch_inactive_first', settings.language)}`);
-            return;
-        }
-
-        // 3. CONFIRMATION
-        if (!window.confirm(t('delete_user_confirm', settings.language))) {
-            return;
-        }
-
-        try {
-            // SPECIAL HANDLING FOR ADMINS: Demote first to bypass potential RLS/Constraint
-            if (role === Role.ADMIN) {
-                await supabase
-                    .from('users')
-                    .update({ data: { ...userToDelete, role: Role.STAGING_SUPERVISOR, isApproved: false } })
-                    .eq('id', userId);
-            }
-
-            // Attempt Hard Delete - EXPLICITLY SELECT DATA TO VERIFY
-            const { error, data: deleteData } = await supabase.from('users').delete().eq('id', userId).select();
-
-            // Check for Silent Failure (0 rows deleted)
-            const silentFailure = !error && (!deleteData || deleteData.length === 0);
-
-            if (error || silentFailure) {
-                const { data: currentUserData } = await supabase.from('users').select('data').eq('id', userId).single();
-
-                if (currentUserData) {
-                    const softDeletedData = {
-                        ...currentUserData.data,
-                        isDeleted: true,
-                        role: Role.STAGING_SUPERVISOR, // Ensure role is not ADMIN in the tombstone
-                        username: `${username}_deleted_${Date.now()}`
-                    };
-
-                    const { error: softError, data: softData } = await supabase
-                        .from('users')
-                        .update({ data: softDeletedData })
-                        .eq('id', userId)
-                        .select();
-
-                    if (softError || !softData || softData.length === 0) {
-                        const reason = softError?.message || "Permission Denied (0 rows updated)";
-                        alert(`DELETE FAILED\n\nCould not delete user. Database permissions might be restricted.\n\nReason: ${reason}`);
-                        return;
-                    }
-                } else {
-                    alert(`DELETE FAILED\n\nUser record not found.`);
-                    return;
-                }
-            }
-
-            // Success feedback
-            addToast('success', `${username} ${t('user_deleted', settings.language)}`);
-            await refreshUsers();
-
-        } catch (error: any) {
-            // Blocking Alert for Unexpected Error
-            alert(`SYSTEM ERROR\n\nFailed to delete user: ${error.message || "Unknown error"}`);
-        }
-    };
-
-    const toggleUserStatus = async (user: User) => {
-        try {
-            const updatedUser = { ...user, isApproved: !user.isApproved };
-
-            // Explicitly select data to confirm row was touched
-            const { data, error } = await supabase
-                .from('users')
-                .update({ data: updatedUser })
-                .eq('id', user.id)
-                .select();
-
-            if (error) {
-                throw error;
-            }
-
-            // RCA: Check if any row was actually updated
-            if (!data || data.length === 0) {
-                throw new Error("Permission Denied: Database policy prevented this change (0 rows updated).");
-            }
-
-            addToast('success', `User ${user.username} is now ${updatedUser.isApproved ? t('active', settings.language) : t('inactive', settings.language)} `);
-            await refreshUsers();
-        } catch (error: any) {
-            alert(`STATUS CHANGE FAILED\n\nReason: ${error.message || "Unknown Error"} \n\nTroubleshooting: You might not have permission to modify this user.`);
-        }
-    };
-
-    const handlePasswordReset = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!passwordResetUser || !newPassword) return;
-
-        try {
-            const updatedUser = { ...passwordResetUser, password: newPassword };
-            const { error } = await supabase.from('users').update({ data: updatedUser }).eq('id', passwordResetUser.id);
-            if (error) throw error;
-            addToast('success', `${t('password', settings.language)} ${t('user_updated_successfully', settings.language)}: ${passwordResetUser.username} `);
-            setPasswordResetUser(null);
-            setNewPassword('');
-            await refreshUsers();
-        } catch (error: any) {
-            addToast('error', t('failed_to_update_user', settings.language));
-        }
-    };
-
-    const handleAddUser = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setNewUserLoading(true);
-        try {
-            if (!newUser.username || !newUser.password) throw new Error("Username and Password are required.");
-            if (!newUser.role) throw new Error("Please select a role.");
-            const userData = {
-                id: crypto.randomUUID(),
-                username: newUser.username,
-                email: newUser.email,
-                fullName: newUser.fullName || newUser.username,
-                empCode: newUser.empCode,
-                role: newUser.role,
-                isApproved: true,
-                password: newUser.password
-            };
-            const { error } = await supabase.from('users').insert({ id: userData.id, data: userData });
-            if (error) throw error;
-            addToast('success', `${newUser.username} ${t('user_created_successfully', settings.language)} `);
-            await refreshUsers();
-            setIsAddingUser(false);
-            setNewUser({ username: '', fullName: '', empCode: '', email: '', password: '', role: '' as Role });
-        } catch (error: any) {
-            addToast('error', error.message || "Failed to create user");
-        } finally {
-            setNewUserLoading(false);
-        }
-    };
-
+    // Sidebar Navigation Items
+    const navItems = [
+        { id: 'ALL', label: 'All Users', icon: Users, count: users.length, color: 'text-slate-500' },
+        { id: Role.ADMIN, label: 'Administrators', icon: Shield, count: users.filter(u => u.role === Role.ADMIN).length, color: 'text-indigo-600' },
+        { id: Role.STAGING_SUPERVISOR, label: 'Staging Supervisors', icon: UserCheck, count: users.filter(u => u.role === Role.STAGING_SUPERVISOR).length, color: 'text-blue-600' },
+        { id: Role.LOADING_SUPERVISOR, label: 'Loading Supervisors', icon: LayoutGrid, count: users.filter(u => u.role === Role.LOADING_SUPERVISOR).length, color: 'text-orange-600' },
+        { id: Role.SHIFT_LEAD, label: 'Shift Leads', icon: Star, count: users.filter(u => u.role === Role.SHIFT_LEAD).length, color: 'text-purple-600' },
+        { id: 'PENDING', label: 'Pending Approval', icon: Clock, count: users.filter(u => !u.isApproved).length, color: 'text-amber-600' },
+        { id: 'LOCKED', label: 'Locked Accounts', icon: Shield, count: users.filter(u => u.isLocked).length, color: 'text-red-600' },
+    ];
 
     return (
-        <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
-            <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold text-foreground">{t('user_management', settings.language)}</h3>
+        <div className="flex flex-col lg:flex-row h-[calc(100vh-100px)] gap-4 lg:gap-6 animate-in fade-in zoom-in-95 duration-300">
+            {/* LEFT SIDEBAR - DIRECTORY TREE (Mobile: Top horizontal scroll, Desktop: Left vertical sidebar) */}
+            <div className="w-full lg:w-64 shrink-0 flex flex-row lg:flex-col gap-2 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0 scrollbar-hide">
+                <div className="px-4 py-2 lg:w-full min-w-[200px]">
+                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 hidden lg:block">Directory</h3>
+                    <div className="flex lg:flex-col gap-1 lg:space-y-1">
+                        {navItems.map((item) => (
+                            <button
+                                key={item.id}
+                                onClick={() => setFilter(item.id as any)}
+                                className={cn(
+                                    "flex-shrink-0 lg:w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 border lg:border-none border-slate-100 dark:border-slate-800 lg:bg-transparent bg-white dark:bg-slate-900",
+                                    userFilter === item.id
+                                        ? "bg-white dark:bg-slate-800 text-indigo-600 shadow-lg shadow-indigo-500/10 lg:scale-105 border-indigo-200 dark:border-indigo-900"
+                                        : "text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-700 lg:hover:pl-4"
+                                )}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <item.icon size={16} className={item.color} />
+                                    <span className="whitespace-nowrap">{item.label}</span>
+                                </div>
+                                {item.count > 0 && (
+                                    <Badge variant="secondary" className="ml-2 bg-slate-100 dark:bg-slate-800 text-slate-500 text-[10px] px-1.5 h-5 min-w-[20px] justify-center">
+                                        {item.count}
+                                    </Badge>
+                                )}
+                            </button>
+                        ))}
+                    </div>
+                </div>
 
-                {/* User Filter Tabs */}
-                <div className="flex bg-muted p-1 rounded-lg gap-1 overflow-x-auto">
-                    <button
-                        onClick={() => setFilter('ALL')}
-                        className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${userFilter === 'ALL' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-                    >
-                        {t('all', settings.language)}
-                    </button>
-                    <button
-                        onClick={() => setFilter('PENDING')}
-                        className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${userFilter === 'PENDING' ? 'bg-background shadow-sm text-destructive' : 'text-muted-foreground hover:text-foreground'}`}
-                    >
-                        {t('pending', settings.language)}
-                    </button>
-                    <div className="w-px bg-border my-1" />
-                    <button
-                        onClick={() => setFilter(Role.STAGING_SUPERVISOR)}
-                        className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${userFilter === Role.STAGING_SUPERVISOR ? 'bg-background shadow-sm text-blue-600' : 'text-muted-foreground hover:text-foreground'}`}
-                    >
-                        {t('staging', settings.language)}
-                    </button>
-                    <button
-                        onClick={() => setFilter(Role.LOADING_SUPERVISOR)}
-                        className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${userFilter === Role.LOADING_SUPERVISOR ? 'bg-background shadow-sm text-orange-600' : 'text-muted-foreground hover:text-foreground'}`}
-                    >
-                        {t('loading', settings.language)}
-                    </button>
-                    <button
-                        onClick={() => setFilter(Role.SHIFT_LEAD)}
-                        className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${userFilter === Role.SHIFT_LEAD ? 'bg-background shadow-sm text-purple-600' : 'text-muted-foreground hover:text-foreground'}`}
-                    >
-                        {t('shift_lead', settings.language)}
-                    </button>
+                <div className="mt-auto px-4 py-6 hidden lg:block">
+                    <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-xl shadow-indigo-500/20">
+                        <p className="text-xs font-bold opacity-80 mb-1 uppercase tracking-widest">Total Users</p>
+                        <p className="text-3xl font-black tracking-tight">{users.length}</p>
+                        <div className="mt-3 flex items-center gap-2 text-[10px] font-medium bg-white/10 w-fit px-2 py-1 rounded-lg backdrop-blur-sm">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                            {users.filter(u => u.isApproved).length} Active Identities
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="relative">
-                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                    <input
-                        value={userSearchQuery}
-                        onChange={(e) => setUserSearchQuery(e.target.value)}
-                        className="bg-muted/50 border border-border rounded-lg pl-9 pr-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:border-primary/50 focus:outline-none w-64"
-                        placeholder={t('search_users_placeholder', settings.language)}
+            {/* MAIN CONTENT - DATA GRID */}
+            <div className="flex-1 flex flex-col bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden min-w-0">
+                {/* TOOLBAR */}
+                <div className="p-4 lg:p-5 border-b border-slate-100 dark:border-slate-800 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 bg-white/50 backdrop-blur-sm sticky top-0 z-20">
+                    <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-4 flex-1">
+                        <div className="relative w-full max-w-md group">
+                            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                            <input
+                                value={userSearchQuery}
+                                onChange={(e) => setUserSearchQuery(e.target.value)}
+                                className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl pl-10 pr-4 py-2.5 text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 transition-all placeholder:text-slate-400"
+                                placeholder="Search..."
+                            />
+                        </div>
+                        <div className="hidden lg:block h-6 w-px bg-slate-200 dark:bg-slate-700" />
+                        <div className="flex items-center gap-2 overflow-x-auto pb-1 lg:pb-0">
+                            {/* FILTER */}
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant={statusFilter !== 'ALL' ? "secondary" : "ghost"} size="sm" className={cn("text-slate-500 hover:text-indigo-600 gap-2 shrink-0", statusFilter !== 'ALL' && "text-indigo-600")}>
+                                        <Filter size={16} />
+                                        <span className="hidden sm:inline">{statusFilter === 'ALL' ? 'Filter' : statusFilter === 'ACTIVE' ? 'Active' : 'Locked'}</span>
+                                        <ChevronDown size={12} className="opacity-50" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" className="w-48">
+                                    <DropdownMenuLabel>Account Status</DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuRadioGroup value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+                                        <DropdownMenuRadioItem value="ALL">Show All Objects</DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem value="ACTIVE">Active Accounts</DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem value="LOCKED">Locked Accounts</DropdownMenuRadioItem>
+                                    </DropdownMenuRadioGroup>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+
+                            {/* SORT */}
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="sm" className="text-slate-500 hover:text-indigo-600 gap-2 shrink-0">
+                                        <ArrowUpDown size={16} /> <span className="hidden sm:inline">Sort</span>
+                                        <ChevronDown size={12} className="opacity-50" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" className="w-48">
+                                    <DropdownMenuLabel>Sort Directory By</DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuRadioGroup value={sortConfig.key} onValueChange={(v) => setSortConfig({ key: v as SortKey, direction: sortConfig.direction })}>
+                                        <DropdownMenuRadioItem value="name">Full Name</DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem value="role">Role / Permission</DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem value="lastActive">Last Activity</DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem value="status">Account Status</DropdownMenuRadioItem>
+                                    </DropdownMenuRadioGroup>
+                                    <DropdownMenuSeparator />
+                                    <div className="p-2">
+                                        <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
+                                            <button
+                                                onClick={() => setSortConfig(p => ({ ...p, direction: 'asc' }))}
+                                                className={cn("flex-1 text-xs font-bold py-1.5 rounded-md text-center transition-all", sortConfig.direction === 'asc' ? "bg-white shadow-sm text-indigo-600" : "text-slate-500")}
+                                            >
+                                                Asc
+                                            </button>
+                                            <button
+                                                onClick={() => setSortConfig(p => ({ ...p, direction: 'desc' }))}
+                                                className={cn("flex-1 text-xs font-bold py-1.5 rounded-md text-center transition-all", sortConfig.direction === 'desc' ? "bg-white shadow-sm text-indigo-600" : "text-slate-500")}
+                                            >
+                                                Desc
+                                            </button>
+                                        </div>
+                                    </div>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <Button variant="outline" size="sm" onClick={handleExport} className="hidden lg:flex border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50">
+                            <Download size={16} className="mr-2" /> Export
+                        </Button>
+                        <Button onClick={() => setIsAddingUser(true)} className="flex-1 lg:flex-none bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-lg shadow-indigo-500/20 transition-all active:scale-95 justify-center">
+                            <UserPlus size={18} className="mr-2" /> <span className="sm:inline">Add User</span>
+                        </Button>
+                    </div>
+                </div>
+
+                {/* TABLE AREA */}
+                <div className="flex-1 overflow-auto bg-slate-50/50 dark:bg-slate-900/50 relative">
+                    <UserTable
+                        users={processedUsers}
+                        lastActiveMap={lastActiveMap}
+                        onToggleStatus={toggleUserStatus}
+                        onUnlock={handleUnlockUser}
+                        onEdit={setEditingUser}
+                        onDelete={handleDeleteUser}
+                        onResetPassword={setPasswordResetUser}
                     />
                 </div>
-                <Button onClick={() => setIsAddingUser(true)} className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground">
-                    <UserPlus size={16} /> {t('add_user', settings.language)}
-                </Button>
-            </div>
 
-            <div className="rounded-xl border border-border overflow-hidden bg-card overflow-x-auto">
-                <table className="w-full text-left text-sm min-w-[700px]">
-                    <thead>
-                        <tr className="bg-muted text-muted-foreground border-b border-border sticky top-0 z-10 backdrop-blur-sm shadow-sm">
-                            <th className="py-3 pl-4 font-medium">{t('user', settings.language)}</th>
-                            <th className="py-3 font-medium">{t('role', settings.language)}</th>
-                            <th className="py-3 font-medium">{t('emp', settings.language)}</th>
-                            <th className="py-3 font-medium">{t('last_active', settings.language)}</th>
-                            <th className="py-3 font-medium">{t('status', settings.language)}</th>
-                            <th className="py-3 pr-4 text-right font-medium">{t('actions', settings.language)}</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                        {filteredUsers.length === 0 ? (
-                            <tr><td colSpan={6} className="py-8 text-center text-muted-foreground">{t('no_users_found', settings.language)}</td></tr>
-                        ) : filteredUsers.map((user) => {
-                            const lastActive = lastActiveMap.get(user.username);
-                            return (
-                                <tr key={user.id} className="group hover:bg-muted/50 transition-colors">
-                                    <td className="py-3 pl-4 font-medium text-foreground">{user.fullName} <div className="text-xs text-muted-foreground font-normal sm:hidden">{user.username}</div></td>
-                                    <td className="py-3">
-                                        <Badge variant="secondary" className="text-xs font-normal">
-                                            {user.role}
-                                        </Badge>
-                                    </td>
-                                    <td className="py-3 text-muted-foreground text-xs">{user.empCode || '-'}</td>
-                                    <td className="py-3 text-muted-foreground text-xs">
-                                        <div className="flex items-center gap-1.5">
-                                            <Clock size={12} className={lastActive ? "text-emerald-500" : "text-slate-300"} />
-                                            {getTimeAgo(lastActive)}
-                                        </div>
-                                    </td>
-                                    <td className="py-3">
-                                        <button
-                                            onClick={() => toggleUserStatus(user)}
-                                            className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium transition-colors border ${user.isApproved
-                                                ? 'bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500/20'
-                                                : 'bg-red-500/10 text-red-600 border-red-500/20 hover:bg-red-500/20'
-                                                }`}
-                                        >
-                                            {user.isApproved ? (
-                                                <><CheckCircle size={12} /> {t('active', settings.language)}</>
-                                            ) : (
-                                                <><XCircle size={12} /> {t('inactive', settings.language)}</>
-                                            )}
-                                        </button>
-                                    </td>
-                                    <td className="py-3 pr-4 text-right flex justify-end gap-2">
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-                                            onClick={() => setPasswordResetUser(user)}
-                                            title={t('reset_password', settings.language)}
-                                        >
-                                            <KeyRound size={14} />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-                                            onClick={() => setEditingUser(user)}
-                                            title={t('edit_user', settings.language)}
-                                        >
-                                            <FileText size={14} />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-8 w-8 p-0 text-destructive/50 hover:text-destructive hover:bg-destructive/10 cursor-pointer"
-                                            onClick={() => handleDeleteUser(user)}
-                                            title={t('delete_user', settings.language)}
-                                        >
-                                            <Trash2 size={14} className="pointer-events-none" />
-                                        </Button>
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                </table>
-            </div>
-
-            {/* NEW USER MODAL */}
-            {isAddingUser && (
-                <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-                    <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="bg-card border border-border w-full max-w-md rounded-xl shadow-2xl overflow-hidden">
-                        <div className="p-4 border-b border-border flex justify-between items-center bg-muted/50">
-                            <h3 className="font-bold text-lg">{t('add_new_user', settings.language)}</h3>
-                            <button onClick={() => setIsAddingUser(false)} className="text-muted-foreground hover:text-foreground"><X size={20} /></button>
-                        </div>
-                        <form onSubmit={handleAddUser} className="p-4 space-y-4">
-                            <div>
-                                <label className="text-xs font-bold uppercase text-muted-foreground mb-1 block">{t('role', settings.language)}</label>
-                                <select
-                                    value={newUser.role}
-                                    onChange={(e) => setNewUser({ ...newUser, role: e.target.value as Role })}
-                                    className="w-full bg-background border border-border p-2 rounded-lg font-bold"
-                                >
-                                    <option value="" disabled>Select Role</option>
-                                    {Object.values(Role).map(r => (
-                                        <option key={r} value={r} className="font-bold">
-                                            {r}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-xs font-bold uppercase text-muted-foreground mb-1 block">{t('username', settings.language)} *</label>
-                                    <input required value={newUser.username} onChange={e => setNewUser({ ...newUser, username: e.target.value })} className="w-full bg-background border border-border p-2 rounded-lg" />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold uppercase text-muted-foreground mb-1 block">{t('full_name', settings.language)}</label>
-                                    <input value={newUser.fullName} onChange={e => setNewUser({ ...newUser, fullName: e.target.value })} className="w-full bg-background border border-border p-2 rounded-lg" />
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-xs font-bold uppercase text-muted-foreground mb-1 block">{t('password', settings.language)} *</label>
-                                    <input required type="text" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} className="w-full bg-background border border-border p-2 rounded-lg" />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold uppercase text-muted-foreground mb-1 block">{t('emp_code', settings.language)}</label>
-                                    <input value={newUser.empCode} onChange={e => setNewUser({ ...newUser, empCode: e.target.value })} className="w-full bg-background border border-border p-2 rounded-lg" />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="text-xs font-bold uppercase text-muted-foreground mb-1 block">{t('email', settings.language)}</label>
-                                <input type="email" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} className="w-full bg-background border border-border p-2 rounded-lg" />
-                            </div>
-
-                            <div className="pt-2 flex justify-end gap-2">
-                                <Button type="button" variant="ghost" onClick={() => setIsAddingUser(false)}>{t('cancel', settings.language)}</Button>
-                                <Button type="submit" disabled={newUserLoading} className="bg-primary text-primary-foreground">
-                                    {newUserLoading && <Loader2 className="animate-spin mr-2" size={16} />} {t('create_user', settings.language)}
-                                </Button>
-                            </div>
-                        </form>
-                    </motion.div>
+                <div className="p-3 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-[10px] text-slate-400 flex justify-between items-center font-medium">
+                    <span>{processedUsers.length} users</span>
+                    <span className="hidden sm:inline">SCM-FG Directory Service v1.2</span>
                 </div>
-            )
-            }
+            </div>
 
-            {/* PASSWORD RESET MODAL */}
-            {
-                passwordResetUser && (
-                    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-                        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-sm rounded-xl shadow-2xl p-6">
-                            <h3 className="font-bold text-lg mb-2">{t('reset_password', settings.language)}</h3>
-                            <p className="text-sm text-slate-500 mb-4">{t('enter_new_password_for', settings.language)} <strong>{passwordResetUser.username}</strong></p>
-                            <form onSubmit={handlePasswordReset}>
-                                <input
-                                    type="text"
-                                    className="w-full border p-2 rounded mb-4 bg-slate-50 dark:bg-slate-950 dark:border-slate-800"
-                                    placeholder={t('password', settings.language)}
-                                    value={newPassword}
-                                    onChange={(e) => setNewPassword(e.target.value)}
-                                    autoFocus
-                                />
-                                <div className="flex justify-end gap-2">
-                                    <Button type="button" variant="ghost" onClick={() => setPasswordResetUser(null)}>{t('cancel', settings.language)}</Button>
-                                    <Button type="submit">{t('update_password', settings.language)}</Button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                )
-            }
+            {/* MODALS */}
+            <AddUserModal
+                isOpen={isAddingUser}
+                onClose={() => setIsAddingUser(false)}
+                onSuccess={refreshUsers}
+                settings={settings}
+            />
 
-            {/* EDIT USER MODAL */}
-            {
-                editingUser && (
-                    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in zoom-in-95">
-                        <div className="bg-background border border-border w-full max-w-md rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                            <div className="p-4 border-b border-border flex justify-between items-center bg-muted/30">
-                                <h3 className="font-bold text-lg flex items-center gap-2">
-                                    <FileText size={18} className="text-primary" /> {t('edit_user', settings.language)}
-                                </h3>
-                                <button onClick={() => setEditingUser(null)} className="text-muted-foreground hover:text-foreground p-1 hover:bg-muted rounded-full transition-colors">
-                                    <X size={20} />
-                                </button>
-                            </div>
-                            <form onSubmit={handleUpdateUser} className="p-6 space-y-5 overflow-y-auto">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1.5">
-                                        <label className="text-xs font-bold uppercase text-muted-foreground tracking-wider">{t('username', settings.language)}</label>
-                                        <input
-                                            value={editingUser!.username}
-                                            onChange={(e) => setEditingUser({ ...editingUser!, username: e.target.value })}
-                                            className="w-full bg-background border border-border p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-                                        />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-xs font-bold uppercase text-muted-foreground tracking-wider">{t('full_name', settings.language)}</label>
-                                        <input
-                                            value={editingUser!.fullName}
-                                            onChange={(e) => setEditingUser({ ...editingUser!, fullName: e.target.value })}
-                                            className="w-full bg-background border border-border p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-                                        />
-                                    </div>
-                                </div>
+            <EditUserModal
+                user={editingUser}
+                onClose={() => setEditingUser(null)}
+                onSuccess={refreshUsers}
+                settings={settings}
+            />
 
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold uppercase text-muted-foreground tracking-wider">{t('role_assignment', settings.language)}</label>
-                                    <select
-                                        value={editingUser!.role}
-                                        onChange={(e) => setEditingUser({ ...editingUser!, role: e.target.value as Role })}
-                                        className="w-full bg-background border border-border p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all appearance-none font-bold"
-                                    >
-                                        {Object.values(Role).map(r => (
-                                            <option key={r} value={r} className="font-bold">
-                                                {r}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1.5">
-                                        <label className="text-xs font-bold uppercase text-muted-foreground tracking-wider">{t('employee_code', settings.language)}</label>
-                                        <input
-                                            value={editingUser!.empCode}
-                                            onChange={(e) => setEditingUser({ ...editingUser!, empCode: e.target.value })}
-                                            className="w-full bg-background border border-border p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-                                        />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-xs font-bold uppercase text-muted-foreground tracking-wider">{t('email_address', settings.language)}</label>
-                                        <input
-                                            type="email"
-                                            value={editingUser!.email}
-                                            onChange={(e) => setEditingUser({ ...editingUser!, email: e.target.value })}
-                                            className="w-full bg-background border border-border p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="pt-4 flex gap-3 justify-end border-t border-border mt-2">
-                                    <Button type="button" variant="outline" onClick={() => setEditingUser(null)} className="border-border text-foreground hover:bg-muted">{t('cancel', settings.language)}</Button>
-                                    <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90 px-6">{t('save_changes', settings.language)}</Button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                )}
+            <PasswordResetModal
+                user={passwordResetUser}
+                onClose={() => setPasswordResetUser(null)}
+                onSuccess={refreshUsers}
+                settings={settings}
+            />
         </div>
     );
 }
-
-

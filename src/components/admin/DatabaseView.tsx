@@ -6,7 +6,7 @@ import { useToast } from "@/contexts/ToastContext";
 import { useData } from "@/contexts/DataContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, Printer, Trash2, Layers, Package, CheckCircle, LayoutGrid, XCircle, List } from 'lucide-react';
+import { Search, Printer, Trash2, Layers, Package, CheckCircle, LayoutGrid, XCircle, List, Calendar, Clock } from 'lucide-react';
 import { OperationsMonitor } from "./OperationsMonitor";
 import { t } from "@/lib/i18n";
 
@@ -26,11 +26,33 @@ export function DatabaseView({ sheets, currentUser, settings, refreshSheets }: D
     const [searchQuery, setSearchQuery] = useState('');
     const [stageFilter, setStageFilter] = useState<'ALL' | 'STAGING' | 'LOADING' | 'COMPLETED'>('ALL');
     const [viewMode, setViewMode] = useState<'list' | 'board'>('list');
+    const [timeFilter, setTimeFilter] = useState<'ALL' | '30D' | '90D' | 'CUSTOM'>('ALL');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
 
     const filteredSheets = useMemo(() => {
-        let relevantSheets = sheets;
+        let relevantSheets = [...sheets];
 
-        // 0. Stage Filtering (Grouping Statuses)
+        // 0. Time Filtering
+        if (timeFilter !== 'ALL') {
+            if (timeFilter === 'CUSTOM') {
+                if (startDate) {
+                    const start = new Date(startDate);
+                    relevantSheets = relevantSheets.filter(s => new Date(s.createdAt) >= start);
+                }
+                if (endDate) {
+                    const end = new Date(endDate);
+                    relevantSheets = relevantSheets.filter(s => new Date(s.createdAt) <= end);
+                }
+            } else {
+                const now = new Date();
+                const days = timeFilter === '30D' ? 30 : 90;
+                const threshold = new Date(now.setDate(now.getDate() - days));
+                relevantSheets = relevantSheets.filter(s => new Date(s.createdAt) >= threshold);
+            }
+        }
+
+        // 1. Stage Filtering (Grouping Statuses)
         if (stageFilter !== 'ALL') {
             relevantSheets = relevantSheets.filter(sheet => {
                 if (stageFilter === 'STAGING') return sheet.status === SheetStatus.DRAFT || sheet.status === SheetStatus.STAGING_VERIFICATION_PENDING;
@@ -52,7 +74,7 @@ export function DatabaseView({ sheets, currentUser, settings, refreshSheets }: D
             return matchesSearch;
         });
 
-        return relevantSheets;
+        return relevantSheets.sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime());
     }, [sheets, stageFilter, searchQuery]);
 
     // Duration Helper
@@ -66,6 +88,12 @@ export function DatabaseView({ sheets, currentUser, settings, refreshSheets }: D
         const hours = Math.floor(diffMs / (1000 * 60 * 60));
         const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
         return `${hours}h ${minutes}m`;
+    };
+
+    const formatDate = (date: any) => {
+        if (!date) return '---';
+        const d = new Date(date);
+        return isNaN(d.getTime()) ? '---' : d.toLocaleString();
     };
 
     const handleDeleteSheet = async (sheetId: string) => {
@@ -117,6 +145,51 @@ export function DatabaseView({ sheets, currentUser, settings, refreshSheets }: D
                 </div>
 
                 <div className="flex flex-wrap items-center gap-4">
+                    {/* Time Filtering Toggle */}
+                    <div className="flex bg-slate-100 dark:bg-slate-800/50 p-1 rounded-xl border border-slate-200/50 dark:border-white/5 shadow-inner">
+                        {(['ALL', '30D', '90D', 'CUSTOM'] as const).map((range) => (
+                            <button
+                                key={range}
+                                onClick={() => setTimeFilter(range)}
+                                className={`px-2.5 py-1 rounded-lg text-[9px] uppercase font-black transition-all ${timeFilter === range ? 'bg-white dark:bg-slate-600 text-primary shadow-sm ring-1 ring-slate-200/50' : 'text-slate-400 hover:text-slate-600'}`}
+                            >
+                                {range === 'ALL' ? 'All Time' : range === '30D' ? '30 Days' : range === '90D' ? '3 Months' : 'Custom'}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Custom DateTime Inputs */}
+                    {timeFilter === 'CUSTOM' && (
+                        <div className="flex items-center gap-1 animate-in slide-in-from-right-2 duration-300">
+                            <div className="flex items-center bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/5 shadow-sm overflow-hidden group focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+                                <div className="flex items-center gap-2 px-3 py-1.5 border-r border-slate-100 dark:border-white/5">
+                                    <Calendar className="w-3.5 h-3.5 text-primary" />
+                                    <div className="flex flex-col">
+                                        <span className="text-[7px] uppercase font-bold text-slate-400 leading-tight">Start Time</span>
+                                        <input
+                                            type="datetime-local"
+                                            value={startDate}
+                                            onChange={(e) => setStartDate(e.target.value)}
+                                            className="bg-transparent text-[11px] font-bold outline-none w-[145px] cursor-pointer"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2 px-3 py-1.5">
+                                    <Clock className="w-3.5 h-3.5 text-primary" />
+                                    <div className="flex flex-col">
+                                        <span className="text-[7px] uppercase font-bold text-slate-400 leading-tight">End Time</span>
+                                        <input
+                                            type="datetime-local"
+                                            value={endDate}
+                                            onChange={(e) => setEndDate(e.target.value)}
+                                            className="bg-transparent text-[11px] font-bold outline-none w-[145px] cursor-pointer"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Modern Stage Filters */}
                     <div className="flex bg-slate-100 dark:bg-slate-800/50 p-1.5 rounded-xl border border-slate-200/50 dark:border-white/5 shadow-inner">
                         <FilterButton
@@ -180,23 +253,23 @@ export function DatabaseView({ sheets, currentUser, settings, refreshSheets }: D
                     <OperationsMonitor sheets={filteredSheets} onRefresh={refreshSheets} />
                 </div>
             ) : (
-                <div className="rounded-2xl border border-slate-200 dark:border-white/5 overflow-hidden bg-white dark:bg-slate-900/20 shadow-xl shadow-slate-200/50 dark:shadow-none overflow-x-auto">
-                    <div className="min-w-[1200px]">
+                <div className="rounded-2xl border border-slate-200 dark:border-white/5 overflow-hidden bg-white dark:bg-slate-900/20 shadow-xl shadow-slate-200/50 dark:shadow-none">
+                    <div className="w-full">
                         <div className="bg-slate-50/80 dark:bg-slate-950/50 text-slate-500 border-b border-slate-200 dark:border-white/5 backdrop-blur-sm sticky top-0 z-10 flex font-bold text-[9px] uppercase tracking-widest px-4">
-                            <div className={`w-[12%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>{t('id', settings.language)}</div>
-                            <div className={`w-[13%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>
+                            <div className={`w-[10%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>{t('id', settings.language)}</div>
+                            <div className={`w-[14%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>
                                 <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-slate-400" />{t('staging_sv', settings.language)}</span>
                             </div>
-                            <div className={`w-[13%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>
+                            <div className={`w-[14%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>
                                 <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-blue-400" />{t('loading_sv', settings.language)}</span>
                             </div>
-                            <div className={`w-[13%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>
+                            <div className={`w-[14%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>
                                 <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-purple-400" />{t('approval_sv', settings.language)}</span>
                             </div>
-                            <div className={`w-[20%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>{t('destination', settings.language)}</div>
+                            <div className={`w-[18%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>{t('destination', settings.language)}</div>
                             <div className={`w-[8%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>{t('duration', settings.language)}</div>
                             <div className={`w-[12%] ${settings.density === 'compact' ? 'py-1' : 'py-3'}`}>{t('status', settings.language)}</div>
-                            <div className={`w-[9%] text-right font-medium px-4 ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>{t('actions', settings.language)}</div>
+                            <div className={`w-[10%] text-right font-medium px-4 ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>{t('actions', settings.language)}</div>
                         </div>
 
                         {filteredSheets.length === 0 ? (
@@ -210,20 +283,27 @@ export function DatabaseView({ sheets, currentUser, settings, refreshSheets }: D
                                         <div
                                             key={sheet.id}
                                             className="flex items-center px-4 hover:bg-slate-50 dark:hover:bg-primary/5 transition-all cursor-pointer border-b border-slate-100 dark:border-white/5 group text-sm relative min-h-[68px]"
-                                            onClick={() => navigate(isCompleted ? `/sheets/loading/${sheet.id}` : `/sheets/staging/${sheet.id}`)}
+                                            onClick={() => {
+                                                const useLoadingSheet =
+                                                    sheet.status === SheetStatus.LOCKED ||
+                                                    sheet.status === SheetStatus.LOADING_VERIFICATION_PENDING ||
+                                                    sheet.status === SheetStatus.COMPLETED;
+
+                                                navigate(useLoadingSheet ? `/sheets/loading/${sheet.id}` : `/sheets/staging/${sheet.id}`);
+                                            }}
                                         >
                                             <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary scale-y-0 group-hover:scale-y-100 transition-transform origin-top duration-300" />
-                                            <div className="w-[12%] font-mono text-xs font-bold text-slate-500 group-hover:text-primary transition-colors">{sheet.id}</div>
+                                            <div className="w-[10%] font-mono text-[10px] font-bold text-slate-500 group-hover:text-primary transition-colors truncate pr-2">#{sheet.id.slice(-8)}</div>
 
                                             {/* Timeline Columns */}
-                                            <div className="w-[13%] font-medium text-slate-900 dark:text-slate-200 truncate pr-4">
+                                            <div className="w-[14%] font-medium text-slate-900 dark:text-slate-200 truncate pr-4">
                                                 <div className="flex items-center gap-1.5">
                                                     <div className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0" />
                                                     <span className="truncate text-xs">{sheet.supervisorName || '-'}</span>
                                                 </div>
                                             </div>
 
-                                            <div className="w-[13%] text-slate-600 dark:text-slate-400 truncate pr-4">
+                                            <div className="w-[14%] text-slate-600 dark:text-slate-400 truncate pr-4">
                                                 {sheet.loadingSvName ? (
                                                     <div className="flex items-center gap-1.5">
                                                         <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
@@ -234,7 +314,7 @@ export function DatabaseView({ sheets, currentUser, settings, refreshSheets }: D
                                                 )}
                                             </div>
 
-                                            <div className="w-[13%] text-slate-600 dark:text-slate-400 truncate pr-4">
+                                            <div className="w-[14%] text-slate-600 dark:text-slate-400 truncate pr-4">
                                                 {(() => {
                                                     const approver = sheet.verifiedBy || sheet.completedBy || sheet.loadingApprovedBy;
                                                     return approver ? (
@@ -248,12 +328,12 @@ export function DatabaseView({ sheets, currentUser, settings, refreshSheets }: D
                                                 })()}
                                             </div>
 
-                                            <div className="w-[20%] truncate text-slate-500 pr-4">
+                                            <div className="w-[18%] truncate text-slate-500 pr-4">
                                                 <div className="flex flex-col">
                                                     <span className="text-foreground font-medium truncate">{sheet.destination || '-'}</span>
                                                     <div className="flex items-center gap-2 text-[10px] opacity-60">
-                                                        <span className="bg-slate-100 dark:bg-slate-800 px-1 rounded uppercase">{sheet.shift}</span>
-                                                        <span>{new Date(sheet.date).toLocaleDateString()}</span>
+                                                        <span className="bg-slate-100 dark:bg-slate-800 px-1 rounded uppercase tracking-tighter">{sheet.shift}</span>
+                                                        <span className="truncate">{formatDate(sheet.createdAt || sheet.date)}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -267,11 +347,17 @@ export function DatabaseView({ sheets, currentUser, settings, refreshSheets }: D
                                                         sheet.status.includes('PENDING') ? 'text-amber-600 border-amber-500/20 bg-amber-500/10 dark:text-amber-400' :
                                                             sheet.status === SheetStatus.LOCKED ? 'text-indigo-600 border-indigo-500/20 bg-indigo-500/10 dark:text-indigo-400' :
                                                                 'text-slate-500 border-slate-200 bg-slate-50 dark:text-slate-400 dark:border-white/10 dark:bg-white/5'}`}>
-                                                    {t(sheet.status.toLowerCase() as any, settings.language).replace(/_/g, ' ')}
+                                                    {(() => {
+                                                        // Custom Override: Show "READY TO LOAD" for Loading Team when status is LOCKED
+                                                        if (sheet.status === SheetStatus.LOCKED && (currentUser?.role === Role.LOADING_SUPERVISOR || currentUser?.role === Role.ADMIN || currentUser?.role === Role.SHIFT_LEAD)) {
+                                                            return t('ready_to_load', settings.language);
+                                                        }
+                                                        return t(sheet.status.toLowerCase() as any, settings.language).replace(/_/g, ' ');
+                                                    })()}
                                                 </Badge>
                                             </div>
 
-                                            <div className="w-[9%] flex justify-end gap-1 px-4" onClick={e => e.stopPropagation()}>
+                                            <div className="w-[10%] flex justify-end gap-1 px-4" onClick={e => e.stopPropagation()}>
                                                 {/* Quick Actions for Admin */}
                                                 {currentUser?.role === Role.ADMIN && (
                                                     <>

@@ -26,6 +26,7 @@ type TranslationKey =
     | 'language'
     | 'english'
     | 'japanese'
+    | 'reports'
     | 'stats'
     | 'live_workflow_status'
     | 'recent_activity'
@@ -200,6 +201,7 @@ type TranslationKey =
     | 'failed_to_update_status'
     | 'send_to_review'
     | 'cannot_delete_self'
+    | 'cannot_deactivate_self'
     | 'delete_active_user_warning'
     | 'operations_monitor'
     | 'current_progress'
@@ -239,6 +241,7 @@ const translations: Record<Language, Record<TranslationKey, string>> = {
         language_desc: "App display language",
         english: "English",
         japanese: "Japanese",
+        reports: "Reports",
         default_tab: "Default Tab",
         default_tab_desc: "Admin landing page",
         stats: "Stats",
@@ -403,6 +406,7 @@ const translations: Record<Language, Record<TranslationKey, string>> = {
         failed_to_update_status: "Failed to update status",
         send_to_review: "Send to Review",
         cannot_delete_self: "You cannot delete your own account!",
+        cannot_deactivate_self: "You cannot deactivate your own account!",
         delete_active_user_warning: "This user is currently active. Deleting them will automatically deactivate their profile. Proceed?",
         operations_monitor: "Operations Monitor",
         current_progress: "Current Progress",
@@ -444,6 +448,7 @@ const translations: Record<Language, Record<TranslationKey, string>> = {
         language_desc: "アプリの表示言語",
         english: "英語",
         japanese: "日本語",
+        reports: "レポート",
         default_tab: "デフォルトタブ",
         default_tab_desc: "管理者のランディングページ",
         stats: "統計",
@@ -608,6 +613,7 @@ const translations: Record<Language, Record<TranslationKey, string>> = {
         failed_to_update_status: "ステータスの更新に失敗しました",
         send_to_review: "レビューに送信",
         cannot_delete_self: "自分のアカウントは削除できません！",
+        cannot_deactivate_self: "自分のアカウントは無効化できません！",
         delete_active_user_warning: "このユーザーは現在アクティブです。削除すると自動的に非アクティブ化されます。続行しますか？",
         operations_monitor: "運用モニター",
         current_progress: "現在の進捗",
