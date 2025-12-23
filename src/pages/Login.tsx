@@ -149,7 +149,7 @@ export default function LoginPage() {
             <motion.div
                 initial={{ opacity: 0, x: -30 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="absolute top-6 left-6 lg:top-10 lg:left-12 z-20 flex items-center gap-4 max-w-[80%]"
+                className="relative p-6 pb-0 lg:absolute lg:top-10 lg:left-12 lg:p-0 z-20 flex items-center gap-4 max-w-[80%]"
             >
                 <div className="relative group shrink-0">
                     <img src="/unicharm-logo.png" alt="Unicharm" className="relative w-12 lg:w-16 h-auto drop-shadow-2xl brightness-110" />
@@ -166,11 +166,11 @@ export default function LoginPage() {
 
             {/* MAIN CONTENT - STRICT 50/50 GRID */}
             {/* Using h-full on the grid ensures it fills the viewport height exactly on Desktop */}
-            <div className="relative z-10 w-full h-full grid grid-cols-1 lg:grid-cols-2">
+            <div className="relative z-10 w-full min-h-screen flex flex-col lg:grid lg:grid-cols-2 lg:h-full">
 
                 {/* LEFT COLUMN: Premium Products - POSITIONED BELOW HEADER */}
                 {/* top padding ensures it clears the absolute header; justify-start keeps it from floating up */}
-                <div className="flex flex-col justify-end lg:justify-start items-center p-8 lg:pt-32 h-[45vh] lg:h-full order-2 lg:order-1">
+                <div className="flex flex-col justify-center lg:justify-start items-center p-8 lg:pt-32 lg:h-full order-2 lg:order-1">
                     <div className="flex flex-col items-center mb-4 lg:mt-12 lg:mb-4 opacity-90">
                         <span className="text-xs lg:text-sm font-bold italic text-slate-700 tracking-[0.6em] uppercase text-center" style={{ fontFamily: 'Outfit, sans-serif' }}>
                             Premium Products
@@ -225,7 +225,7 @@ export default function LoginPage() {
 
                 {/* RIGHT COLUMN: Login Portal - MEDIUM SIZE */}
                 {/* Centered vertically, aligned right on desktop */}
-                <div className="flex flex-col justify-center items-center lg:items-end p-8 lg:pr-32 h-[55vh] lg:h-full order-1 lg:order-2">
+                <div className="flex flex-col justify-center items-center lg:items-end p-4 md:p-8 lg:pr-32 flex-1 lg:h-full order-1 lg:order-2 min-h-[500px] lg:min-h-0">
                     <div className="w-full max-w-[320px] lg:max-w-[380px]">
                         {/* Header Text - Scaled Down */}
                         <motion.div
