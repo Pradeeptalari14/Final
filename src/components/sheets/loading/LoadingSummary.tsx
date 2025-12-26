@@ -6,9 +6,6 @@ interface LoadingSummaryProps {
     totalStaging: number;
     grandTotalLoaded: number;
     balance: number;
-    remarks: string;
-    onRemarksChange: (value: string) => void;
-    isLocked: boolean;
     returnedItems: LoadingItem[];
     overLoadedItems: LoadingItem[];
     extraItemsWithQty: AdditionalItem[];
@@ -19,9 +16,6 @@ export const LoadingSummary: React.FC<LoadingSummaryProps> = ({
     totalStaging,
     grandTotalLoaded,
     balance,
-    remarks,
-    onRemarksChange,
-    isLocked,
     returnedItems,
     overLoadedItems,
     extraItemsWithQty,
@@ -73,13 +67,7 @@ export const LoadingSummary: React.FC<LoadingSummaryProps> = ({
                     ))}
                 </div>
 
-                <textarea
-                    className="w-full h-24 p-3 border border-slate-300 rounded-lg text-sm outline-none bg-white focus:ring-2 focus:ring-amber-500/20"
-                    placeholder="Enter other remarks regarding shortage/excess..."
-                    value={remarks}
-                    onChange={e => onRemarksChange(e.target.value)}
-                    disabled={isLocked}
-                />
+
             </div>
         </div>
     );

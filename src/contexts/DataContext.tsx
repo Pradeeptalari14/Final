@@ -352,7 +352,8 @@ export function DataProvider({ children, queryClient }: { children: React.ReactN
         securityLogs,
         logSecurityEvent,
         activityLogs,
-        logActivity
+        logActivity,
+        getAllUsers: () => users
     }}>
         {children}
     </DataContext.Provider>;

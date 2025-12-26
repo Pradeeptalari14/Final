@@ -87,77 +87,181 @@ export default function LoadingSheet() {
             </div>
 
             {/* EXCEL PRINT LAYOUT (Legacy Ported) */}
-            <div className="hidden print:block font-sans text-[10px] w-full text-black bg-white p-4 print:p-0 overflow-auto">
-                <div className="min-w-[800px]">
-                    <table className="w-full border-collapse border border-black mb-1 table-fixed text-[10px]">
+            {/* EXCEL PRINT LAYOUT (Restored 1-10 Grid Box Style) */}
+            <div className="hidden print:block font-sans text-black bg-white w-full max-w-none">
+                <style>{`
+                    @media print {
+                        @page { size: A4 landscape; margin: 5mm; }
+                        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                        tr { page-break-inside: avoid; }
+                    }
+                `}</style>
+
+                <div className="w-full border border-black text-[10px]">
+                    {/* HEADER */}
+                    {/* HEADER */}
+                    <table className="w-full border-collapse border border-black mb-1 table-fixed">
                         <colgroup>
-                            <col className="w-[10%]" /><col className="w-[23%]" />
-                            <col className="w-[10%]" /><col className="w-[23%]" />
-                            <col className="w-[14%]" /><col className="w-[20%]" />
+                            <col className="w-[8%]" />  {/* 1: Shift/Trans/Dest/Dock (Short label) */}
+                            <col className="w-[17%]" /> {/* 2: Value */}
+                            <col className="w-[8%]" />  {/* 3: Date/Driver/Vehicle/Seal (Short label) */}
+                            <col className="w-[17%]" /> {/* 4: Value */}
+                            <col className="w-[15%]" /> {/* 5: Picking By/Picking Cross/Start/End (Long label) */}
+                            <col className="w-[17%]" /> {/* 6: Value */}
+                            <col className="w-[8%]" />  {/* 7: Emp code/End label */}
+                            <col className="w-[10%]" /> {/* 8: Value */}
                         </colgroup>
-                        <thead><tr><th colSpan={6} className="border border-black p-1 text-center text-xl font-bold bg-white">UCIA - FG WAREHOUSE</th></tr></thead>
+                        <thead>
+                            <tr><th colSpan={8} className="border border-black p-2 text-center text-xl font-bold bg-gray-50 uppercase">UCIA - FG WAREHOUSE</th></tr>
+                        </thead>
                         <tbody>
-                            <tr><td className="border border-black p-1 font-bold text-center bg-gray-100" colSpan={6}>Staging & Loading Check Sheet</td></tr>
+                            <tr><td className="border border-black p-1 font-bold text-center bg-gray-100" colSpan={8}>STAGING & LOADING CHECK SHEET</td></tr>
+                            {/* Row 1: 4 Items (1+1+1+1+1+1+1+1 items = 8 cols) */}
                             <tr>
-                                <td className="border border-black p-1 font-bold">Shift</td><td className="border border-black p-1 font-bold">{header.shift}</td>
-                                <td className="border border-black p-1 font-bold">Date</td><td className="border border-black p-1 font-medium">{currentSheet.date}</td>
-                                <td className="border border-black p-1 font-bold">Name of the SV / SG</td><td className="border border-black p-1 font-medium">{currentSheet.supervisorName}</td>
+                                <td className="border border-black p-1 font-bold bg-gray-50">Shift</td>
+                                <td className="border border-black p-1 font-medium">{header.shift}</td>
+                                <td className="border border-black p-1 font-bold bg-gray-50">Date</td>
+                                <td className="border border-black p-1 font-medium">{currentSheet.date}</td>
+                                <td className="border border-black p-1 font-bold bg-gray-50">Picking By *</td>
+                                <td className="border border-black p-1 font-medium">{currentSheet.pickingBy}</td>
+                                <td className="border border-black p-1 font-bold bg-gray-50">Emp. Code</td>
+                                <td className="border border-black p-1 font-medium">{header.pickingByEmpCode || '-'}</td>
                             </tr>
+                            {/* Row 2: 4 Items (2+2+2+2 cols = 8) */}
                             <tr>
-                                <td className="border border-black p-1 font-bold">Emp.code</td><td className="border border-black p-1 font-medium">{currentSheet.empCode}</td>
-                                <td className="border border-black p-1 font-bold">Transporter</td><td className="border border-black p-1 font-bold">{header.transporter}</td>
-                                <td className="border border-black p-1 font-bold">Loading Start Time</td><td className="border border-black p-1 font-medium">{header.startTime}</td>
+                                <td className="border border-black p-1 font-bold bg-gray-50">Transporter</td>
+                                <td className="border border-black p-1 font-medium">{header.transporter}</td>
+                                <td className="border border-black p-1 font-bold bg-gray-50">Driver Name</td>
+                                <td className="border border-black p-1 font-medium">{header.driverName}</td>
+                                <td className="border border-black p-1 font-bold bg-gray-50">Picking Crosschecked By</td>
+                                <td className="border border-black p-1 font-medium">{currentSheet.pickingCrosscheckedBy}</td>
+                                <td className="border border-black p-1 font-bold bg-gray-50">Emp. Code</td>
+                                <td className="border border-black p-1 font-medium">{header.pickingCrosscheckedByEmpCode || '-'}</td>
                             </tr>
+                            {/* Row 3: 3 Items (Col alignment fixed) */}
                             <tr>
-                                <td className="border border-black p-1 font-bold">Picking By</td><td className="border border-black p-1 font-bold">{header.pickingBy}</td>
-                                <td className="border border-black p-1 font-bold">Destination</td><td className="border border-black p-1 font-medium">{header.destination}</td>
-                                <td className="border border-black p-1 font-bold">Loading End Time</td><td className="border border-black p-1 font-medium">{header.endTime}</td>
+                                <td className="border border-black p-1 font-bold bg-gray-50">Destination</td>
+                                <td className="border border-black p-1 font-medium">{header.destination}</td>
+                                <td className="border border-black p-1 font-bold bg-gray-50">Vehicle No</td>
+                                <td className="border border-black p-1 font-medium uppercase">{header.vehicleNo}</td>
+                                <td className="border border-black p-1 font-bold bg-gray-50">Start Time</td>
+                                <td className="border border-black p-1 font-medium" colSpan={3}>
+                                    {(() => {
+                                        const t = currentSheet.loadingStartTime;
+                                        if (!t) return '-';
+                                        if (t.includes(':')) return t;
+                                        const d = new Date(t);
+                                        return isNaN(d.getTime()) ? '-' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                    })()}
+                                </td>
+                            </tr>
+                            {/* Row 4: 3 Items (Col alignment fixed) */}
+                            <tr>
+                                <td className="border border-black p-1 font-bold bg-gray-50">Loading Dock</td>
+                                <td className="border border-black p-1 font-medium">{header.loadingDock}</td>
+                                <td className="border border-black p-1 font-bold bg-gray-50">Seal No *</td>
+                                <td className="border border-black p-1 font-medium">{header.sealNo}</td>
+                                <td className="border border-black p-1 font-bold bg-gray-50">End Time</td>
+                                <td className="border border-black p-1 font-medium" colSpan={3}>
+                                    {(() => {
+                                        const t = currentSheet.loadingEndTime;
+                                        if (!t) return '-';
+                                        if (t.includes(':')) return t;
+                                        const d = new Date(t);
+                                        return isNaN(d.getTime()) ? '-' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                    })()}
+                                </td>
                             </tr>
                         </tbody>
                     </table>
 
-                    {/* Staging & Loading Table (Print) */}
-                    <table className="w-full border-collapse border border-black text-[9px] mb-1">
+                    {/* MAIN DATA TABLE (Standard Items Only) */}
+                    <table className="w-full border-collapse border border-black text-[9px] mb-2">
+                        <colgroup>
+                            <col className="w-[4%]" />{/* Sr No */}
+                            <col className="w-[16%]" />{/* SKU Name */}
+
+                            {/* Staging (3 cols) */}
+                            <col className="w-[5%]" /><col className="w-[5%]" /><col className="w-[5%]" />
+
+                            {/* Loading 1-10 (10 cols ~4.5% each) */}
+                            <col className="w-[4.5%]" /><col className="w-[4.5%]" /><col className="w-[4.5%]" /><col className="w-[4.5%]" /><col className="w-[4.5%]" />
+                            <col className="w-[4.5%]" /><col className="w-[4.5%]" /><col className="w-[4.5%]" /><col className="w-[4.5%]" /><col className="w-[4.5%]" />
+
+                            {/* Summary (3 cols) */}
+                            <col className="w-[5%]" /><col className="w-[5%]" /><col className="w-[5%]" />
+                        </colgroup>
                         <thead>
-                            <tr className="bg-gray-200">
-                                <th rowSpan={2} className="border border-black p-1 w-8">Sr.No</th>
-                                <th rowSpan={2} className="border border-black p-1">SKU Name</th>
-                                <th colSpan={3} className="border border-black p-1">STAGING DETAILS</th>
-                                <th colSpan={10} className="border border-black p-1">LOADING DETAILS (CELLS 1-10)</th>
-                                <th rowSpan={2} className="border border-black p-1 w-10">Lse</th>
-                                <th rowSpan={2} className="border border-black p-1 w-12">Tot</th>
-                                <th rowSpan={2} className="border border-black p-1 w-12">Bal</th>
+                            <tr className="bg-gray-100">
+                                <th rowSpan={2} className="border border-black p-1 text-center bg-gray-200">Sr.no</th>
+                                <th rowSpan={2} className="border border-black p-1 text-left px-2 bg-gray-200">SKU Name</th>
+                                <th colSpan={3} className="border border-black p-1 text-center bg-gray-300">STAGING</th>
+                                <th colSpan={10} className="border border-black p-1 text-center bg-gray-300">LOADING DETAILS (1-10)</th>
+                                <th rowSpan={2} className="border border-black p-1 text-center bg-gray-200">Loose</th>
+                                <th rowSpan={2} className="border border-black p-1 text-center bg-gray-200">Total</th>
+                                <th rowSpan={2} className="border border-black p-1 text-center bg-gray-200">Balance</th>
                             </tr>
                             <tr className="bg-gray-100">
-                                <th className="border border-black p-1 w-8">Cs/P</th><th className="border border-black p-1 w-8">Full</th><th className="border border-black p-1 w-10">TTL</th>
-                                {Array.from({ length: 10 }).map((_, i) => <th key={i} className="border border-black p-1 w-4">{i + 1}</th>)}
+                                <th className="border border-black p-0.5 text-center">Full</th>
+                                <th className="border border-black p-0.5 text-center">Loose</th>
+                                <th className="border border-black p-0.5 text-center font-bold">Total</th>
+
+                                {/* 1-10 Headers */}
+                                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
+                                    <th key={n} className="border border-black p-0.5 text-center bg-gray-300">{n}</th>
+                                ))}
                             </tr>
                         </thead>
                         <tbody>
-                            {currentSheet.loadingItems?.map((lItem) => {
+                            {/* Standard Loading Items with Multi-Row Logic */}
+                            {currentSheet.loadingItems?.map((lItem, idx) => {
                                 const sItem = currentSheet.stagingItems.find(s => s.srNo === lItem.skuSrNo);
-                                if (!sItem || !sItem.skuName) return null;
-                                const rowsNeeded = Math.max(1, Math.ceil(sItem.fullPlt / 10));
+                                if (!sItem) return null;
+
+                                // Calculate rows needed based on Full Pallets (10 per row)
+                                const rowsNeeded = Math.max(1, Math.ceil((sItem.fullPlt || 0) / 10));
+
                                 return Array.from({ length: rowsNeeded }).map((_, rIndex) => (
-                                    <tr key={`${lItem.skuSrNo}-${rIndex}`}>
+                                    <tr key={`l-${idx}-${rIndex}`} className="h-6">
+                                        {/* Header Columns (RowSpan for first row only) */}
                                         {rIndex === 0 && (
                                             <>
                                                 <td rowSpan={rowsNeeded} className="border border-black p-1 text-center">{lItem.skuSrNo}</td>
-                                                <td rowSpan={rowsNeeded} className="border border-black p-1">{sItem.skuName}</td>
-                                                <td rowSpan={rowsNeeded} className="border border-black p-1 text-center">{sItem.casesPerPlt}</td>
+                                                <td rowSpan={rowsNeeded} className="border border-black p-1 px-1 font-medium truncate">{sItem.skuName}</td>
                                                 <td rowSpan={rowsNeeded} className="border border-black p-1 text-center">{sItem.fullPlt}</td>
-                                                <td rowSpan={rowsNeeded} className="border border-black p-1 text-center font-bold">{sItem.ttlCases}</td>
+                                                <td rowSpan={rowsNeeded} className="border border-black p-1 text-center">{sItem.loose}</td>
+                                                <td rowSpan={rowsNeeded} className="border border-black p-1 text-center font-bold bg-gray-50">{sItem.ttlCases}</td>
                                             </>
                                         )}
+
+                                        {/* Loading Cells 1-10 for this Row (rIndex) */}
                                         {Array.from({ length: 10 }).map((_, cIndex) => {
-                                            const cell = lItem.cells.find(c => c.row === rIndex && c.col === cIndex);
-                                            return <td key={cIndex} className="border border-black p-1 text-center">{cell?.value || ''}</td>;
+                                            // Find cell matching this specific Row AND Column
+                                            const cell = lItem.cells.find(c => (c.row || 0) === rIndex && c.col === cIndex);
+                                            const hasVal = cell && cell.value > 0;
+
+                                            // Gray out cells that are NOT required by the Total Pallet Count (sItem.fullPlt)
+                                            const absoluteIndex = rIndex * 10 + cIndex;
+                                            const isRequiredSlot = absoluteIndex < (sItem.fullPlt || 0);
+
+                                            const bgClass = !isRequiredSlot ? 'bg-gray-300' : (hasVal ? 'bg-white font-bold' : 'bg-white');
+
+                                            return (
+                                                <td key={cIndex} className={`border border-black p-0.5 text-center ${bgClass}`}>
+                                                    {/* If grayed out (not required), show dash to prevent writing. Else show value. */}
+                                                    {!isRequiredSlot ? '-' : (cell?.value ? cell.value : '')}
+                                                </td>
+                                            );
                                         })}
+
+                                        {/* Summary Columns (RowSpan for first row only) */}
                                         {rIndex === 0 && (
                                             <>
-                                                <td rowSpan={rowsNeeded} className="border border-black p-1 text-center">{lItem.looseInput || ''}</td>
+                                                <td rowSpan={rowsNeeded} className="border border-black p-1 text-center">{lItem.looseInput ?? ''}</td>
                                                 <td rowSpan={rowsNeeded} className="border border-black p-1 text-center font-bold">{lItem.total}</td>
-                                                <td rowSpan={rowsNeeded} className={`border border-black p-1 text-center font-bold ${lItem.balance !== 0 ? 'text-red-600' : ''}`}>{lItem.balance}</td>
+                                                <td rowSpan={rowsNeeded} className={`border border-black p-1 text-center font-bold ${lItem.balance !== 0 ? 'text-black bg-red-100' : ''}`}>
+                                                    {lItem.balance}
+                                                </td>
                                             </>
                                         )}
                                     </tr>
@@ -166,33 +270,206 @@ export default function LoadingSheet() {
                         </tbody>
                     </table>
 
-                    {/* Print Summary & Remarks */}
-                    <div className="border border-black border-t-0 flex">
-                        <div className="w-[40%] border-r border-black flex flex-col text-[9px]">
-                            <div className="flex justify-between border-b border-black p-1 font-bold"><span>Total Staging Qty</span><span>{totals.totalStaging}</span></div>
-                            <div className="flex justify-between border-b border-black p-1 font-bold"><span>Actual Loaded Qty</span><span>{totals.grandTotalLoaded}</span></div>
-                            <div className="flex justify-between p-1 font-bold"><span>Balance to be returned</span><span>{totals.balance}</span></div>
+                    {/* ADDITIONAL ITEMS SECTION (Separate Table) */}
+                    {(() => {
+                        const filteredAdditionalItems = currentSheet.additionalItems?.filter(item => (item.skuName && item.skuName.trim() !== '') || item.total > 0) || [];
+
+                        if (filteredAdditionalItems.length === 0) return null;
+
+                        return (
+                            <div className="mb-2">
+                                <div className="font-bold text-[9px] uppercase tracking-widest bg-gray-100 p-1 border border-black border-b-0">
+                                    + Additional Items (Extras)
+                                </div>
+                                <table className="w-full border-collapse border border-black text-[9px]">
+                                    <colgroup>
+                                        <col className="w-[5%]" />{/* Sr */}
+                                        <col className="w-[30%]" />{/* SKU - Wide */}
+
+                                        {/* 1-10 Loading (10 cols) */}
+                                        <col className="w-[5.5%]" /><col className="w-[5.5%]" /><col className="w-[5.5%]" /><col className="w-[5.5%]" /><col className="w-[5.5%]" />
+                                        <col className="w-[5.5%]" /><col className="w-[5.5%]" /><col className="w-[5.5%]" /><col className="w-[5.5%]" /><col className="w-[5.5%]" />
+
+                                        <col className="w-[5%]" />{/* Total */}
+                                    </colgroup>
+                                    <thead>
+                                        <tr className="bg-gray-50">
+                                            <th className="border border-black p-1 text-center">Sr.no</th>
+                                            <th className="border border-black p-1 text-left px-2">SKU Name</th>
+                                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
+                                                <th key={n} className="border border-black p-1 text-center bg-gray-300">{n}</th>
+                                            ))}
+                                            <th className="border border-black p-1 text-center">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filteredAdditionalItems.map((aItem, idx) => (
+                                            <tr key={`a-${idx}`} className="h-6">
+                                                <td className="border border-black p-1 text-center text-gray-500">A{idx + 1}</td>
+                                                <td className="border border-black p-1 px-2 font-medium truncate">{aItem.skuName}</td>
+
+                                                {/* Loading Counts 1-10 */}
+                                                {Array.from({ length: 10 }).map((_, i) => {
+                                                    const val = aItem.counts[i] || 0;
+                                                    return (
+                                                        <td key={i} className={`border border-black p-0.5 text-center ${val > 0 ? 'bg-white font-bold' : 'bg-gray-300'}`}>
+                                                            {val > 0 ? val : '-'}
+                                                        </td>
+                                                    );
+                                                })}
+
+                                                <td className="border border-black p-1 text-center font-bold">{aItem.total}</td>
+                                            </tr>
+                                        ))}
+                                        <tr className="bg-gray-50 font-bold">
+                                            <td colSpan={12} className="border border-black p-1 text-right px-2">Total Extras:</td>
+                                            <td className="border border-black p-1 text-center">{filteredAdditionalItems.reduce((acc, curr) => acc + curr.total, 0)}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        );
+                    })()}
+
+                    {/* NEW FOOTER LAYOUT */}
+                    {/* NEW FOOTER LAYOUT */}
+                    {/* Footer Section - Fixed Grid */}
+                    <div className="mt-2 border-2 border-black text-[10px] break-inside-avoid" style={{ pageBreakInside: 'avoid' }}>
+                        {/* Remarks Row (Conditional) */}
+                        {(lists.returnedItems.length > 0 || (footer.remarks && footer.remarks.trim().length > 0)) && (
+                            <div className="flex border-b-2 border-black">
+                                <div className={`${lists.returnedItems.length > 0 ? 'w-[85%] border-r-2' : 'w-full'} border-black p-1`}>
+                                    <div className="font-bold underline mb-1">Remarks (If any adjusment for shortage/excess, please mention details with approval no. )</div>
+                                    <div className="whitespace-pre-wrap min-h-12">
+                                        {/* Returned Items */}
+                                        {lists.returnedItems.length > 0 && lists.returnedItems.map((item, i) => {
+                                            const sItem = currentSheet.stagingItems.find(s => s.srNo === item.skuSrNo);
+                                            return <div key={i}>For {sItem?.skuName || 'Item'} {item.balance} loose returned.</div>;
+                                        })}
+                                        {/* General Remarks */}
+                                        {footer.remarks}
+                                    </div>
+                                </div>
+                                {lists.returnedItems.length > 0 && (
+                                    <div className="w-[15%] p-1 flex flex-col justify-between items-center bg-white">
+                                        <div className="text-center font-bold">Picking Sv sign return received</div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Extra Items Row (Conditional) */}
+                        {(currentSheet.additionalItems || []).some(i => i.total > 0) && (
+                            <div className="flex border-b-2 border-black">
+                                <div className="w-[85%] border-r-2 border-black p-1">
+                                    <div className="font-bold underline mb-1">Cases Extra / Additional:</div>
+                                    <div className="whitespace-pre-wrap">
+                                        {(currentSheet.additionalItems || []).filter(i => i.total > 0).map((item, i) => (
+                                            <div key={i}>For {item.skuName} {item.total} Cases Extra.</div>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="w-[15%] p-1 flex flex-col justify-between items-center bg-white">
+                                    <div className="text-center font-bold">Approve Sign</div>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="flex border-b-2 border-black">
+                            <div className="w-[50%] border-r-2 border-black flex">
+                                <div className="w-1/3 border-r-2 border-black p-1 font-bold flex items-center">Supervisor Name</div>
+                                <div className="flex-1 p-1 flex items-center justify-center font-bold">
+                                    {/* Show Supervisor Name if available */}
+                                    {header.supervisorName && (
+                                        <div className="text-center">
+                                            <div>{header.supervisorName}</div>
+                                            <div className="text-[8px] font-normal">(after loading completed)</div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="w-[50%] flex">
+                                <div className="w-1/3 border-r-2 border-black p-1 font-bold flex items-center">Supervisor Sign</div>
+                                <div className="flex-1 p-1 flex items-center justify-center pt-8">
+                                    <div className="border-t border-gray-400 w-3/4 text-center text-[8px] text-gray-500">(after loading completed)</div>
+                                </div>
+                            </div>
                         </div>
-                        <div className="w-[60%] p-1 flex flex-col">
-                            <div className="font-bold text-xs">Remarks</div>
-                            <div className="mt-1 text-[9px] italic">
-                                {lists.returnedItems.map((item, idx) => <p key={idx}>For {currentSheet.stagingItems.find(s => s.srNo === item.skuSrNo)?.skuName} {item.balance} loose returned.</p>)}
-                                {lists.overLoadedItems.map((item, idx) => <p key={idx}>For {currentSheet.stagingItems.find(s => s.srNo === item.skuSrNo)?.skuName} {Math.abs(item.balance)} Cases Extra loaded.</p>)}
-                                {lists.extraItemsWithQty.map((item, idx) => <p key={idx}>For {item.skuName} {item.total} Cases Extra loaded.</p>)}
-                                {footer.remarks}
+
+                        <div className="flex group">
+                            <div className="w-[50%] border-r-2 border-black flex">
+                                <div className="w-1/3 border-r-2 border-black p-1 font-bold flex items-center bg-gray-100">Name/Sign. SL</div>
+                                <div className="flex-1 p-1 flex items-center justify-center font-cursive text-lg h-[50px] overflow-hidden">
+                                    {/* Signatures would go here */}
+                                    {(currentSheet.slName || currentSheet.slSign) && (
+                                        <>
+                                            {currentSheet.slSign && (
+                                                (currentSheet.slSign.trim().startsWith('data:image') || currentSheet.slSign.trim().startsWith('http')) &&
+                                                currentSheet.slSign.length > 50
+                                            ) ? (
+                                                <img
+                                                    src={currentSheet.slSign}
+                                                    alt="SL Sign"
+                                                    className="h-[45px] w-auto object-contain"
+                                                    onError={(e) => {
+                                                        (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                                    }}
+                                                />
+                                            ) : (
+                                                <span className="font-cursive text-xl">{currentSheet.slSign || currentSheet.slName}</span>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="w-[50%] flex">
+                                <div className="w-1/3 border-r-2 border-black p-1 font-bold flex items-center bg-gray-100">Name/Sign. DEO</div>
+                                <div className="flex-1 p-1 flex items-center justify-center font-cursive text-lg h-[50px] overflow-hidden">
+                                    {/* DEO Signature Placeholder */}
+                                    {footer.deoSign && (
+                                        ((footer.deoSign.trim().startsWith('data:image') || footer.deoSign.trim().startsWith('http')) && footer.deoSign.length > 50) ? (
+                                            <img src={footer.deoSign} alt="DEO Sign" className="h-[45px] w-auto object-contain" />
+                                        ) : (
+                                            <span className="font-cursive text-xl">{footer.deoSign}</span>
+                                        )
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* TOTAL LOADED CASES ROW - MOVED HERE */}
+                        <div className="flex font-bold text-[12px] border-t-2 border-black">
+                            <div className="w-[50%] border-r-2 border-black flex items-center justify-end px-2 py-1 uppercase tracking-wider">
+                                TOTAL loaded Cases -----&gt;
+                            </div>
+                            <div className="w-[50%] flex items-center justify-center text-xl">
+                                {totals.grandTotalLoaded}
                             </div>
                         </div>
                     </div>
-
-                    <div className="flex border border-black border-t-0 text-xs">
-                        <div className="w-1/4 border-r border-black p-1"><div>Supervisor Name:</div><div className="font-bold">{footer.svName}</div></div>
-                        <div className="w-1/4 border-r border-black p-1"><div>Supervisor Sign:</div><div className="font-script text-sm">{footer.svSign}</div></div>
-                        <div className="w-1/4 border-r border-black p-1"><div>SL Sign:</div><div className="font-script text-sm">{footer.slSign}</div></div>
-                        <div className="w-1/4 p-1"><div>DEO Sign:</div><div className="font-script text-sm">{footer.deoSign}</div></div>
-                    </div>
-                    {footer.capturedImage && <div className="mt-4"><img src={footer.capturedImage} className="max-w-full h-auto" /></div>}
                 </div>
-            </div>
+
+                <div className="mt-2 text-[9px] text-right px-1 w-full text-gray-500 print:hidden">
+                    Page 1 / 1
+                </div>
+
+                {/* ATTACHED IMAGES SECTION (New Page) */}
+                {
+                    currentSheet.capturedImages && currentSheet.capturedImages.length > 0 && (
+                        <div className="mt-4 print-break-before hidden print:block">
+                            <div className="font-bold text-sm mb-2 uppercase border-b border-black pb-1">ATTACHED IMAGES ({currentSheet.capturedImages.length})</div>
+                            <div className="grid grid-cols-1 gap-4">
+                                {currentSheet.capturedImages.map((imgUrl, i) => (
+                                    <div key={i} className="border border-black p-1">
+                                        <img src={imgUrl} className="w-full h-auto object-contain max-h-[90vh]" alt={`Evidence ${i + 1}`} />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )
+                }
+
+            </div> {/* End of Print Layout Container */}
 
             {/* MAIN FORM UI */}
             <RejectionSection
@@ -206,9 +483,11 @@ export default function LoadingSheet() {
                     };
                 })}
             />
-            {currentSheet.comments && currentSheet.comments.length > 0 && (isPendingVerification || currentSheet.status === SheetStatus.LOCKED) && (
-                <DismissibleAlert comments={currentSheet.comments} />
-            )}
+            {
+                currentSheet.comments && currentSheet.comments.length > 0 && (isPendingVerification || currentSheet.status === SheetStatus.LOCKED) && (
+                    <DismissibleAlert comments={currentSheet.comments} />
+                )
+            }
 
             <div className="bg-white shadow-xl shadow-slate-200 rounded-xl overflow-hidden border border-slate-200 print:hidden">
                 <SheetHeader
@@ -239,7 +518,7 @@ export default function LoadingSheet() {
                 <LoadingItemsTable
                     currentSheet={currentSheet}
                     isLocked={isLocked}
-                    displayedStagingItems={lists.displayedStagingItems}
+
                     onCellChange={handlers.handleLoadingCellChange}
                     onCellBlur={handlers.handleCellBlur}
                     onLooseChange={handlers.handleLooseChange}
@@ -259,9 +538,6 @@ export default function LoadingSheet() {
                     totalStaging={totals.totalStaging}
                     grandTotalLoaded={totals.grandTotalLoaded}
                     balance={totals.balance}
-                    remarks={footer.remarks}
-                    onRemarksChange={handlers.setRemarks}
-                    isLocked={isLocked}
                     returnedItems={lists.returnedItems}
                     overLoadedItems={lists.overLoadedItems}
                     extraItemsWithQty={lists.extraItemsWithQty}
@@ -316,6 +592,6 @@ export default function LoadingSheet() {
                 onCapture={camera.capturePhoto}
             />
             <canvas ref={camera.canvasRef} className="hidden" />
-        </div>
+        </div >
     );
 }

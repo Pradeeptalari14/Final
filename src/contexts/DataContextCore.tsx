@@ -4,6 +4,7 @@ import { SheetData, User, Notification, AppSettings } from '@/types';
 export interface DataContextType {
     sheets: SheetData[];
     users: User[];
+    getAllUsers: () => User[];
     notifications: Notification[];
     securityLogs: any[];
     activityLogs: any[];

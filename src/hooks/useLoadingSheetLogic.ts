@@ -6,7 +6,7 @@ import { SheetData, SheetStatus, Role } from '@/types';
 export const useLoadingSheetLogic = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { updateSheet, sheets, refreshSheets, currentUser } = useData();
+    const { updateSheet, sheets, refreshSheets, currentUser, users } = useData();
 
     const [currentSheet, setCurrentSheet] = useState<SheetData | null>(null);
     const [loading, setLoading] = useState(true);
@@ -14,7 +14,7 @@ export const useLoadingSheetLogic = () => {
     // Header inputs
     const [transporter, setTransporter] = useState('');
     const [loadingDock, setLoadingDock] = useState('');
-    const [shift, setShift] = useState('A');
+    const [shift, setShift] = useState('');
     const [destination, setDestination] = useState('');
     const [supervisorName, setSupervisorName] = useState('');
     const [empCode, setEmpCode] = useState('');
@@ -23,7 +23,9 @@ export const useLoadingSheetLogic = () => {
 
     // Loading Specific Extra Fields
     const [pickingBy, setPickingBy] = useState('');
+    const [pickingByEmpCode, setPickingByEmpCode] = useState('');
     const [pickingCrosscheckedBy, setPickingCrosscheckedBy] = useState('');
+    const [pickingCrosscheckedByEmpCode, setPickingCrosscheckedByEmpCode] = useState('');
     const [vehicleNo, setVehicleNo] = useState('');
     const [driverName, setDriverName] = useState('');
     const [sealNo, setSealNo] = useState('');
@@ -73,23 +75,63 @@ export const useLoadingSheetLogic = () => {
 
         setTransporter(currentSheet.transporter || '');
         setLoadingDock(currentSheet.loadingDockNo || '');
-        setShift(currentSheet.shift || 'A');
+        setShift(currentSheet.shift || '');
         setDestination(currentSheet.destination || '');
 
         const currentUserCode = currentUser?.empCode || '';
-        setEmpCode((currentSheet.empCode && currentSheet.empCode.trim() !== '') ? currentSheet.empCode : currentUserCode);
+
+        // If sheet is fresh for loading (LOCKED), auto-fill with current Loading Supervisor's code.
+        // Otherwise (in progress), respect the saved value.
+        if (currentSheet.status === SheetStatus.LOCKED) {
+            setEmpCode(currentUserCode);
+        } else {
+            setEmpCode((currentSheet.empCode && currentSheet.empCode.trim() !== '') ? currentSheet.empCode : currentUserCode);
+        }
 
         setStartTime(currentSheet.loadingStartTime || new Date().toLocaleTimeString('en-US', { hour12: false }));
         setEndTime(currentSheet.loadingEndTime || '');
 
         const currentUserName = currentUser?.fullName || currentUser?.username || '';
-        setPickingBy((currentSheet.pickingBy && currentSheet.pickingBy.trim() !== '') ? currentSheet.pickingBy : (currentSheet.supervisorName || currentSheet.createdBy || currentUserName));
-        setPickingCrosscheckedBy((currentSheet.pickingCrosscheckedBy && currentSheet.pickingCrosscheckedBy.trim() !== '') ? currentSheet.pickingCrosscheckedBy : currentUserName);
+        const initialPickingBy = (currentSheet.pickingBy && currentSheet.pickingBy.trim() !== '') ? currentSheet.pickingBy : (currentSheet.supervisorName || currentSheet.createdBy || currentUserName);
+        setPickingBy(initialPickingBy);
+
+        // Auto-fill Picking By Emp Code: 
+        // 1. If Locked -> use Staging Sup's code (currentSheet.empCode)
+        // 2. If Saved -> use saved value
+        // 3. Fallback: If empty, try to find user by Name in the users list
+        if (currentSheet.status === SheetStatus.LOCKED) {
+            setPickingByEmpCode(currentSheet.empCode || '');
+        } else if (currentSheet.pickingByEmpCode) {
+            setPickingByEmpCode(currentSheet.pickingByEmpCode);
+        } else {
+            // Fallback for existing sheets without captured code
+            const foundUser = users.find(u =>
+                (u.username && u.username.toLowerCase().trim() === initialPickingBy.toLowerCase().trim()) ||
+                (u.fullName && u.fullName.toLowerCase().trim() === initialPickingBy.toLowerCase().trim())
+            );
+            setPickingByEmpCode(foundUser?.empCode || '-');
+        }
+
+
+        const initialPickingCrosscheckedBy = (currentSheet.pickingCrosscheckedBy && currentSheet.pickingCrosscheckedBy.trim() !== '') ? currentSheet.pickingCrosscheckedBy : currentUserName;
+        setPickingCrosscheckedBy(initialPickingCrosscheckedBy);
+
+        // Auto-fill Picking Crosschecked By Emp Code:
+        if (currentSheet.pickingCrosscheckedByEmpCode) {
+            setPickingCrosscheckedByEmpCode(currentSheet.pickingCrosscheckedByEmpCode);
+        } else {
+            // Fallback lookup
+            const foundUser = users.find(u =>
+                (u.username && u.username.toLowerCase().trim() === initialPickingCrosscheckedBy.toLowerCase().trim()) ||
+                (u.fullName && u.fullName.toLowerCase().trim() === initialPickingCrosscheckedBy.toLowerCase().trim())
+            );
+            setPickingCrosscheckedByEmpCode(foundUser?.empCode || '-');
+        }
         setVehicleNo(currentSheet.vehicleNo || '');
         setDriverName(currentSheet.driverName || '');
         setSealNo(currentSheet.sealNo || '');
         setRegSerialNo(currentSheet.regSerialNo || '');
-        setSupervisorName((currentSheet.supervisorName && currentSheet.supervisorName.trim() !== '') ? currentSheet.supervisorName : currentUserName);
+        setSupervisorName((currentSheet.loadingSvName && currentSheet.loadingSvName.trim() !== '') ? currentSheet.loadingSvName : currentUserName);
         setSvName((currentSheet.loadingSvName && currentSheet.loadingSvName.trim() !== '') ? currentSheet.loadingSvName : currentUserName);
         setSvSign(currentSheet.loadingSupervisorSign || '');
         setSlSign(currentSheet.slSign || '');
@@ -103,7 +145,7 @@ export const useLoadingSheetLogic = () => {
         if (hasStagingData && (!hasLoadingData || !hasAdditionalData)) {
             generateLoadingItems(currentSheet);
         }
-    }, [currentSheet?.id, currentUser]);
+    }, [currentSheet, currentUser, users]);
 
     // Camera Lifecycle
     useEffect(() => {
@@ -194,9 +236,17 @@ export const useLoadingSheetLogic = () => {
         const value = parseInt(val);
         const stagingItem = currentSheet?.stagingItems.find(s => s.srNo === skuSrNo);
         if (stagingItem && Number(stagingItem.casesPerPlt) > 0 && value !== Number(stagingItem.casesPerPlt)) {
-            if (!window.confirm(`\u26A0\uFE0F Quantity Mismatch\n\nYou Entered: ${value}\nStandard Cases/Plt: ${stagingItem.casesPerPlt}\n\nIs this correct?`)) {
-                handleLoadingCellChange(skuSrNo, row, col, '');
-            }
+            alert(`\u26A0\uFE0F INCORRECT QUANTITY!\n\nAllowed: ${stagingItem.casesPerPlt}\nEntered: ${value}\n\nThe value must match the standard Cases/Pallet.`);
+            // Strictly clear the invalid value
+            handleLoadingCellChange(skuSrNo, row, col, '');
+            // Force refocus on the specific cell
+            setTimeout(() => {
+                const element = document.getElementById(`cell-${skuSrNo}-${row}-${col}`);
+                if (element) {
+                    element.focus();
+                    (element as HTMLInputElement).select?.();
+                }
+            }, 0);
         }
     };
 
@@ -288,6 +338,8 @@ export const useLoadingSheetLogic = () => {
             loadingStartTime: startTime,
             loadingEndTime: endTime,
             pickingBy,
+            pickingByEmpCode,
+            pickingCrosscheckedByEmpCode,
             pickingCrosscheckedBy,
             vehicleNo,
             driverName,
@@ -440,7 +492,7 @@ export const useLoadingSheetLogic = () => {
     return {
         id, currentSheet, loading, currentUser, states, errors,
         header: {
-            shift, transporter, destination, loadingDock, supervisorName, empCode, startTime, endTime, pickingBy, pickingCrosscheckedBy, vehicleNo, driverName, sealNo, regSerialNo
+            shift, transporter, destination, loadingDock, supervisorName, empCode, startTime, endTime, pickingBy, pickingByEmpCode, pickingCrosscheckedBy, pickingCrosscheckedByEmpCode, vehicleNo, driverName, sealNo, regSerialNo
         },
         footer: { svName, svSign, slSign, deoSign, remarks, capturedImage },
         camera: { videoRef, canvasRef, cameraActive, startCamera, stopCamera, capturePhoto },

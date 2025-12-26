@@ -66,6 +66,20 @@ export default function StagingSheet() {
         window.print();
     };
 
+    const onRequestVerification = () => {
+        const errors: string[] = [];
+        if (!formData.shift) errors.push("Shift");
+        if (!formData.destination) errors.push("Destination");
+        if (!formData.loadingDockNo) errors.push("Loading Dock");
+
+        if (errors.length > 0) {
+            alert(`Please fill in the following mandatory fields before requesting verification:\n- ${errors.join('\n- ')}`);
+            return;
+        }
+
+        handleRequestVerification();
+    };
+
     // Loading / Not Found Handling
     if (id && id !== 'new' && (!formData.id || formData.id !== id)) {
         if (dataLoading) {
@@ -89,7 +103,7 @@ export default function StagingSheet() {
     }
 
     return (
-        <div className="bg-white min-h-screen text-slate-800 pb-24 print:pb-0 print:min-h-0 print:h-auto print:overflow-visible font-sans max-w-[1024px] print:max-w-none mx-auto shadow-xl print:shadow-none my-2 print:my-0 rounded-lg print:rounded-none overflow-hidden print:overflow-visible border border-slate-200 print:border-none">
+        <div className="bg-white min-h-screen text-slate-800 print:pb-0 print:min-h-0 print:h-auto print:overflow-visible font-sans max-w-[1024px] print:max-w-none mx-auto shadow-2xl shadow-slate-200/50 print:shadow-none my-2 print:my-0 rounded-xl print:rounded-none overflow-hidden print:overflow-visible border border-slate-100 print:border-none relative">
 
             {/* HIDDEN PRINTABLE VIEW (For actual printing) */}
             <div className="hidden print:block">
@@ -97,33 +111,33 @@ export default function StagingSheet() {
             </div>
 
             {/* Top Bar */}
-            <div className="print:hidden bg-white border-b border-slate-200 p-4 md:px-8 flex justify-between items-center sticky top-0 z-30 shadow-sm backdrop-blur-md bg-white/90">
+            <div className="print:hidden border-b border-slate-200/80 p-4 md:px-8 flex justify-between items-center sticky top-0 z-30 shadow-sm backdrop-blur-xl bg-white/80">
                 <div className="flex items-center gap-4">
-                    <Button variant="ghost" onClick={() => navigate(-1)} className="text-slate-500 hover:text-slate-900 gap-2 hover:bg-slate-100">
+                    <Button variant="ghost" onClick={() => navigate(-1)} className="text-slate-500 hover:text-slate-900 gap-2 hover:bg-slate-100/80 rounded-full px-4">
                         <ArrowLeft size={18} /> Back
                     </Button>
                     <div className="flex items-center gap-3">
-                        <h1 className="text-lg md:text-xl font-bold text-slate-800 tracking-tight">Staging Sheet</h1>
-                        <Badge variant="outline" className={`text-xs px-2.5 py-0.5 font-bold uppercase ${formData.status === SheetStatus.LOCKED ? 'bg-purple-100 text-purple-700 border-purple-200' :
-                            formData.status === SheetStatus.COMPLETED ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
-                                formData.status?.includes('PENDING') ? 'bg-orange-100 text-orange-700 border-orange-200' :
-                                    'bg-slate-100 text-slate-600 border-slate-200'
+                        <h1 className="text-lg md:text-xl font-extrabold text-slate-900 tracking-tight">Staging Sheet</h1>
+                        <Badge variant="secondary" className={`text-xs px-2.5 py-0.5 font-bold uppercase shadow-none ${formData.status === SheetStatus.LOCKED ? 'bg-purple-100 text-purple-700 border border-purple-200' :
+                            formData.status === SheetStatus.COMPLETED ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' :
+                                formData.status?.includes('PENDING') ? 'bg-orange-100 text-orange-700 border border-orange-200' :
+                                    'bg-slate-100 text-slate-600 border border-slate-200'
                             }`}>
                             {formData.status?.replace(/_/g, ' ')}
                         </Badge>
                     </div>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => exportStagingToExcel(formData, formData.stagingItems || [])} className="gap-2 text-slate-600 border-slate-200 hover:bg-slate-50">
+                    <Button variant="outline" onClick={() => exportStagingToExcel(formData, formData.stagingItems || [])} className="gap-2 text-slate-600 border-slate-200 hover:bg-slate-50 shadow-sm">
                         <FileSpreadsheet size={16} /> <span className="hidden sm:inline">Export Excel</span>
                     </Button>
-                    <Button variant="default" onClick={handlePrint} className="gap-2 bg-slate-900 text-white shadow-sm hover:bg-slate-800 transition-colors">
+                    <Button variant="default" onClick={handlePrint} className="gap-2 bg-slate-900 text-white shadow-md hover:bg-slate-800 transition-all hover:shadow-lg hover:-translate-y-0.5">
                         <Printer size={16} /> <span className="hidden sm:inline">Print / PDF</span>
                     </Button>
                 </div>
             </div>
 
-            <div className="print:hidden p-2 space-y-3 bg-slate-50/50 min-h-[calc(100vh-60px)]">
+            <div className="print:hidden p-3 md:p-6 space-y-6 bg-slate-50/50 min-h-[calc(100vh-80px)]">
 
                 {/* Rejection/Comments History */}
                 {formData.comments && formData.comments.length > 0 && (formData.status === SheetStatus.DRAFT || formData.status === SheetStatus.STAGING_VERIFICATION_PENDING) && (
@@ -168,9 +182,12 @@ export default function StagingSheet() {
                         <Button
                             variant="outline"
                             onClick={addItem}
-                            className="w-full md:w-auto border-dashed border-slate-300 text-slate-500 hover:text-blue-600 hover:border-blue-400 hover:bg-blue-50 transition-all gap-2 py-6"
+                            className="w-full md:w-auto border border-dashed border-slate-300 text-slate-500 hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50/50 hover:shadow-sm transition-all duration-300 gap-2 py-8 px-12 rounded-xl text-base font-medium group"
                         >
-                            <Plus size={18} /> Add New Row
+                            <div className="bg-slate-100 group-hover:bg-indigo-100 p-2 rounded-full transition-colors">
+                                <Plus size={18} className="text-slate-400 group-hover:text-indigo-500" />
+                            </div>
+                            Add New Row
                         </Button>
                     )}
                 </div>
@@ -181,21 +198,24 @@ export default function StagingSheet() {
                     onApprove={handleVerificationAction}
                     isStaging={true}
                 />
+
+                {/* Spacer to prevent Sticky Footer from blocking content */}
+                <div className="h-24 print:hidden" />
             </div>
 
-            {/* Standard Footer Actions for Edit Mode */}
+            {/* Sticky Card Footer Actions for Edit Mode */}
             {formData.status !== SheetStatus.LOCKED && formData.status !== SheetStatus.STAGING_VERIFICATION_PENDING && formData.status !== SheetStatus.COMPLETED && (
-                <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-200 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)] flex justify-center gap-4 z-40 print:hidden animate-in slide-in-from-bottom-4">
-                    <Button variant="outline" onClick={() => navigate(-1)} className="text-slate-500 hover:text-slate-900 border-slate-200">
+                <div className="sticky bottom-0 w-full p-4 bg-white/90 backdrop-blur-xl border-t border-slate-200 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)] flex justify-center gap-4 z-40 print:hidden animate-in slide-in-from-bottom-2">
+                    <Button variant="outline" onClick={() => navigate(-1)} className="text-slate-500 hover:text-slate-900 border-slate-200 hover:bg-slate-100/50">
                         Cancel
                     </Button>
-                    <Button variant="outline" onClick={handleDelete} disabled={loading} className="text-red-500 border-red-200 hover:bg-red-50">
+                    <Button variant="outline" onClick={handleDelete} disabled={loading} className="text-red-500 border-red-200 hover:bg-red-50/50">
                         {loading ? <Loader2 className="animate-spin" /> : <Trash2 size={16} className="mr-2" />} Delete
                     </Button>
-                    <Button onClick={handleRequestVerification} className="px-8 bg-purple-600 hover:bg-purple-500 text-white shadow-lg">
+                    <Button onClick={onRequestVerification} className="px-8 bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-500/20">
                         <Lock className="mr-2" size={16} /> Request Verification
                     </Button>
-                    <Button onClick={() => handleSave()} disabled={loading} className="px-8 bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all">
+                    <Button onClick={() => handleSave()} disabled={loading} className="px-8 bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-lg shadow-indigo-500/20 hover:shadow-xl hover:-translate-y-0.5 transition-all">
                         {loading ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" size={18} />} Save Draft
                     </Button>
                 </div>

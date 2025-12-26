@@ -98,12 +98,15 @@ export interface SheetData {
     loadingStartTime?: string;
     loadingEndTime?: string;
     pickingBy?: string;
+    pickingByEmpCode?: string;
     pickingCrosscheckedBy?: string;
+    pickingCrosscheckedByEmpCode?: string;
 
     // Signatures / Audit
     loadingSvName?: string;
     loadingSupervisorSign?: string;
     slSign?: string;
+    slName?: string;
     deoSign?: string;
 
     // Approval Metadata

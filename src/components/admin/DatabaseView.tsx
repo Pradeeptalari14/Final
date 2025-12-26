@@ -6,7 +6,7 @@ import { useToast } from "@/contexts/ToastContext";
 import { useData } from "@/contexts/DataContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, Printer, Trash2, Layers, Package, CheckCircle, LayoutGrid, XCircle, List, Calendar, Clock } from 'lucide-react';
+import { Search, Printer, Trash2, Layers, Package, CheckCircle, LayoutGrid, XCircle, List, Calendar, Clock, ArrowUp, ArrowDown } from 'lucide-react';
 import { OperationsMonitor } from "./OperationsMonitor";
 import { t } from "@/lib/i18n";
 
@@ -29,6 +29,14 @@ export function DatabaseView({ sheets, currentUser, settings, refreshSheets }: D
     const [timeFilter, setTimeFilter] = useState<'ALL' | '30D' | '90D' | 'CUSTOM'>('ALL');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
+    const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'updatedAt', direction: 'desc' });
+
+    const handleSort = (key: string) => {
+        setSortConfig(current => ({
+            key,
+            direction: current.key === key && current.direction === 'desc' ? 'asc' : 'desc'
+        }));
+    };
 
     const filteredSheets = useMemo(() => {
         let relevantSheets = [...sheets];
@@ -74,8 +82,40 @@ export function DatabaseView({ sheets, currentUser, settings, refreshSheets }: D
             return matchesSearch;
         });
 
-        return relevantSheets.sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime());
-    }, [sheets, stageFilter, searchQuery]);
+        return relevantSheets.sort((a, b) => {
+            const aValue = a[sortConfig.key as keyof SheetData];
+            const bValue = b[sortConfig.key as keyof SheetData];
+
+            const getTimeSafe = (d: any) => {
+                const t = new Date(d).getTime();
+                return isNaN(t) ? 0 : t;
+            };
+
+            // 1. ID Sorting (Numeric)
+            if (sortConfig.key === 'id') {
+                const numA = parseInt(a.id.replace(/\D/g, '')) || 0;
+                const numB = parseInt(b.id.replace(/\D/g, '')) || 0;
+                return sortConfig.direction === 'asc' ? numA - numB : numB - numA;
+            }
+
+            // 2. Date Sorting
+            if (sortConfig.key === 'date' || sortConfig.key === 'updatedAt') {
+                const dateA = getTimeSafe(a.date || a.createdAt);
+                const dateB = getTimeSafe(b.date || b.createdAt);
+                const diff = sortConfig.direction === 'asc' ? dateA - dateB : dateB - dateA;
+
+                // Tie-breaker: If dates are same, sort by created time desc
+                if (diff === 0) {
+                    return getTimeSafe(b.updatedAt || b.createdAt) - getTimeSafe(a.updatedAt || a.createdAt);
+                }
+                return diff;
+            }
+
+            if ((aValue || '') < (bValue || '')) return sortConfig.direction === 'asc' ? -1 : 1;
+            if ((aValue || '') > (bValue || '')) return sortConfig.direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }, [sheets, stageFilter, searchQuery, sortConfig]);
 
     // Duration Helper
     const getDuration = (sheet: any) => {
@@ -256,19 +296,38 @@ export function DatabaseView({ sheets, currentUser, settings, refreshSheets }: D
                 <div className="rounded-2xl border border-slate-200 dark:border-white/5 overflow-hidden bg-white dark:bg-slate-900/20 shadow-xl shadow-slate-200/50 dark:shadow-none">
                     <div className="w-full">
                         <div className="bg-slate-50/80 dark:bg-slate-950/50 text-slate-500 border-b border-slate-200 dark:border-white/5 backdrop-blur-sm sticky top-0 z-10 flex font-bold text-[9px] uppercase tracking-widest px-4">
-                            <div className={`w-[10%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>{t('id', settings.language)}</div>
-                            <div className={`w-[14%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>
+                            <div
+                                className={`w-[10%] ${settings.density === 'compact' ? 'py-2' : 'py-3'} cursor-pointer hover:text-primary transition-colors flex items-center gap-1 group`}
+                                onClick={() => handleSort('id')}
+                            >
+                                {t('id', settings.language)}
+                                {sortConfig.key === 'id' && (
+                                    sortConfig.direction === 'asc' ? <ArrowUp size={12} className="text-primary" /> : <ArrowDown size={12} className="text-primary" />
+                                )}
+                                {sortConfig.key !== 'id' && <ArrowDown size={12} className="opacity-0 group-hover:opacity-50" />}
+                            </div>
+                            <div className={`w-[12%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>
                                 <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-slate-400" />{t('staging_sv', settings.language)}</span>
                             </div>
-                            <div className={`w-[14%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>
+                            <div className={`w-[12%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>
                                 <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-blue-400" />{t('loading_sv', settings.language)}</span>
                             </div>
-                            <div className={`w-[14%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>
+                            <div className={`w-[12%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>
                                 <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-purple-400" />{t('approval_sv', settings.language)}</span>
                             </div>
-                            <div className={`w-[18%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>{t('destination', settings.language)}</div>
+                            <div className={`w-[14%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>{t('destination', settings.language)}</div>
+                            <div
+                                className={`w-[12%] ${settings.density === 'compact' ? 'py-2' : 'py-3'} cursor-pointer hover:text-primary transition-colors flex items-center gap-1 group`}
+                                onClick={() => handleSort('date')}
+                            >
+                                Date
+                                {sortConfig.key === 'date' && (
+                                    sortConfig.direction === 'asc' ? <ArrowUp size={12} className="text-primary" /> : <ArrowDown size={12} className="text-primary" />
+                                )}
+                                {sortConfig.key !== 'date' && <ArrowDown size={12} className="opacity-0 group-hover:opacity-50" />}
+                            </div>
                             <div className={`w-[8%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>{t('duration', settings.language)}</div>
-                            <div className={`w-[12%] ${settings.density === 'compact' ? 'py-1' : 'py-3'}`}>{t('status', settings.language)}</div>
+                            <div className={`w-[10%] ${settings.density === 'compact' ? 'py-1' : 'py-3'}`}>{t('status', settings.language)}</div>
                             <div className={`w-[10%] text-right font-medium px-4 ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}>{t('actions', settings.language)}</div>
                         </div>
 
@@ -296,14 +355,14 @@ export function DatabaseView({ sheets, currentUser, settings, refreshSheets }: D
                                             <div className="w-[10%] font-mono text-[10px] font-bold text-slate-500 group-hover:text-primary transition-colors truncate pr-2">#{sheet.id.slice(-8)}</div>
 
                                             {/* Timeline Columns */}
-                                            <div className="w-[14%] font-medium text-slate-900 dark:text-slate-200 truncate pr-4">
+                                            <div className="w-[12%] font-medium text-slate-900 dark:text-slate-200 truncate pr-4">
                                                 <div className="flex items-center gap-1.5">
                                                     <div className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0" />
                                                     <span className="truncate text-xs">{sheet.supervisorName || '-'}</span>
                                                 </div>
                                             </div>
 
-                                            <div className="w-[14%] text-slate-600 dark:text-slate-400 truncate pr-4">
+                                            <div className="w-[12%] text-slate-600 dark:text-slate-400 truncate pr-4">
                                                 {sheet.loadingSvName ? (
                                                     <div className="flex items-center gap-1.5">
                                                         <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
@@ -314,7 +373,7 @@ export function DatabaseView({ sheets, currentUser, settings, refreshSheets }: D
                                                 )}
                                             </div>
 
-                                            <div className="w-[14%] text-slate-600 dark:text-slate-400 truncate pr-4">
+                                            <div className="w-[12%] text-slate-600 dark:text-slate-400 truncate pr-4">
                                                 {(() => {
                                                     const approver = sheet.verifiedBy || sheet.completedBy || sheet.loadingApprovedBy;
                                                     return approver ? (
@@ -328,19 +387,22 @@ export function DatabaseView({ sheets, currentUser, settings, refreshSheets }: D
                                                 })()}
                                             </div>
 
-                                            <div className="w-[18%] truncate text-slate-500 pr-4">
+                                            <div className="w-[14%] truncate text-slate-500 pr-4">
                                                 <div className="flex flex-col">
                                                     <span className="text-foreground font-medium truncate">{sheet.destination || '-'}</span>
                                                     <div className="flex items-center gap-2 text-[10px] opacity-60">
                                                         <span className="bg-slate-100 dark:bg-slate-800 px-1 rounded uppercase tracking-tighter">{sheet.shift}</span>
-                                                        <span className="truncate">{formatDate(sheet.createdAt || sheet.date)}</span>
                                                     </div>
                                                 </div>
                                             </div>
 
+                                            <div className="w-[12%] truncate text-slate-600 dark:text-slate-400 text-xs font-medium pr-4">
+                                                {formatDate(sheet.date || sheet.createdAt)}
+                                            </div>
+
                                             <div className="w-[8%] text-[10px] font-mono text-slate-400 font-medium">{getDuration(sheet)}</div>
 
-                                            <div className="w-[12%]">
+                                            <div className="w-[10%]">
                                                 <Badge variant="outline" className={`
                                                 text-[10px] font-extrabold uppercase tracking-tight px-3 py-1 rounded-full whitespace-nowrap border-2
                                                 ${isCompleted ? 'text-emerald-600 border-emerald-500/20 bg-emerald-500/10 dark:text-emerald-400' :

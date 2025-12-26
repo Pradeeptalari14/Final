@@ -15,13 +15,13 @@ const EMPTY_ITEM: StagingItem = {
 export const useStagingSheetLogic = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { addSheet, updateSheet, deleteSheet, sheets, refreshSheets, shift, currentUser, devRole, loading: dataLoading } = useData();
+    const { addSheet, updateSheet, deleteSheet, sheets, refreshSheets, currentUser, devRole, loading: dataLoading } = useData();
 
     // Determine effective role
     const currentRole = (devRole || currentUser?.role) as Role | undefined;
 
     const [formData, setFormData] = useState<Partial<SheetData>>({
-        shift: shift || 'A',
+        shift: '',
         date: new Date().toISOString().split('T')[0],
         destination: '',
         supervisorName: currentUser?.fullName || currentUser?.username || '',

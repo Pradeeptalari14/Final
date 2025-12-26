@@ -9,6 +9,7 @@ import LoadingSheet from './components/sheets/LoadingSheet';
 import SettingsPage from './pages/Settings';
 import DatabasePage from './pages/Database';
 import AdminDashboard from './pages/AdminDashboard';
+import ReportsPage from './pages/Reports';
 
 
 export const router = createBrowserRouter([
@@ -32,6 +33,10 @@ export const router = createBrowserRouter([
             {
                 path: 'database',
                 element: <DatabasePage />,
+            },
+            {
+                path: 'reports',
+                element: <ReportsPage />,
             },
 
 

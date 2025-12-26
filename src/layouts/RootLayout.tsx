@@ -104,11 +104,11 @@ export default function RootLayout() {
                 {/* REPORTS (Power BI) */}
                 {(currentUser?.role === Role.ADMIN || currentUser?.role === Role.SHIFT_LEAD) && (
                     <NavItem
-                        to="/admin?section=reports"
+                        to="/reports"
                         icon={LayoutDashboard}
                         label={t('reports', settings.language)}
                         collapsed={collapsed && !isMobile}
-                        active={location.pathname === '/admin' && location.search.includes('section=reports')}
+                        active={location.pathname === '/reports'}
                     />
                 )}
 

@@ -5,7 +5,7 @@ import { useData } from "@/contexts/DataContext";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, RefreshCw, Download, X, XCircle, Layers, Package, CheckCircle, LayoutGrid, FileText, Database as DbIcon } from "lucide-react";
+import { Plus, Search, RefreshCw, Download, X, XCircle, Layers, Package, CheckCircle, LayoutGrid, Database as DbIcon, ArrowUp, ArrowDown } from "lucide-react";
 import { SheetData, SheetStatus, Role } from "@/types";
 import { t } from "@/lib/i18n";
 import { exportToExcelGeneric } from '@/lib/excelExport';
@@ -20,6 +20,14 @@ export default function DatabasePage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [stageFilter, setStageFilter] = useState<'ALL' | 'STAGING' | 'LOADING' | 'COMPLETED'>('ALL');
+    const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' });
+
+    const handleSort = (key: string) => {
+        setSortConfig(current => ({
+            key,
+            direction: current.key === key && current.direction === 'desc' ? 'asc' : 'desc'
+        }));
+    };
 
     if (loading && sheets.length === 0) return <div className="p-8 text-slate-400 font-medium animate-pulse">{t('loading_dots', settings.language)}</div>;
 
@@ -65,8 +73,46 @@ export default function DatabasePage() {
             }
         }
 
-        return relevantSheets;
-    }, [sheets, stageFilter, searchQuery, activeFilter]);
+        return relevantSheets.sort((a, b) => {
+            const getKey = (item: SheetData, key: string) => {
+                if (key === 'date') return item.date || item.createdAt || '';
+                const val = item[key as keyof SheetData];
+                return val === undefined || val === null ? '' : val;
+            };
+
+            const aValue = getKey(a, sortConfig.key);
+            const bValue = getKey(b, sortConfig.key);
+
+            const getTimeSafe = (d: any) => {
+                const t = new Date(d).getTime();
+                return isNaN(t) ? 0 : t;
+            };
+
+            // 1. ID Sorting (Numeric)
+            if (sortConfig.key === 'id') {
+                const numA = parseInt(a.id.replace(/\D/g, '')) || 0;
+                const numB = parseInt(b.id.replace(/\D/g, '')) || 0;
+                return sortConfig.direction === 'asc' ? numA - numB : numB - numA;
+            }
+
+            // 2. Date Sorting
+            if (sortConfig.key === 'date') {
+                const dateA = getTimeSafe(aValue);
+                const dateB = getTimeSafe(bValue);
+                const diff = sortConfig.direction === 'asc' ? dateA - dateB : dateB - dateA;
+
+                // Tie-breaker: sort by created time desc
+                if (diff === 0) {
+                    return getTimeSafe(b.updatedAt || b.createdAt) - getTimeSafe(a.updatedAt || a.createdAt);
+                }
+                return diff;
+            }
+
+            if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+            if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }, [sheets, stageFilter, searchQuery, activeFilter, sortConfig]);
 
     const clearFilter = () => {
         setSearchParams({});
@@ -168,13 +214,7 @@ export default function DatabasePage() {
                 </div>
             </div>
 
-            {/* Quick Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <StatCard icon={<FileText className="text-blue-500" />} label="Total Records" value={stats.total} color="blue" />
-                <StatCard icon={<Layers className="text-amber-500" />} label="Staging Area" value={stats.staging} color="amber" />
-                <StatCard icon={<Package className="text-indigo-500" />} label="In Loading" value={stats.loading} color="indigo" />
-                <StatCard icon={<CheckCircle className="text-emerald-500" />} label="Completed" value={stats.completed} color="emerald" />
-            </div>
+
 
             {/* Premium Filter Bar */}
             <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-white/5 rounded-2xl p-6 shadow-xl shadow-slate-200/50 dark:shadow-none backdrop-blur-xl space-y-4">
@@ -185,24 +225,28 @@ export default function DatabasePage() {
                             onClick={() => setStageFilter('ALL')}
                             icon={<LayoutGrid size={16} />}
                             label={t('all', settings.language)}
+                            count={stats.total}
                         />
                         <FilterButton
                             active={stageFilter === 'STAGING'}
                             onClick={() => setStageFilter('STAGING')}
                             icon={<Layers size={16} />}
                             label={t('staging', settings.language)}
+                            count={stats.staging}
                         />
                         <FilterButton
                             active={stageFilter === 'LOADING'}
                             onClick={() => setStageFilter('LOADING')}
                             icon={<Package size={16} />}
                             label={t('loading', settings.language)}
+                            count={stats.loading}
                         />
                         <FilterButton
                             active={stageFilter === 'COMPLETED'}
                             onClick={() => setStageFilter('COMPLETED')}
                             icon={<CheckCircle size={16} />}
                             label={t('completed', settings.language)}
+                            count={stats.completed}
                         />
                     </div>
 
@@ -229,10 +273,30 @@ export default function DatabasePage() {
                 <Table>
                     <TableHeader className="bg-muted/30">
                         <TableRow className="hover:bg-transparent border-b border-border/50">
-                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground pl-6 h-14 w-[100px]">{t('id', settings.language)}</TableHead>
+                            <TableHead
+                                className="text-[10px] font-black uppercase tracking-widest text-muted-foreground pl-6 h-14 w-[100px] cursor-pointer hover:text-foreground transition-colors"
+                                onClick={() => handleSort('id')}
+                            >
+                                <div className="flex items-center gap-1">
+                                    {t('id', settings.language)}
+                                    {sortConfig.key === 'id' && (
+                                        sortConfig.direction === 'asc' ? <ArrowUp size={12} className="text-primary" /> : <ArrowDown size={12} className="text-primary" />
+                                    )}
+                                </div>
+                            </TableHead>
                             <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground h-14 w-[220px]">{t('worker_timeline', settings.language)}</TableHead>
                             <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground h-14 w-[180px]">{t('destination', settings.language)}</TableHead>
-                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground h-14 w-[120px]">{t('date', settings.language)}</TableHead>
+                            <TableHead
+                                className="text-[10px] font-black uppercase tracking-widest text-muted-foreground h-14 w-[120px] cursor-pointer hover:text-foreground transition-colors"
+                                onClick={() => handleSort('date')}
+                            >
+                                <div className="flex items-center gap-1">
+                                    {t('date', settings.language)}
+                                    {sortConfig.key === 'date' && (
+                                        sortConfig.direction === 'asc' ? <ArrowUp size={12} className="text-primary" /> : <ArrowDown size={12} className="text-primary" />
+                                    )}
+                                </div>
+                            </TableHead>
                             <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground h-14 w-[100px]">{t('duration', settings.language)}</TableHead>
                             <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground h-14 w-[150px]">{t('status', settings.language)}</TableHead>
                             <TableHead className="text-right text-[10px] font-black uppercase tracking-widest text-muted-foreground h-14 pr-6 w-[120px]">{t('actions', settings.language)}</TableHead>
@@ -373,30 +437,9 @@ export default function DatabasePage() {
     );
 }
 
-function StatCard({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: number; color: string }) {
-    const colorClasses: Record<string, string> = {
-        blue: "bg-blue-500/10 border-blue-500/20",
-        amber: "bg-amber-500/10 border-amber-500/20",
-        indigo: "bg-indigo-500/10 border-indigo-500/20",
-        emerald: "bg-emerald-500/10 border-emerald-500/20",
-    };
 
-    return (
-        <div className={`p-5 rounded-2xl border ${colorClasses[color]} bg-white dark:bg-slate-900/60 shadow-sm transition-all hover:translate-y-[-4px] hover:shadow-lg`}>
-            <div className="flex items-center gap-4">
-                <div className="p-3 bg-white dark:bg-slate-800 rounded-xl shadow-sm">
-                    {icon}
-                </div>
-                <div>
-                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{label}</p>
-                    <p className="text-2xl font-black text-foreground">{value}</p>
-                </div>
-            </div>
-        </div>
-    );
-}
 
-function FilterButton({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
+function FilterButton({ active, onClick, icon, label, count }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string; count?: number }) {
     return (
         <button
             onClick={onClick}
@@ -410,6 +453,11 @@ function FilterButton({ active, onClick, icon, label }: { active: boolean; onCli
         >
             {icon}
             {label}
+            {count !== undefined && (
+                <span className={`ml-1.5 px-2 py-0.5 rounded-full text-[9px] ${active ? 'bg-primary/10 text-primary' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'}`}>
+                    {count}
+                </span>
+            )}
         </button>
     );
 }
