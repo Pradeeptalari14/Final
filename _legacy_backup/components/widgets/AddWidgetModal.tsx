@@ -9,7 +9,12 @@ interface AddWidgetModalProps {
     activeWidgets: string[];
 }
 
-export const AddWidgetModal: React.FC<AddWidgetModalProps> = ({ isOpen, onClose, onAdd, activeWidgets }) => {
+export const AddWidgetModal: React.FC<AddWidgetModalProps> = ({
+    isOpen,
+    onClose,
+    onAdd,
+    activeWidgets
+}) => {
     if (!isOpen) return null;
 
     return (
@@ -19,36 +24,50 @@ export const AddWidgetModal: React.FC<AddWidgetModalProps> = ({ isOpen, onClose,
                     <h3 className="font-bold text-slate-800 flex items-center gap-2">
                         <Plus size={20} className="text-blue-600" /> Add Content
                     </h3>
-                    <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors text-slate-500">
+                    <button
+                        onClick={onClose}
+                        className="p-2 hover:bg-slate-200 rounded-full transition-colors text-slate-500"
+                    >
                         <X size={20} />
                     </button>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-5 space-y-6">
                     {/* Categories */}
-                    {['Analytics', 'Score Card', 'Chart', 'List'].map(category => {
-                        const widgets = WIDGET_METADATA.filter(w => w.category === category);
+                    {['Analytics', 'Score Card', 'Chart', 'List'].map((category) => {
+                        const widgets = WIDGET_METADATA.filter((w) => w.category === category);
                         if (widgets.length === 0) return null;
 
                         return (
                             <div key={category}>
-                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">{category}</h4>
+                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+                                    {category}
+                                </h4>
                                 <div className="space-y-3">
-                                    {widgets.map(widget => {
+                                    {widgets.map((widget) => {
                                         const isActive = activeWidgets.includes(widget.id);
                                         return (
-                                            <div key={widget.id} className="border border-slate-200 rounded-xl p-4 hover:border-blue-400 hover:shadow-md transition-all group">
+                                            <div
+                                                key={widget.id}
+                                                className="border border-slate-200 rounded-xl p-4 hover:border-blue-400 hover:shadow-md transition-all group"
+                                            >
                                                 <div className="flex justify-between items-start mb-2">
-                                                    <h5 className="font-bold text-slate-700">{widget.title}</h5>
+                                                    <h5 className="font-bold text-slate-700">
+                                                        {widget.title}
+                                                    </h5>
                                                     <button
-                                                        onClick={() => !isActive && onAdd(widget.id)}
+                                                        onClick={() =>
+                                                            !isActive && onAdd(widget.id)
+                                                        }
                                                         disabled={isActive}
                                                         className={`px-3 py-1 text-xs font-bold rounded-full transition-colors \${isActive ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'}`}
                                                     >
                                                         {isActive ? 'Added' : 'Add'}
                                                     </button>
                                                 </div>
-                                                <p className="text-xs text-slate-500 leading-relaxed">{widget.description}</p>
+                                                <p className="text-xs text-slate-500 leading-relaxed">
+                                                    {widget.description}
+                                                </p>
                                             </div>
                                         );
                                     })}

@@ -1,14 +1,27 @@
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Database, Settings, Menu, Shield, LogOut, X, Users, FileText, WifiOff } from 'lucide-react';
+import {
+    LayoutDashboard,
+    Database,
+    Settings,
+    Menu,
+    Shield,
+    LogOut,
+    X,
+    Users,
+    FileText,
+    WifiOff
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { useData } from '@/contexts/DataContext';
+import { useAppState } from '@/contexts/AppStateContext';
 import { Role } from '@/types';
 import { t } from '@/lib/i18n';
 import { NotificationBell } from '@/components/ui/NotificationBell';
 
 export default function RootLayout() {
-    const { devRole, setDevRole, currentUser, settings, updateSettings, isOnline } = useData();
+    const { currentUser, isOnline } = useData();
+    const { devRole, setDevRole, settings, updateSettings } = useAppState();
     const navigate = useNavigate();
     const location = useLocation();
     const [mobileOpen, setMobileOpen] = useState(false);
@@ -23,30 +36,161 @@ export default function RootLayout() {
 
     // Close mobile menu on route change
     useEffect(() => {
-        setMobileOpen(false);
-    }, [location.pathname]);
+        if (mobileOpen) {
+            queueMicrotask(() => setMobileOpen(false));
+        }
+    }, [location.pathname, mobileOpen]);
 
     const handleSignOut = () => {
         setDevRole(null as any); // Force null to trigger redirect
     };
 
     // Determine Admin Label based on Role
-    const adminLabel = currentUser?.role === Role.SHIFT_LEAD ? t('shift_lead', settings.language)
-        : currentUser?.role === Role.STAGING_SUPERVISOR ? t('staging', settings.language)
-            : currentUser?.role === Role.LOADING_SUPERVISOR ? t('loading', settings.language)
-                : t('admin', settings.language);
+    const adminLabel =
+        currentUser?.role === Role.SHIFT_LEAD
+            ? t('shift_lead', settings.language)
+            : currentUser?.role === Role.STAGING_SUPERVISOR
+                ? t('staging', settings.language)
+                : currentUser?.role === Role.LOADING_SUPERVISOR
+                    ? t('loading', settings.language)
+                    : t('admin', settings.language);
 
-    const SidebarContent = ({ isMobile = false }) => (
+    return (
+        <div className="flex h-screen w-full bg-slate-50 dark:bg-background text-foreground overflow-hidden font-sans selection:bg-primary/30 print:h-auto print:overflow-visible transition-colors duration-300">
+            {/* DESKTOP SIDEBAR (Hidden on mobile) */}
+            <aside
+                className={cn(
+                    'hidden md:flex relative z-20 flex-col bg-white dark:bg-slate-900/80 backdrop-blur-xl transition-all duration-300 print:hidden border-r border-slate-200 dark:border-white/5',
+                    collapsed ? 'w-20' : 'w-64'
+                )}
+            >
+                <SidebarContent
+                    collapsed={collapsed}
+                    settings={settings}
+                    currentUser={currentUser}
+                    adminLabel={adminLabel}
+                    location={location}
+                    handleSignOut={handleSignOut}
+                />
+            </aside>
+
+            {/* MOBILE SIDEBAR (Drawer) */}
+            {mobileOpen && (
+                <div className="fixed inset-0 z-50 md:hidden">
+                    {/* Backdrop */}
+                    <div
+                        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                        onClick={() => setMobileOpen(false)}
+                    />
+                    {/* Drawer */}
+                    <aside className="absolute left-0 top-0 bottom-0 w-3/4 max-w-xs bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-white/10 shadow-2xl flex flex-col animate-in slide-in-from-left duration-300">
+                        <SidebarContent
+                            isMobile={true}
+                            collapsed={collapsed}
+                            settings={settings}
+                            currentUser={currentUser}
+                            adminLabel={adminLabel}
+                            location={location}
+                            handleSignOut={handleSignOut}
+                            setMobileOpen={setMobileOpen}
+                        />
+                    </aside>
+                </div>
+            )}
+
+            {/* Main Content */}
+            <main className="flex-1 relative overflow-hidden flex flex-col print:h-auto print:overflow-visible">
+                {/* Offline Banner */}
+                {!isOnline && (
+                    <div className="bg-red-500 text-white text-[10px] py-1 px-4 flex items-center justify-center gap-2 animate-in slide-in-from-top duration-300">
+                        <WifiOff size={12} />
+                        <span className="font-bold uppercase tracking-wider">
+                            {t('offline_mode', settings.language)} - Data Sync Paused
+                        </span>
+                    </div>
+                )}
+                {/* Header */}
+                <header className="h-16 bg-background/50 backdrop-blur flex items-center justify-between px-4 md:px-8 print:hidden shrink-0">
+                    {/* Mobile Menu Toggle */}
+                    <button
+                        onClick={() => setMobileOpen(true)}
+                        className="md:hidden p-2 -ml-2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                        <Menu size={24} />
+                    </button>
+
+                    {/* Desktop Collapse Toggle */}
+                    <button
+                        onClick={() => updateSettings({ sidebarCollapsed: !collapsed })}
+                        className="hidden md:block p-2 -ml-2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                        <Menu size={20} />
+                    </button>
+
+                    <div className="flex items-center gap-4">
+                        <NotificationBell />
+                        <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center overflow-hidden border border-border">
+                            <img
+                                src="/unicharm-logo.png"
+                                alt="Profile"
+                                className="w-full h-full object-contain p-1"
+                            />
+                        </div>
+                    </div>
+                </header>
+
+                {/* Page Content */}
+                <div className="flex-1 overflow-auto bg-grid-white/[0.02] print:overflow-visible">
+                    <Outlet />
+                </div>
+            </main>
+        </div>
+    );
+}
+
+interface SidebarContentProps {
+    isMobile?: boolean;
+    collapsed: boolean;
+    settings: any;
+    currentUser: any;
+    adminLabel: string;
+    location: any;
+    handleSignOut: () => void;
+    setMobileOpen?: (open: boolean) => void;
+}
+
+function SidebarContent({
+    isMobile = false,
+    collapsed,
+    settings,
+    currentUser,
+    adminLabel,
+    location,
+    handleSignOut,
+    setMobileOpen
+}: SidebarContentProps) {
+    return (
         <>
             <div className="h-16 flex items-center px-6">
                 <div className="flex items-center gap-3">
                     <div className="h-10 w-10 flex items-center justify-center">
-                        <img src="/unicharm-logo.png" alt="Logo" className="w-full h-full object-contain" />
+                        <img
+                            src="/unicharm-logo.png"
+                            alt="Logo"
+                            className="w-full h-full object-contain"
+                        />
                     </div>
-                    {(!collapsed || isMobile) && <span className="font-bold text-lg tracking-tight text-foreground">Unicharm</span>}
+                    {(!collapsed || isMobile) && (
+                        <span className="font-bold text-lg tracking-tight text-slate-900 dark:text-white">
+                            Unicharm
+                        </span>
+                    )}
                 </div>
-                {isMobile && (
-                    <button onClick={() => setMobileOpen(false)} className="ml-auto text-muted-foreground hover:text-foreground">
+                {isMobile && setMobileOpen && (
+                    <button
+                        onClick={() => setMobileOpen(false)}
+                        className="ml-auto text-muted-foreground hover:text-foreground"
+                    >
                         <X size={24} />
                     </button>
                 )}
@@ -68,7 +212,10 @@ export default function RootLayout() {
                         icon={Users}
                         label={t('users', settings.language)}
                         collapsed={collapsed && !isMobile}
-                        active={location.pathname === '/admin' && location.search.includes('section=users')}
+                        active={
+                            location.pathname === '/admin' &&
+                            location.search.includes('section=users')
+                        }
                     />
                 )}
 
@@ -78,7 +225,12 @@ export default function RootLayout() {
                     icon={Shield}
                     label={adminLabel}
                     collapsed={collapsed && !isMobile}
-                    active={location.pathname === '/admin' && !location.search.includes('section=users') && !location.search.includes('section=audit_logs') && !location.search.includes('section=reports')}
+                    active={
+                        location.pathname === '/admin' &&
+                        !location.search.includes('section=users') &&
+                        !location.search.includes('section=audit_logs') &&
+                        !location.search.includes('section=reports')
+                    }
                 />
 
                 {/* SETTINGS */}
@@ -97,7 +249,10 @@ export default function RootLayout() {
                         icon={FileText}
                         label={t('audit_logs', settings.language)}
                         collapsed={collapsed && !isMobile}
-                        active={location.pathname === '/admin' && location.search.includes('section=audit_logs')}
+                        active={
+                            location.pathname === '/admin' &&
+                            location.search.includes('section=audit_logs')
+                        }
                     />
                 )}
 
@@ -122,92 +277,54 @@ export default function RootLayout() {
                 />
             </nav>
 
-
-
             <div className="p-4 mt-auto">
-                <button onClick={handleSignOut} className="flex items-center gap-3 w-full p-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/10 transition-all">
+                <button
+                    onClick={handleSignOut}
+                    className="flex items-center gap-3 w-full p-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/10 transition-all"
+                >
                     <LogOut size={20} />
-                    {(!collapsed || isMobile) && <span className="font-medium">{t('sign_out', settings.language)}</span>}
+                    {(!collapsed || isMobile) && (
+                        <span className="font-medium">{t('sign_out', settings.language)}</span>
+                    )}
                 </button>
             </div>
         </>
     );
-
-    return (
-        <div className="flex h-screen w-full bg-slate-50 dark:bg-background text-foreground overflow-hidden font-sans selection:bg-primary/30 print:h-auto print:overflow-visible transition-colors duration-300">
-
-            {/* DESKTOP SIDEBAR (Hidden on mobile) */}
-            <aside className={cn(
-                "hidden md:flex relative z-20 flex-col bg-card/80 backdrop-blur-xl transition-all duration-300 print:hidden",
-                collapsed ? "w-20" : "w-64"
-            )}>
-                <SidebarContent />
-            </aside>
-
-            {/* MOBILE SIDEBAR (Drawer) */}
-            {mobileOpen && (
-                <div className="fixed inset-0 z-50 md:hidden">
-                    {/* Backdrop */}
-                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-                    {/* Drawer */}
-                    <aside className="absolute left-0 top-0 bottom-0 w-3/4 max-w-xs bg-card border-r border-border shadow-2xl flex flex-col animate-in slide-in-from-left duration-300">
-                        <SidebarContent isMobile={true} />
-                    </aside>
-                </div>
-            )}
-
-            {/* Main Content */}
-            <main className="flex-1 relative overflow-hidden flex flex-col print:h-auto print:overflow-visible">
-                {/* Offline Banner */}
-                {!isOnline && (
-                    <div className="bg-red-500 text-white text-[10px] py-1 px-4 flex items-center justify-center gap-2 animate-in slide-in-from-top duration-300">
-                        <WifiOff size={12} />
-                        <span className="font-bold uppercase tracking-wider">{t('offline_mode', settings.language)} - Data Sync Paused</span>
-                    </div>
-                )}
-                {/* Header */}
-                <header className="h-16 bg-background/50 backdrop-blur flex items-center justify-between px-4 md:px-8 print:hidden shrink-0">
-
-                    {/* Mobile Menu Toggle */}
-                    <button onClick={() => setMobileOpen(true)} className="md:hidden p-2 -ml-2 text-muted-foreground hover:text-foreground transition-colors">
-                        <Menu size={24} />
-                    </button>
-
-                    {/* Desktop Collapse Toggle */}
-                    <button onClick={() => updateSettings({ sidebarCollapsed: !collapsed })} className="hidden md:block p-2 -ml-2 text-muted-foreground hover:text-foreground transition-colors">
-                        <Menu size={20} />
-                    </button>
-
-                    <div className="flex items-center gap-4">
-                        <NotificationBell />
-                        <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center overflow-hidden border border-border">
-                            <img src="/unicharm-logo.png" alt="Profile" className="w-full h-full object-contain p-1" />
-                        </div>
-                    </div>
-                </header>
-
-                {/* Page Content */}
-                <div className="flex-1 overflow-auto bg-grid-white/[0.02] print:overflow-visible">
-                    <Outlet />
-                </div>
-            </main>
-        </div>
-    );
 }
 
-function NavItem({ to, icon: Icon, label, collapsed, active }: { to: string, icon: React.ElementType, label: string, collapsed: boolean, active?: boolean }) {
+function NavItem({
+    to,
+    icon: Icon,
+    label,
+    collapsed,
+    active
+}: {
+    to: string;
+    icon: React.ElementType;
+    label: string;
+    collapsed: boolean;
+    active?: boolean;
+}) {
     return (
         <NavLink
             to={to}
-            className={({ isActive }) => cn(
-                "flex items-center gap-3 p-3 rounded-xl transition-all duration-200 group relative",
-                (active !== undefined ? active : isActive)
-                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/10",
-                collapsed && "justify-center"
-            )}
+            className={({ isActive }) =>
+                cn(
+                    'flex items-center gap-3 p-3 rounded-xl transition-all duration-200 group relative',
+                    (active !== undefined ? active : isActive)
+                        ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/10',
+                    collapsed && 'justify-center'
+                )
+            }
         >
-            <Icon size={20} className={cn("transition-transform group-hover:scale-110", collapsed ? "mx-auto" : "")} />
+            <Icon
+                size={20}
+                className={cn(
+                    'transition-transform group-hover:scale-110',
+                    collapsed ? 'mx-auto' : ''
+                )}
+            />
             {!collapsed && <span className="font-medium truncate">{label}</span>}
             {collapsed && (
                 <div className="absolute left-full ml-2 px-2 py-1 bg-popover text-popover-foreground text-xs rounded shadow-md opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 border border-border">

@@ -2,12 +2,12 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Home, AlertTriangle, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useData } from '@/contexts/DataContext';
+import { useAppState } from '@/contexts/AppStateContext';
 import { t } from '@/lib/i18n';
 
 export default function NotFound() {
     const navigate = useNavigate();
-    const { settings } = useData();
+    const { settings } = useAppState();
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -26,10 +26,15 @@ export default function NotFound() {
                         <AlertTriangle size={40} />
                     </div>
 
-                    <h1 className="text-6xl font-black mb-2 bg-gradient-to-b from-foreground to-foreground/50 bg-clip-text text-transparent">404</h1>
-                    <h2 className="text-2xl font-bold text-foreground">{t('page_not_found', settings.language)}</h2>
+                    <h1 className="text-6xl font-black mb-2 bg-gradient-to-b from-foreground to-foreground/50 bg-clip-text text-transparent">
+                        404
+                    </h1>
+                    <h2 className="text-2xl font-bold text-foreground">
+                        {t('page_not_found', settings.language)}
+                    </h2>
                     <p className="text-muted-foreground mt-4 leading-relaxed">
-                        The page you are looking for might have been moved, deleted, or simply doesn't exist.
+                        The page you are looking for might have been moved, deleted, or simply
+                        doesn&apos;t exist.
                     </p>
                 </div>
 
@@ -53,7 +58,9 @@ export default function NotFound() {
                 </div>
 
                 <div className="pt-8 border-t border-border/50">
-                    <p className="text-xs text-muted-foreground opacity-50 uppercase tracking-widest font-bold">Unicharm Smart Operations</p>
+                    <p className="text-xs text-muted-foreground opacity-50 uppercase tracking-widest font-bold">
+                        Unicharm Smart Operations
+                    </p>
                 </div>
             </motion.div>
         </div>

@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, SheetData, Role, Notification } from './types';
 import { supabase } from './services/supabaseClient';
@@ -47,8 +46,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         if (data && !error) {
             const loadedSheets = data
-                .filter(d => d.data) // Filter out invalid/empty data
-                .map(d => ({
+                .filter((d) => d.data) // Filter out invalid/empty data
+                .map((d) => ({
                     ...d.data,
                     id: d.id,
                     status: d.data.status || 'DRAFT'
@@ -61,23 +60,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const { data } = await supabase.from('users').select('*');
         if (data) {
             const mappedUsers: User[] = data
-                .filter(d => d.data) // Filter out null data
-                .map(d => d.data as User);
+                .filter((d) => d.data) // Filter out null data
+                .map((d) => d.data as User);
             setUsers(mappedUsers);
 
             // Ensure Default Admin Exists
-            const adminExists = mappedUsers.some(u => u.username === 'admin');
+            const adminExists = mappedUsers.some((u) => u.username === 'admin');
             if (!adminExists) {
-                console.log("Admin user missing. Seeding default admin...");
+                console.log('Admin user missing. Seeding default admin...');
                 const defaultAdmin: User = {
-                    id: "1",
-                    username: "admin",
-                    fullName: "System Administrator",
+                    id: '1',
+                    username: 'admin',
+                    fullName: 'System Administrator',
                     role: Role.ADMIN,
-                    empCode: "ADM001",
-                    email: "admin@unicharm.com",
+                    empCode: 'ADM001',
+                    email: 'admin@unicharm.com',
                     isApproved: true,
-                    password: "123"
+                    password: '123'
                 };
 
                 const { error: seedError } = await supabase.from('users').insert({
@@ -86,10 +85,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 });
 
                 if (!seedError) {
-                    setUsers(prev => [...prev, defaultAdmin]);
-                    addNotification("Default Admin (admin/123) restored.");
+                    setUsers((prev) => [...prev, defaultAdmin]);
+                    addNotification('Default Admin (admin/123) restored.');
                 } else {
-                    console.error("Failed to seed admin:", seedError);
+                    console.error('Failed to seed admin:', seedError);
                 }
             }
         }
@@ -98,9 +97,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const fetchLogs = async () => {
         const { data } = await supabase.from('logs').select('*');
         if (data) {
-            const mappedLogs = data.map(d => d.data).sort((a: any, b: any) =>
-                new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-            );
+            const mappedLogs = data
+                .map((d) => d.data)
+                .sort(
+                    (a: any, b: any) =>
+                        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+                );
             setAuditLogs(mappedLogs);
         }
     };
@@ -113,7 +115,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             timestamp: new Date().toISOString(),
             details
         };
-        setAuditLogs(prev => [logEntry, ...prev]);
+        setAuditLogs((prev) => [logEntry, ...prev]);
         await supabase.from('logs').insert({
             id: logEntry.id,
             data: logEntry
@@ -129,7 +131,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 const user = JSON.parse(savedSession);
                 setCurrentUser(user);
             } catch (e) {
-                console.error("Failed to restore session", e);
+                console.error('Failed to restore session', e);
                 localStorage.removeItem('unicharm_user');
             }
         }
@@ -149,7 +151,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 .limit(1);
 
             if (error) {
-                console.error("Login Error", error);
+                console.error('Login Error', error);
                 return false;
             }
 
@@ -200,7 +202,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     const approveUser = async (id: string, approve: boolean) => {
-        const userToUpdate = users.find(u => u.id === id);
+        const userToUpdate = users.find((u) => u.id === id);
         if (!userToUpdate) return;
 
         if (approve) {
@@ -215,7 +217,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     const deleteUser = async (id: string) => {
-        const userToDelete = users.find(u => u.id === id);
+        const userToDelete = users.find((u) => u.id === id);
         if (!userToDelete) return;
 
         await supabase.from('users').delete().eq('id', id);
@@ -224,7 +226,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     const resetPassword = async (id: string, newPass: string) => {
-        const userToUpdate = users.find(u => u.id === id);
+        const userToUpdate = users.find((u) => u.id === id);
         if (!userToUpdate) return;
 
         const updatedUser = { ...userToUpdate, password: newPass };
@@ -240,19 +242,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
 
         if (!error) {
-            setSheets(prev => [sheet, ...prev]);
+            setSheets((prev) => [sheet, ...prev]);
             addNotification(`Sheet ${sheet.id} created.`);
             addLog('SHEET_CREATE', `Sheet ${sheet.id} created`);
         }
     };
 
     const updateSheet = async (sheet: SheetData) => {
-        const { error } = await supabase.from('sheets').update({
-            data: sheet
-        }).eq('id', sheet.id);
+        const { error } = await supabase
+            .from('sheets')
+            .update({
+                data: sheet
+            })
+            .eq('id', sheet.id);
 
         if (!error) {
-            setSheets(prev => prev.map(s => s.id === sheet.id ? sheet : s));
+            setSheets((prev) => prev.map((s) => (s.id === sheet.id ? sheet : s)));
             if (sheet.status !== SheetStatus.DRAFT) {
                 addLog('SHEET_UPDATE', `Sheet ${sheet.id} updated (Status: ${sheet.status})`);
             }
@@ -262,13 +267,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const deleteSheet = async (id: string, reason: string) => {
         const { error } = await supabase.from('sheets').delete().eq('id', id);
         if (!error) {
-            setSheets(prev => prev.filter(s => s.id !== id));
+            setSheets((prev) => prev.filter((s) => s.id !== id));
             addLog('SHEET_DELETE', `Sheet ${id} deleted. Reason: ${reason}`);
         }
     };
 
     const addComment = async (sheetId: string, text: string) => {
-        const sheet = sheets.find(s => s.id === sheetId);
+        const sheet = sheets.find((s) => s.id === sheetId);
         if (!sheet) return;
 
         const newComment = {
@@ -289,11 +294,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const [activeLocks, setActiveLocks] = useState<Set<string>>(new Set());
     const acquireLock = (sheetId: string) => {
         if (activeLocks.has(sheetId)) return false;
-        setActiveLocks(prev => new Set(prev).add(sheetId));
+        setActiveLocks((prev) => new Set(prev).add(sheetId));
         return true;
     };
     const releaseLock = (sheetId: string) => {
-        setActiveLocks(prev => {
+        setActiveLocks((prev) => {
             const next = new Set(prev);
             next.delete(sheetId);
             return next;
@@ -301,11 +306,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     const addNotification = (msg: string) => {
-        setNotifications(prev => [{ id: Date.now().toString() + Math.random().toString(36).substring(2, 9), message: msg, read: false, timestamp: new Date().toISOString() }, ...prev]);
+        setNotifications((prev) => [
+            {
+                id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
+                message: msg,
+                read: false,
+                timestamp: new Date().toISOString()
+            },
+            ...prev
+        ]);
     };
 
     const markAllRead = () => {
-        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+        setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     };
 
     const resetSystemData = async () => {
@@ -319,17 +332,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             await supabase.from('logs').delete().neq('id', '0');
             addLog('SYSTEM_RESET', 'All system data has been cleared by Admin.');
         } catch (e) {
-            console.error("Failed to clear DB", e);
+            console.error('Failed to clear DB', e);
         }
     };
 
     return (
-        <AppContext.Provider value={{
-            currentUser, users, sheets, notifications, auditLogs, isLoading,
-            login, logout, register, approveUser, deleteUser, resetPassword,
-            addSheet, updateSheet, deleteSheet, addComment,
-            acquireLock, releaseLock, addNotification, markAllRead, resetSystemData
-        }}>
+        <AppContext.Provider
+            value={{
+                currentUser,
+                users,
+                sheets,
+                notifications,
+                auditLogs,
+                isLoading,
+                login,
+                logout,
+                register,
+                approveUser,
+                deleteUser,
+                resetPassword,
+                addSheet,
+                updateSheet,
+                deleteSheet,
+                addComment,
+                acquireLock,
+                releaseLock,
+                addNotification,
+                markAllRead,
+                resetSystemData
+            }}
+        >
             {children}
         </AppContext.Provider>
     );
@@ -344,4 +376,4 @@ export const useApp = () => {
 };
 
 // Need to import SheetStatus for conditional check if not imported
-import { SheetStatus } from './types'; 
+import { SheetStatus } from './types';

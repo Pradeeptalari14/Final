@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useApp } from '../AppContext';
 import { Role } from '../types';
@@ -81,7 +80,11 @@ export const Auth = () => {
             <div className="w-full max-w-sm bg-black/60 backdrop-blur-md p-8 rounded-2xl shadow-2xl text-white border border-white/10 z-10 mx-4">
                 <div className="text-center mb-8">
                     <div className="w-24 h-24 mx-auto mb-6 flex items-center justify-center">
-                        <img src="/login-logo.png" alt="Logo" className="w-full h-full object-contain drop-shadow-lg" />
+                        <img
+                            src="/login-logo.png"
+                            alt="Logo"
+                            className="w-full h-full object-contain drop-shadow-lg"
+                        />
                     </div>
                     <h1 className="text-2xl font-bold mb-1">Unicharm SCM</h1>
                     <p className="text-white/60 text-xs">FG Warehouse Operations</p>
@@ -107,7 +110,7 @@ export const Auth = () => {
                             className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/10 focus:border-blue-400 focus:bg-white/20 focus:outline-none transition-all text-sm font-medium text-white placeholder-white/50"
                             placeholder="Username"
                             value={username}
-                            onChange={e => setUsername(e.target.value)}
+                            onChange={(e) => setUsername(e.target.value)}
                         />
                     </div>
 
@@ -120,7 +123,7 @@ export const Auth = () => {
                                     className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/10 focus:border-blue-400 focus:bg-white/20 focus:outline-none transition-all text-sm font-medium text-white placeholder-white/50"
                                     placeholder="Full Name"
                                     value={fullName}
-                                    onChange={e => setFullName(e.target.value)}
+                                    onChange={(e) => setFullName(e.target.value)}
                                 />
                             </div>
                             <div>
@@ -130,7 +133,7 @@ export const Auth = () => {
                                     className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/10 focus:border-blue-400 focus:bg-white/20 focus:outline-none transition-all text-sm font-medium text-white placeholder-white/50"
                                     placeholder="Employee Code"
                                     value={empCode}
-                                    onChange={e => setEmpCode(e.target.value)}
+                                    onChange={(e) => setEmpCode(e.target.value)}
                                 />
                             </div>
                         </>
@@ -144,7 +147,7 @@ export const Auth = () => {
                                 className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/10 focus:border-blue-400 focus:bg-white/20 focus:outline-none transition-all text-sm font-medium text-white placeholder-white/50"
                                 placeholder="Email Address"
                                 value={email}
-                                onChange={e => setEmail(e.target.value)}
+                                onChange={(e) => setEmail(e.target.value)}
                             />
                         </div>
                     )}
@@ -157,7 +160,7 @@ export const Auth = () => {
                             className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/10 focus:border-blue-400 focus:bg-white/20 focus:outline-none transition-all text-sm font-medium text-white placeholder-white/50 pr-10"
                             placeholder="Password"
                             value={password}
-                            onChange={e => setPassword(e.target.value)}
+                            onChange={(e) => setPassword(e.target.value)}
                         />
                         <button
                             type="button"
@@ -172,28 +175,62 @@ export const Auth = () => {
                         <select
                             className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/10 focus:border-blue-400 focus:bg-white/20 focus:outline-none transition-all text-sm font-medium text-white appearance-none cursor-pointer"
                             value={role}
-                            onChange={e => setRole(e.target.value as Role)}
+                            onChange={(e) => setRole(e.target.value as Role)}
                         >
-                            <option value={Role.STAGING_SUPERVISOR} className="text-slate-900">Staging Supervisor</option>
-                            <option value={Role.LOADING_SUPERVISOR} className="text-slate-900">Loading Supervisor</option>
-                            <option value={Role.ADMIN} className="text-slate-900">Administrator</option>
-                            <option value={Role.SHIFT_LEAD} className="text-slate-900">Shift Lead</option>
+                            <option value={Role.STAGING_SUPERVISOR} className="text-slate-900">
+                                Staging Supervisor
+                            </option>
+                            <option value={Role.LOADING_SUPERVISOR} className="text-slate-900">
+                                Loading Supervisor
+                            </option>
+                            <option value={Role.ADMIN} className="text-slate-900">
+                                Administrator
+                            </option>
+                            <option value={Role.SHIFT_LEAD} className="text-slate-900">
+                                Shift Lead
+                            </option>
                         </select>
                         <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none text-white/50">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                            <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth="2"
+                                    d="M19 9l-7 7-7-7"
+                                ></path>
+                            </svg>
                         </div>
                     </div>
 
-                    <button type="submit" className="w-full bg-[#ff7b00] hover:bg-[#ff9500] text-white font-bold py-3.5 rounded-lg shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2 mt-4">
-                        {isLogin ? <><LogIn size={18} /> Login</> : <><UserPlus size={18} /> Register</>}
+                    <button
+                        type="submit"
+                        className="w-full bg-[#ff7b00] hover:bg-[#ff9500] text-white font-bold py-3.5 rounded-lg shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2 mt-4"
+                    >
+                        {isLogin ? (
+                            <>
+                                <LogIn size={18} /> Login
+                            </>
+                        ) : (
+                            <>
+                                <UserPlus size={18} /> Register
+                            </>
+                        )}
                     </button>
                 </form>
 
                 <div className="mt-6 text-center">
                     <p className="text-sm text-white/60">
-                        {isLogin ? "Don't have an account?" : "Already have an account?"}
-                        <button onClick={toggleMode} className="ml-1 text-[#ff7b00] font-semibold hover:text-[#ff9500] hover:underline">
-                            {isLogin ? "Register now" : "Login here"}
+                        {isLogin ? "Don't have an account?" : 'Already have an account?'}
+                        <button
+                            onClick={toggleMode}
+                            className="ml-1 text-[#ff7b00] font-semibold hover:text-[#ff9500] hover:underline"
+                        >
+                            {isLogin ? 'Register now' : 'Login here'}
                         </button>
                     </p>
                 </div>

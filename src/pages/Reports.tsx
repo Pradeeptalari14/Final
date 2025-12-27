@@ -1,784 +1,422 @@
-import React, { useState, useMemo } from 'react'; // v8.1
-
+import React, { useState, useMemo } from 'react';
 import {
-    Activity,
-    Clock,
-    TrendingUp,
     Calendar,
-    Filter,
     Download,
-    LayoutDashboard,
-    Factory,
     Truck,
-    AlertOctagon,
-    FileText,
-    Info,
-    ChevronDown,
     Users,
-    CheckCircle2,
+    FileText,
+    ChevronDown,
+    Clock,
+    LayoutGrid,
     Search,
-    Timer,
-    MoreHorizontal
+    TrendingUp,
+    MapPin,
+    Package
 } from 'lucide-react';
 import { useData } from '@/contexts/DataContext';
-import { Role } from '@/types';
-import {
-    AreaChart,
-    Area,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    ResponsiveContainer,
-    BarChart,
-    Bar,
-    Legend,
-    RadarChart,
-    PolarGrid,
-    PolarAngleAxis,
-    PolarRadiusAxis,
-    Radar,
-    Line
-} from 'recharts';
-import { UserDetailModal, ShiftUser } from '@/components/UserDetailModal';
+import { Role, SheetData, SheetStatus } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Progress } from '@/components/ui/progress';
-import { Input } from "@/components/ui/input";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow
+} from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
+import { exportToExcelGeneric } from '@/lib/excelExport';
 
 // --- Types ---
-type ReportType = 'production' | 'oee' | 'downtime' | 'quality' | 'dpr' | 'shift';
-
-// --- Report Details Configuration ---
-const reportDetails: Record<ReportType, { title: string; desc: string; purpose: string; metrics: string }> = {
-    production: {
-        title: "Production Summary",
-        desc: "Overview of manufacturing output, identifying trends and throughput efficiency.",
-        purpose: "Used to track hourly/daily production targets versus actual output.",
-        metrics: "Cases Produced, Target Adherence, Efficiency %"
-    },
-    oee: {
-        title: "OEE Analysis",
-        desc: "Overall Equipment Effectiveness breakdown into Availability, Performance, and Quality.",
-        purpose: "Critical for identifying losses due to downtime, speed loss, or defects.",
-        metrics: "OEE Score, Run Time, Speed Loss"
-    },
-    downtime: {
-        title: "Downtime Analysis",
-        desc: "Detailed classification of stop events, reasons, and duration impact.",
-        purpose: "Pinpoint root causes of efficiency loss to prioritize maintenance or process fixes.",
-        metrics: "Total Downtime, Top 5 Reasons, MTTR"
-    },
-    quality: {
-        title: "Quality Control",
-        desc: "Defect rate monitoring and standardized quality radar metrics.",
-        purpose: "Ensure product standards are met and identify specific defect types.",
-        metrics: "Defect Rate, FPY (First Pass Yield), Scrap %"
-    },
-    dpr: {
-        title: "Daily Production Report (DPR)",
-        desc: "Comprehensive end-of-day shop floor summary for managers.",
-        purpose: "The official record of daily plant performance, used for morning meetings.",
-        metrics: "Shift-wise Output, Major Stoppages, Manpower Utilization"
-    },
-    shift: {
-        title: "Shift Performance (User Focus)",
-        desc: "Real-time performance tracking of all active staff on the current shift.",
-        purpose: "Monitor individual output, efficiency, and workload distribution.",
-        metrics: "Sheets Completed, Cases Handled, SLA %, Avg Time"
-    }
-};
-
-// --- Mock Data Generators (Dynamic) ---
-const generateProductionData = (variance = 0) => {
-    return Array.from({ length: 24 }).map((_, i) => ({
-        time: `${i}:00`,
-        target: 400 + Math.floor(Math.random() * 50),
-        actual: 350 + Math.floor(Math.random() * 150) + variance,
-        efficiency: 85 + Math.floor(Math.random() * 15)
-    }));
-};
-
-const generateDowntimeData = () => [
-    { reason: 'Equipment Failure', duration: 145 + Math.floor(Math.random() * 30), count: 3 },
-    { reason: 'Material Shortage', duration: 80 + Math.floor(Math.random() * 20), count: 5 },
-    { reason: 'Shift Change', duration: 45, count: 2 },
-    { reason: 'Quality Checks', duration: 30, count: 8 },
-    { reason: 'Cleaning', duration: 25, count: 1 },
-];
-
-const generateQualityData = () => [
-    { metric: 'Accuracy', A: 95, B: 80, fullMark: 100 },
-    { metric: 'Speed', A: 88, B: 90, fullMark: 100 },
-    { metric: 'Reliability', A: 92, B: 85, fullMark: 100 },
-    { metric: 'Safety', A: 98, B: 95, fullMark: 100 },
-    { metric: 'Compliance', A: 100, B: 90, fullMark: 100 },
-];
-
-// --- SLA Logic (40 min target) ---
-
-// --- SLA Logic (40 min target) ---
-const generateSLAData = (variance = 0) => {
-    // Simulate last 50 loading operations
-    const totalOps = 50;
-    const slaTarget = 40; // minutes
-    let metSLA = 0;
-    const ops = Array.from({ length: totalOps }).map((_, i) => {
-        const duration = 25 + Math.floor(Math.random() * 30) + variance; // 25 to 55 mins
-        if (duration <= slaTarget) metSLA++;
-        return {
-            id: `OP-${1000 + i}`,
-            duration,
-            status: duration <= slaTarget ? 'Met' : 'Breached'
-        };
-    });
-
-    return {
-        slaPercent: Math.round((metSLA / totalOps) * 100),
-        avgDuration: Math.round(ops.reduce((acc, curr) => acc + curr.duration, 0) / totalOps),
-        totalOps,
-        breached: totalOps - metSLA,
-        details: ops
-    };
-};
-
+type ReportType = 'daily' | 'staff' | 'monthly';
 
 export default function ReportsPage() {
-    const { sheets, users, activityLogs } = useData();
-    const [activeReport, setActiveReport] = useState<ReportType>('shift'); // Default to Shift Report as per user interest
-    const [timeRange, setTimeRange] = useState('Last 7 Days');
-    const [dataVariance, setDataVariance] = useState(0); // Used to simulate filter changes
-    const [isRefreshing, setIsRefreshing] = useState(false);
+    const { sheets, users, syncStatus, refreshSheets } = useData();
+    const [activeReport, setActiveReport] = useState<ReportType>('daily');
+    const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+    const [searchQuery, setSearchQuery] = useState('');
 
-    // Refresh data when filters change
-    const handleFilterChange = (range: string) => {
-        setIsRefreshing(true);
-        setTimeRange(range);
-        setTimeout(() => {
-            setDataVariance(Math.floor(Math.random() * 20) - 10);
-            setIsRefreshing(false);
-        }, 600);
+    // --- Helper for Date Comparison ---
+    const isSameDay = (dateStr: string, targetStr: string) => {
+        if (!dateStr || !targetStr) return false;
+        // Normalize strings to YYYY-MM-DD
+        const d1 = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
+        const d2 = targetStr.includes('T') ? targetStr.split('T')[0] : targetStr;
+        return d1 === d2;
     };
 
-    const prodData = useMemo(() => generateProductionData(dataVariance), [dataVariance]);
-    const downtimeData = useMemo(() => generateDowntimeData(), [dataVariance]);
-    const qualityData = useMemo(() => generateQualityData(), [dataVariance]);
-    const slaStats = useMemo(() => generateSLAData(dataVariance > 0 ? 5 : 0), [dataVariance]);
+    // --- Helper for Duration ---
+    const getDurationMinutes = (sheet: SheetData) => {
+        if (!sheet.loadingStartTime || !sheet.loadingEndTime) return 0;
+        const start = new Date(`1970-01-01T${sheet.loadingStartTime}`);
+        const end = new Date(`1970-01-01T${sheet.loadingEndTime}`);
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0;
+        let diff = (end.getTime() - start.getTime()) / 1000 / 60;
+        if (diff < 0) diff += 24 * 60; // Midnight crossover
+        return Math.round(diff);
+    };
 
-    // --- Real Data Aggregation ---
-    const shiftUsers = useMemo(() => {
-        if (!users || !sheets) return [];
+    // --- Helper for Sheet Quantity ---
+    const getSheetQuantity = (sheet: SheetData) => {
+        const loadingTotal = (sheet.loadingItems || []).reduce((sum, i) => sum + (i.total || 0), 0);
+        const additionalTotal = (sheet.additionalItems || []).reduce((sum, i) => sum + (i.total || 0), 0);
+        return loadingTotal + additionalTotal;
+    };
 
-        const today = new Date().toDateString();
+    // --- 1. Daily Report Data ---
+    const dailyReportData = useMemo(() => {
+        const filtered = sheets.filter(s => isSameDay(s.date || s.createdAt, selectedDate));
 
-        // 1. Filter sheets based on Time Range
-        const relevantSheets = sheets.filter(s => {
-            const sheetDate = new Date(s.createdAt || s.date);
-            if (timeRange === 'Today') return sheetDate.toDateString() === today;
-            // For now, if not today, show ALL (Last 30 days default behavior for demo)
-            return true;
+        // Vehicles Dispatched (Completed or Pending Verification - basically finished loading)
+        const dispatched = filtered.filter(s =>
+            s.status === SheetStatus.COMPLETED ||
+            s.status === SheetStatus.LOADING_VERIFICATION_PENDING
+        );
+
+        // Destination Wise Aggregation
+        const destStats: Record<string, { vehicles: number, qty: number }> = {};
+        dispatched.forEach(s => {
+            const dest = s.destination || 'Unknown';
+            if (!destStats[dest]) destStats[dest] = { vehicles: 0, qty: 0 };
+            destStats[dest].vehicles += 1;
+            destStats[dest].qty += getSheetQuantity(s);
         });
 
-        // 2. Map Users to Performance Stats
-        return users.map(user => {
-            // Find sheets where this user was the Supervisor of record
-            // Matches by Full Name or Username (fallback)
-            const userSheets = relevantSheets.filter(s =>
-                (s.loadingSvName === user.fullName || s.loadingSvName === user.username) ||
-                (s.supervisorName === user.fullName || s.supervisorName === user.username) ||
-                (s.pickingBy === user.fullName || s.pickingBy === user.username)
+        return {
+            totalVehicles: dispatched.length,
+            totalQty: dispatched.reduce((sum, s) => sum + getSheetQuantity(s), 0),
+            destinations: Object.entries(destStats).map(([name, stats]) => ({
+                name,
+                ...stats
+            }))
+        };
+    }, [sheets, selectedDate]);
+
+    // --- 2. Staff KPI Data ---
+    const staffKPIData = useMemo(() => {
+        const dailySheets = sheets.filter(s => isSameDay(s.date || s.createdAt, selectedDate));
+
+        return (users || []).map(u => {
+            const userSheets = dailySheets.filter(s =>
+                (s.status === SheetStatus.COMPLETED || s.status === SheetStatus.LOADING_VERIFICATION_PENDING) &&
+                (s.loadingSvName === u.fullName || s.supervisorName === u.fullName)
             );
 
-            const sheetsCompleted = userSheets.length;
-
-            // Calculate Cases
-            const casesHandled = userSheets.reduce((acc, s) => {
-                const loadingTotal = (s.loadingItems || []).reduce((sum, i) => sum + (i.total || 0), 0);
-                const additionalTotal = (s.additionalItems || []).reduce((sum, i) => sum + (i.total || 0), 0);
-                // Fallback to staging total if loading not started yet
-                const stagingTotal = (s.stagingItems || []).reduce((sum, i) => sum + (i.ttlCases || 0), 0);
-                return acc + (loadingTotal > 0 ? loadingTotal + additionalTotal : stagingTotal);
-            }, 0);
-
-            // Calculate Avg Time (Duration)
-            let totalMinutes = 0;
-            let timedSheets = 0;
-            let metSlaCount = 0;
-
-            userSheets.forEach(s => {
-                if (s.loadingStartTime && s.loadingEndTime) {
-                    // Start/End are time descriptions "HH:MM:SS" ?? Or ISO?
-                    // Hook sets them as `toLocaleTimeString` or custom string. 
-                    // Let's assume standard time string parsing for now.
-                    // If they are just "10:00:00", we need a dummy date.
-                    const d1 = new Date(`1970-01-01T${s.loadingStartTime}`);
-                    const d2 = new Date(`1970-01-01T${s.loadingEndTime}`);
-                    if (!isNaN(d1.getTime()) && !isNaN(d2.getTime())) {
-                        let diff = (d2.getTime() - d1.getTime()) / 1000 / 60; // minutes
-                        if (diff < 0) diff += 24 * 60; // Handle midnight crossover
-                        totalMinutes += diff;
-                        timedSheets++;
-                        if (diff <= 40) metSlaCount++;
-                    }
-                }
-            });
-
-            const avgTime = timedSheets > 0 ? Math.round(totalMinutes / timedSheets) : 0;
-            const slaCompliance = timedSheets > 0 ? Math.round((metSlaCount / timedSheets) * 100) : 100;
-
-            // Activity Status
-            // Check activity logs for this user
-            const userLogs = activityLogs.filter(l => l.actor === user.username);
-            const lastLog = userLogs[0]; // Ordered by time desc
-            let lastActiveStr = "Offline";
-            let status: 'Active' | 'Break' | 'Offline' = 'Offline';
-
-            if (lastLog) {
-                const logTime = new Date(lastLog.timestamp).getTime();
-                const now = Date.now();
-                const diffMins = (now - logTime) / 1000 / 60;
-
-                if (diffMins < 15) status = 'Active';
-                else if (diffMins < 60) status = 'Break';
-                else status = 'Offline';
-
-                if (diffMins < 1) lastActiveStr = "Just now";
-                else if (diffMins < 60) lastActiveStr = `${Math.floor(diffMins)}m ago`;
-                else if (diffMins < 1440) lastActiveStr = `${Math.floor(diffMins / 60)}h ago`;
-                else lastActiveStr = "1d+ ago";
-            }
-
             return {
-                id: user.id,
-                name: user.fullName || user.username,
-                role: user.role === Role.LOADING_SUPERVISOR ? 'Loading Supervisor' :
-                    user.role === Role.STAGING_SUPERVISOR ? 'Staging Supervisor' :
-                        user.role === Role.SHIFT_LEAD ? 'Shift Lead' : 'Operator',
-                sheetsCompleted,
-                casesHandled,
-                avgTime,
-                slaCompliance,
-                status,
-                lastActive: lastActiveStr,
-                avatar: undefined // No avatar URL in User type yet
-            } as ShiftUser;
-        })
-            .filter(u => u.role !== 'Admin') // Filter out admins if needed
-            .sort((a, b) => b.sheetsCompleted - a.sheetsCompleted); // Top performers first
+                name: u.fullName || u.username,
+                vehicles: userSheets.length,
+                qty: userSheets.reduce((sum, s) => sum + getSheetQuantity(s), 0),
+                role: u.role
+            };
+        }).filter(u => u.vehicles > 0);
+    }, [sheets, users, selectedDate]);
 
-    }, [users, sheets, activityLogs, timeRange]);
+    // --- 3. Monthly Report Data ---
+    const monthlyReportData = useMemo(() => {
+        const [y, m] = selectedDate.split('-');
+        const targetMonth = parseInt(m) - 1;
+        const targetYear = parseInt(y);
 
-    const details = reportDetails[activeReport];
+        const monthlySheets = sheets.filter(s => {
+            const dateStr = s.date || s.createdAt;
+            const d = new Date(dateStr);
+            return d.getMonth() === targetMonth &&
+                d.getFullYear() === targetYear &&
+                (s.status === SheetStatus.COMPLETED || s.status === SheetStatus.LOADING_VERIFICATION_PENDING);
+        });
 
-    // --- KPIs based on Report Type ---
-    const renderContent = () => {
-        if (activeReport === 'shift') {
-            return <ShiftPerformanceView users={shiftUsers} />;
+        const destStats: Record<string, { vehicles: number, qty: number, totalTime: number, timedVehicles: number }> = {};
+
+        monthlySheets.forEach(s => {
+            const dest = s.destination || 'Unknown';
+            if (!destStats[dest]) destStats[dest] = { vehicles: 0, qty: 0, totalTime: 0, timedVehicles: 0 };
+
+            destStats[dest].vehicles += 1;
+            destStats[dest].qty += getSheetQuantity(s);
+
+            const duration = getDurationMinutes(s);
+            if (duration > 0) {
+                destStats[dest].totalTime += duration;
+                destStats[dest].timedVehicles += 1;
+            }
+        });
+
+        return {
+            totalVehicles: monthlySheets.length,
+            totalQty: monthlySheets.reduce((sum, s) => sum + getSheetQuantity(s), 0),
+            destinations: Object.entries(destStats).map(([name, stats]) => ({
+                name,
+                vehicles: stats.vehicles,
+                qty: stats.qty,
+                avgTime: stats.timedVehicles > 0 ? Math.round(stats.totalTime / stats.timedVehicles) : 0
+            }))
+        };
+    }, [sheets, selectedDate]);
+
+    // --- Export Handler ---
+    const handleExport = () => {
+        let exportData: any[] = [];
+        let filename = 'Report';
+
+        if (activeReport === 'daily') {
+            filename = `Daily_Report_${selectedDate}`;
+            exportData = [
+                { 'Report Type': 'Daily Report', 'Date': selectedDate },
+                { 'Total Vehicles': dailyReportData.totalVehicles, 'Total Quantity': dailyReportData.totalQty },
+                {},
+                { 'Destination': 'Breakdown', 'Vehicles': 'Qty' },
+                ...dailyReportData.destinations.map(d => ({
+                    'Destination': d.name,
+                    'Vehicles': d.vehicles,
+                    'Qty': d.qty
+                }))
+            ];
+        } else if (activeReport === 'staff') {
+            filename = `Staff_KPI_${selectedDate}`;
+            exportData = staffKPIData.map(s => ({
+                'Staff Name': s.name,
+                'Role': s.role,
+                'Vehicles Dispatched': s.vehicles,
+                'Quantity Dispatched': s.qty
+            }));
+        } else if (activeReport === 'monthly') {
+            const monthName = new Date(selectedDate).toLocaleString('default', { month: 'long' });
+            filename = `Monthly_Report_${monthName}_${new Date(selectedDate).getFullYear()}`;
+            exportData = monthlyReportData.destinations.map(d => ({
+                'Destination': d.name,
+                'Vehicles': d.vehicles,
+                'Quantity': d.qty,
+                'Avg Loading Time (min)': d.avgTime
+            }));
         }
 
-        // Generic Dashboard for other reports
-        return (
-            <>
-                {renderKPIs()}
-                {/* Charts Area */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                    {activeReport === 'production' && (
-                        <Card className="col-span-1 lg:col-span-2 border-0 shadow-sm ring-1 ring-slate-100">
-                            <CardHeader>
-                                <div className="flex justify-between items-center">
-                                    <div>
-                                        <CardTitle className="text-base font-bold text-slate-800">Production vs Target (Hourly)</CardTitle>
-                                        <CardDescription>Real-time throughput monitoring against planned targets.</CardDescription>
-                                    </div>
-                                    <Info size={16} className="text-slate-400 cursor-help" />
-                                </div>
-                            </CardHeader>
-                            <CardContent className="h-[300px]">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <AreaChart data={prodData}>
-                                        <defs>
-                                            <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1} />
-                                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                                            </linearGradient>
-                                        </defs>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                        <XAxis dataKey="time" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
-                                        <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
-                                        <Tooltip
-                                            contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                        />
-                                        <Area type="monotone" dataKey="actual" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorActual)" name="Actual Output" />
-                                        <Line type="step" dataKey="target" stroke="#94a3b8" strokeDasharray="5 5" strokeWidth={2} name="Target" dot={false} />
-                                    </AreaChart>
-                                </ResponsiveContainer>
-                            </CardContent>
-                        </Card>
-                    )}
-
-                    {(activeReport === 'downtime' || activeReport === 'oee') && (
-                        <Card className="border-0 shadow-sm ring-1 ring-slate-100">
-                            <CardHeader>
-                                <div className="flex justify-between items-center">
-                                    <div>
-                                        <CardTitle className="text-base font-bold text-slate-800">Downtime Analysis (Pareto)</CardTitle>
-                                        <CardDescription>Top reasons for efficiency loss by duration.</CardDescription>
-                                    </div>
-                                    <Info size={16} className="text-slate-400 cursor-help" />
-                                </div>
-                            </CardHeader>
-                            <CardContent className="h-[300px]">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={downtimeData} layout="vertical">
-                                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                                        <XAxis type="number" stroke="#94a3b8" fontSize={12} />
-                                        <YAxis dataKey="reason" type="category" width={100} stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
-                                        <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '8px' }} />
-                                        <Bar dataKey="duration" fill="#ef4444" radius={[0, 4, 4, 0]} barSize={20} name="Duration (min)" />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </CardContent>
-                        </Card>
-                    )}
-
-                    {(activeReport === 'quality' || activeReport === 'oee') && (
-                        <Card className="border-0 shadow-sm ring-1 ring-slate-100">
-                            <CardHeader>
-                                <div className="flex justify-between items-center">
-                                    <div>
-                                        <CardTitle className="text-base font-bold text-slate-800">Quality Radar</CardTitle>
-                                        <CardDescription>Performance across key quality dimensions.</CardDescription>
-                                    </div>
-                                    <Info size={16} className="text-slate-400 cursor-help" />
-                                </div>
-                            </CardHeader>
-                            <CardContent className="h-[300px]">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <RadarChart cx="50%" cy="50%" outerRadius="80%" data={qualityData}>
-                                        <PolarGrid stroke="#e2e8f0" />
-                                        <PolarAngleAxis dataKey="metric" tick={{ fill: '#64748b', fontSize: 11 }} />
-                                        <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#cbd5e1" />
-                                        <Radar name="Shift A" dataKey="A" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} />
-                                        <Radar name="Shift B" dataKey="B" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.3} />
-                                        <Legend />
-                                    </RadarChart>
-                                </ResponsiveContainer>
-                            </CardContent>
-                        </Card>
-                    )}
-                </div>
-            </>
-        );
-    };
-
-    const renderKPIs = () => {
-        switch (activeReport) {
-            case 'production':
-            case 'dpr':
-                return (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                        <KPIGCard
-                            title="Total Output"
-                            desc="Total cases produced/loaded in the selected period."
-                            value={8450 + (dataVariance * 10)}
-                            unit="Cases"
-                            trend="+5.2%"
-                            trendUp={true}
-                            icon={<Factory className="text-blue-500" />}
-                        />
-                        <KPIGCard
-                            title="SLA Compliance"
-                            desc={`Percentage of trucks loaded within the ${40} min target.`}
-                            value={`${slaStats.slaPercent}%`}
-                            unit={`Target: < ${40} min`}
-                            trend={slaStats.slaPercent < 90 ? "-2.1%" : "+1.5%"}
-                            trendUp={slaStats.slaPercent >= 90}
-                            icon={<Clock className={slaStats.slaPercent >= 90 ? "text-green-500" : "text-amber-500"} />}
-                            alert={slaStats.slaPercent < 90}
-                        />
-                        <KPIGCard
-                            title="Avg Loading Time"
-                            desc="Average duration from Check-in to Gate-out."
-                            value={`${slaStats.avgDuration}m`}
-                            unit="per truck"
-                            trend={slaStats.avgDuration > 40 ? "+5m" : "-2m"}
-                            trendUp={slaStats.avgDuration <= 40}
-                            icon={<Truck className="text-purple-500" />}
-                        />
-                    </div>
-                );
-            case 'oee':
-                return (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                        <KPIGCard title="OEE Score" desc="Global standard for measuring manufacturing productivity." value="85.4%" unit="Good" trend="+1.2%" trendUp={true} icon={<Activity className="text-blue-600" />} />
-                        <KPIGCard title="Availability" desc="Percentage of scheduled time that the operation is available to operate." value="92.1%" unit="Run Time" trend="-0.5%" trendUp={false} icon={<Clock className="text-green-600" />} />
-                        <KPIGCard title="Performance" desc="Speed at which the Work Center runs as a percentage of its designed speed." value="88.5%" unit="Speed" trend="+2.4%" trendUp={true} icon={<TrendingUp className="text-purple-600" />} />
-                    </div>
-                );
-            default:
-                return (
-                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm mb-6 flex gap-2">
-                        <Info size={16} className="mt-0.5" /> Select a specific KPI module to see metrics.
-                    </div>
-                );
-        }
+        exportToExcelGeneric(exportData, filename, 'Report');
     };
 
     return (
-        <div className="flex h-[calc(100vh-theme(spacing.16))] bg-slate-50/50">
-            {/* Sidebar / Report Selector */}
-            <div className="w-64 border-r border-slate-200 bg-white p-4 hidden md:block overflow-y-auto shrink-0">
-                <div className="mb-6">
-                    <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-2 px-2">Management Hub</h2>
-                    <p className="text-xs text-slate-500 px-2">Industrial Operations Center</p>
+        <div className="flex h-[calc(100vh-theme(spacing.16))] bg-white dark:bg-slate-950 overflow-hidden">
+            {/* Sidebar Navigation */}
+            <div className="w-72 border-r border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-slate-900/20 p-6 flex flex-col gap-8 shrink-0">
+                <div>
+                    <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Report Center</h2>
+                    <div className="space-y-2">
+                        <ReportNavItem
+                            active={activeReport === 'daily'}
+                            label="Daily Report"
+                            icon={<Calendar size={18} />}
+                            onClick={() => setActiveReport('daily')}
+                        />
+                        <ReportNavItem
+                            active={activeReport === 'staff'}
+                            label="Staff KPI / Shift"
+                            icon={<Users size={18} />}
+                            onClick={() => setActiveReport('staff')}
+                        />
+                        <ReportNavItem
+                            active={activeReport === 'monthly'}
+                            label="Monthly Report"
+                            icon={<TrendingUp size={18} />}
+                            onClick={() => setActiveReport('monthly')}
+                        />
+                    </div>
                 </div>
 
-                <div className="space-y-1">
-                    <ReportNavItem
-                        active={activeReport === 'production'}
-                        icon={<LayoutDashboard size={18} />}
-                        label="Production Summary"
-                        onClick={() => setActiveReport('production')}
-                    />
-                    <ReportNavItem
-                        active={activeReport === 'dpr'}
-                        icon={<FileText size={18} />}
-                        label="Daily Prod. Report (DPR)"
-                        onClick={() => setActiveReport('dpr')}
-                    />
-                    <ReportNavItem
-                        active={activeReport === 'shift'}
-                        icon={<Users size={18} />}
-                        label="Shift Report (Staff)"
-                        onClick={() => setActiveReport('shift')}
-                    />
-                    <div className="h-px bg-slate-100 my-2 mx-2" />
-                    <ReportNavItem
-                        active={activeReport === 'oee'}
-                        icon={<Activity size={18} />}
-                        label="OEE Analysis"
-                        onClick={() => setActiveReport('oee')}
-                    />
-                    <ReportNavItem
-                        active={activeReport === 'downtime'}
-                        icon={<AlertOctagon size={18} />}
-                        label="Downtime Analysis"
-                        onClick={() => setActiveReport('downtime')}
-                    />
-                    <ReportNavItem
-                        active={activeReport === 'quality'}
-                        icon={<CheckCircle2 size={18} />}
-                        label="Quality & Defects"
-                        onClick={() => setActiveReport('quality')}
-                    />
+                <div className="mt-auto pt-6 border-t border-slate-200 dark:border-white/5">
+                    <Button
+                        onClick={handleExport}
+                        className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 font-bold h-12 rounded-xl gap-2"
+                    >
+                        <Download size={18} /> Export Excel
+                    </Button>
                 </div>
             </div>
 
             {/* Main Content */}
-            <div className={cn("flex-1 overflow-auto p-6 transition-opacity duration-300", isRefreshing ? "opacity-60" : "opacity-100")}>
-                {/* Header */}
-                <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-8 gap-4">
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
+                {/* Header Section */}
+                <div className="flex justify-between items-start mb-10">
                     <div>
-                        <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-                            {details.title}
+                        <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight mb-2 uppercase">
+                            {activeReport === 'daily' && "Daily Operations"}
+                            {activeReport === 'staff' && "Staff Performance"}
+                            {activeReport === 'monthly' && "Monthly Analytics"}
                         </h1>
-                        <p className="text-slate-500 text-sm mt-1 mb-2">{details.desc}</p>
-                        <div className="flex flex-wrap gap-2 text-xs">
-                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                                Purpose: {details.purpose}
-                            </Badge>
-                            <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200">
-                                Key Metrics: {details.metrics}
-                            </Badge>
-                        </div>
+                        <p className="text-slate-500 font-medium">
+                            {activeReport === 'daily' && `Viewing operational data for ${new Date(selectedDate).toLocaleDateString()}`}
+                            {activeReport === 'staff' && `Individual KPI tracking for ${new Date(selectedDate).toLocaleDateString()}`}
+                            {activeReport === 'monthly' && `Aggregated performance metrics for ${new Date(selectedDate).toLocaleString('default', { month: 'long', year: 'numeric' })}`}
+                        </p>
                     </div>
-                    <div className="flex gap-2 flex-wrap">
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="outline" size="sm" className="bg-white">
-                                    <Calendar className="mr-2 h-4 w-4" /> {timeRange} <ChevronDown size={14} className="ml-1 opacity-50" />
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-40 p-1" align="end">
-                                <div className="grid gap-1">
-                                    {['Today', 'Yesterday', 'Last 7 Days', 'Last 30 Days', 'This Month'].map((range) => (
-                                        <Button
-                                            key={range}
-                                            variant="ghost"
-                                            size="sm"
-                                            className="justify-start font-normal"
-                                            onClick={() => handleFilterChange(range)}
-                                        >
-                                            {range}
-                                        </Button>
-                                    ))}
-                                </div>
-                            </PopoverContent>
-                        </Popover>
 
-                        <Button variant="outline" size="sm" className="bg-white" onClick={() => handleFilterChange(timeRange)}>
-                            <Filter className="mr-2 h-4 w-4" /> Filter
-                        </Button>
-                        <Button size="sm" className="bg-slate-900 text-white hover:bg-slate-800">
-                            <Download className="mr-2 h-4 w-4" /> Export
-                        </Button>
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10">
+                            <div className={cn(
+                                "w-2 h-2 rounded-full animate-pulse",
+                                syncStatus === 'LIVE' ? "bg-emerald-500" : "bg-amber-500"
+                            )} />
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                {syncStatus === 'LIVE' ? "Real-time Sync Active" : "Syncing..."}
+                            </span>
+                            <button
+                                onClick={() => refreshSheets()}
+                                className="ml-2 p-1 hover:bg-slate-200 dark:hover:bg-white/10 rounded transition-colors"
+                                title="Refresh Data"
+                            >
+                                <Clock size={12} className="text-slate-400" />
+                            </button>
+                        </div>
+
+                        <input
+                            type={activeReport === 'monthly' ? "month" : "date"}
+                            value={activeReport === 'monthly' ? selectedDate.substring(0, 7) : selectedDate}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                setSelectedDate(activeReport === 'monthly' ? `${val}-01` : val);
+                            }}
+                            className="bg-slate-100 dark:bg-slate-800 border-none rounded-xl px-4 py-3 font-bold text-slate-900 dark:text-white focus:ring-2 ring-primary/20 outline-none"
+                        />
                     </div>
                 </div>
 
-                {renderContent()}
+                {/* Dashboard Metrics */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    {activeReport === 'daily' && (
+                        <>
+                            <SummaryCard title="Vehicles Dispatched" value={dailyReportData.totalVehicles} icon={<Truck className="text-blue-500" />} />
+                            <SummaryCard title="Total Quantity" value={dailyReportData.totalQty} icon={<Package className="text-emerald-500" />} />
+                            <SummaryCard title="Destinations" value={dailyReportData.destinations.length} icon={<MapPin className="text-purple-500" />} />
+                        </>
+                    )}
+                    {activeReport === 'staff' && (
+                        <>
+                            <SummaryCard title="Staff Active" value={staffKPIData.length} icon={<Users className="text-blue-500" />} />
+                            <SummaryCard title="Total Loads" value={staffKPIData.reduce((sum, s) => sum + s.vehicles, 0)} icon={<Truck className="text-green-500" />} />
+                            <SummaryCard title="Total Quantity" value={staffKPIData.reduce((sum, s) => sum + s.qty, 0)} icon={<Package className="text-emerald-500" />} />
+                        </>
+                    )}
+                    {activeReport === 'monthly' && (
+                        <>
+                            <SummaryCard title="Monthly Vehicles" value={monthlyReportData.totalVehicles} icon={<Truck className="text-blue-500" />} />
+                            <SummaryCard title="Total Volume" value={monthlyReportData.totalQty} icon={<Package className="text-emerald-500" />} />
+                            <SummaryCard title="Avg Loading Time" value={`${Math.round(monthlyReportData.destinations.reduce((acc, d) => acc + d.avgTime, 0) / (monthlyReportData.destinations.length || 1))}m`} icon={<Clock className="text-purple-500" />} />
+                        </>
+                    )}
+                </div>
 
-            </div>
-        </div>
-    );
-}
-
-// --- Shift User View Component ---
-
-// --- Shift User View Component ---
-function ShiftPerformanceView({ users }: { users: ShiftUser[] }) {
-    const [searchQuery, setSearchQuery] = useState("");
-    const [selectedUser, setSelectedUser] = useState<ShiftUser | null>(null);
-
-    const filteredUsers = users.filter(u =>
-        u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        u.role.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
-    const activeUsers = users.filter(u => u.status === 'Active').length;
-    const totalSheets = users.reduce((acc, u) => acc + u.sheetsCompleted, 0);
-    const avgEff = Math.round(users.reduce((acc, u) => acc + u.slaCompliance, 0) / (users.length || 1));
-
-    return (
-        <div className="space-y-6">
-            <UserDetailModal user={selectedUser} isOpen={!!selectedUser} onClose={() => setSelectedUser(null)} />
-
-            {/* Top Stats Strip */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <KPIGCard
-                    title="Staff On-Shift"
-                    desc="Number of currently active supervisors and operators."
-                    value={activeUsers}
-                    unit={`/ ${users.length} Total`}
-                    trend="Full Staff"
-                    trendUp={true}
-                    icon={<Users className="text-blue-500" />}
-                />
-                <KPIGCard
-                    title="Sheets Completed"
-                    desc="Total staging and loading sheets filed today."
-                    value={totalSheets}
-                    unit="Sheets"
-                    trend="+12%"
-                    trendUp={true}
-                    icon={<FileText className="text-green-500" />}
-                />
-                <KPIGCard
-                    title="Avg Team Efficiency"
-                    desc="Combined SLA compliance score across all team members."
-                    value={`${avgEff}%`}
-                    unit="SLA Score"
-                    trend="-2%"
-                    trendUp={false}
-                    icon={<Activity className="text-purple-500" />}
-                />
-            </div>
-
-            {/* Detailed User Table */}
-            <Card className="border shadow-sm">
-                <CardHeader>
-                    <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
-                        <div>
-                            <CardTitle className="text-lg">Staff Performance Logs</CardTitle>
-                            <CardDescription>Detailed breakdown of individual contributions and efficiency.</CardDescription>
-                        </div>
-                        <div className="relative w-full md:w-64">
-                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
-                            <Input
-                                placeholder="Search staff..."
-                                className="pl-9"
-                                value={searchQuery}
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-                            />
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent>
+                {/* Detailed Table */}
+                <Card className="border-slate-200 dark:border-white/5 shadow-xl shadow-slate-200/50 dark:shadow-none rounded-2xl overflow-hidden">
                     <Table>
-                        <TableHeader>
+                        <TableHeader className="bg-slate-50 dark:bg-slate-900/50">
                             <TableRow>
-                                <TableHead>Operator / Supervisor</TableHead>
-                                <TableHead>Role</TableHead>
-                                <TableHead className="text-right">Sheets</TableHead>
-                                <TableHead className="text-right">Cases</TableHead>
-                                <TableHead className="text-center">Avg Time</TableHead>
-                                <TableHead className="w-[150px]">SLA Efficiency</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
+                                {activeReport === 'daily' && (
+                                    <>
+                                        <TableHead className="font-black uppercase tracking-wider text-[10px] pl-6 h-14">Destination</TableHead>
+                                        <TableHead className="font-black uppercase tracking-wider text-[10px] text-center">Vehicles Dispatched</TableHead>
+                                        <TableHead className="font-black uppercase tracking-wider text-[10px] text-right pr-6">Quantity Dispatched</TableHead>
+                                    </>
+                                )}
+                                {activeReport === 'staff' && (
+                                    <>
+                                        <TableHead className="font-black uppercase tracking-wider text-[10px] pl-6 h-14">Staff Name</TableHead>
+                                        <TableHead className="font-black uppercase tracking-wider text-[10px] text-center">Vehicles Handled</TableHead>
+                                        <TableHead className="font-black uppercase tracking-wider text-[10px] text-right pr-6">Quantity Handled</TableHead>
+                                    </>
+                                )}
+                                {activeReport === 'monthly' && (
+                                    <>
+                                        <TableHead className="font-black uppercase tracking-wider text-[10px] pl-6 h-14">Destination</TableHead>
+                                        <TableHead className="font-black uppercase tracking-wider text-[10px] text-center">Total Vehicles</TableHead>
+                                        <TableHead className="font-black uppercase tracking-wider text-[10px] text-center">Total Quantity</TableHead>
+                                        <TableHead className="font-black uppercase tracking-wider text-[10px] text-right pr-6">Avg Loading Time</TableHead>
+                                    </>
+                                )}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredUsers.length > 0 ? (
-                                filteredUsers.map((user) => (
-                                    <TableRow
-                                        key={user.id}
-                                        className="cursor-pointer hover:bg-slate-50/80 transition-colors"
-                                        onClick={() => setSelectedUser(user)}
-                                    >
-                                        <TableCell>
-                                            <div className="flex items-center gap-3">
-                                                <Avatar className="h-8 w-8">
-                                                    <AvatarImage src={user.avatar} />
-                                                    <AvatarFallback className="bg-slate-100 text-slate-600 font-bold">
-                                                        {user.name.split(' ').map(n => n[0]).join('')}
-                                                    </AvatarFallback>
-                                                </Avatar>
-                                                <div>
-                                                    <div className="font-medium text-slate-900">{user.name}</div>
-                                                    <div className="text-xs text-slate-500">{user.lastActive}</div>
-                                                </div>
-                                            </div>
+                            {activeReport === 'daily' && dailyReportData.destinations.length > 0 ? (
+                                dailyReportData.destinations.map((d, i) => (
+                                    <TableRow key={i} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+                                        <TableCell className="pl-6 font-bold text-slate-900 dark:text-white">{d.name}</TableCell>
+                                        <TableCell className="text-center font-mono font-bold text-blue-600 dark:text-blue-400">{d.vehicles}</TableCell>
+                                        <TableCell className="text-right pr-6 font-black text-slate-900 dark:text-white">{d.qty.toLocaleString()}</TableCell>
+                                    </TableRow>
+                                ))
+                            ) : activeReport === 'staff' && staffKPIData.length > 0 ? (
+                                staffKPIData.map((s, i) => (
+                                    <TableRow key={i} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+                                        <TableCell className="pl-6">
+                                            <div className="font-bold text-slate-900 dark:text-white uppercase">{s.name}</div>
+                                            <div className="text-[10px] text-slate-400 font-black uppercase tracking-tighter">{s.role}</div>
                                         </TableCell>
-                                        <TableCell>
-                                            <Badge variant="outline" className="font-normal text-slate-600">
-                                                {user.role}
+                                        <TableCell className="text-center font-mono font-bold text-green-600 dark:text-green-400">{s.vehicles}</TableCell>
+                                        <TableCell className="text-right pr-6 font-black text-slate-900 dark:text-white">{s.qty.toLocaleString()}</TableCell>
+                                    </TableRow>
+                                ))
+                            ) : activeReport === 'monthly' && monthlyReportData.destinations.length > 0 ? (
+                                monthlyReportData.destinations.map((d, i) => (
+                                    <TableRow key={i} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+                                        <TableCell className="pl-6 font-bold text-slate-900 dark:text-white">{d.name}</TableCell>
+                                        <TableCell className="text-center font-mono font-bold text-blue-600 dark:text-blue-400">{d.vehicles}</TableCell>
+                                        <TableCell className="text-center font-bold text-slate-900 dark:text-white">{d.qty.toLocaleString()}</TableCell>
+                                        <TableCell className="text-right pr-6">
+                                            <Badge className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-none font-black text-xs">
+                                                {d.avgTime} min
                                             </Badge>
-                                        </TableCell>
-                                        <TableCell className="text-right font-medium">{user.sheetsCompleted}</TableCell>
-                                        <TableCell className="text-right text-slate-500">{user.casesHandled.toLocaleString()}</TableCell>
-                                        <TableCell className="text-center">
-                                            <div className="flex items-center justify-center gap-1 text-slate-600">
-                                                <Timer size={14} />
-                                                {user.avgTime}m
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="space-y-1">
-                                                <div className="flex justify-between text-xs">
-                                                    <span className={user.slaCompliance >= 90 ? "text-green-600 font-bold" : "text-amber-600 font-bold"}>
-                                                        {user.slaCompliance}%
-                                                    </span>
-                                                </div>
-                                                <Progress value={user.slaCompliance} className={cn("h-1.5", user.slaCompliance >= 90 ? "bg-green-100" : "bg-amber-100")} indicatorClassName={user.slaCompliance >= 90 ? "bg-green-500" : "bg-amber-500"} />
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge className={cn(
-                                                "gap-1",
-                                                user.status === 'Active' ? "bg-green-50 text-green-700 hover:bg-green-100 border-green-200" :
-                                                    user.status === 'Break' ? "bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200" :
-                                                        "bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200"
-                                            )}>
-                                                <div className={cn("h-1.5 w-1.5 rounded-full",
-                                                    user.status === 'Active' ? "bg-green-500" :
-                                                        user.status === 'Break' ? "bg-amber-500" :
-                                                            "bg-slate-400"
-                                                )} />
-                                                {user.status}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                        <MoreHorizontal size={16} />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedUser(user); }}>
-                                                        View Time Logs
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedUser(user); }}>
-                                                        Performance Card
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
                                         </TableCell>
                                     </TableRow>
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={8} className="h-24 text-center">
-                                        No staff members found.
+                                    <TableCell colSpan={activeReport === 'monthly' ? 4 : 3} className="h-40 text-center text-slate-400 font-bold uppercase tracking-widest text-xs">
+                                        No data available for this period
                                     </TableCell>
                                 </TableRow>
                             )}
                         </TableBody>
                     </Table>
-                </CardContent>
-            </Card>
+                </Card>
+            </div>
         </div>
     );
 }
 
 // --- Sub-components ---
 
-
-function KPIGCard({ title, desc, value, unit, trend, trendUp, icon, alert = false }: any) {
+function ReportNavItem({ active, label, icon, onClick }: { active: boolean, label: string, icon: React.ReactNode, onClick: () => void }) {
     return (
-        <div className={cn(
-            "p-5 rounded-xl border bg-white shadow-sm transition-all hover:shadow-md group relative",
-            alert ? "border-red-200 bg-red-50/10" : "border-slate-100"
-        )}>
-            {/* Info Tooltip */}
-            <Popover>
-                <PopoverTrigger asChild>
-                    <button
-                        className="absolute top-3 right-3 text-slate-300 hover:text-slate-500 transition-colors cursor-help"
-                        title="Click for details"
-                    >
-                        <Info size={14} />
-                    </button>
-                </PopoverTrigger>
-                <PopoverContent side="top" align="end" className="w-64 text-xs text-slate-600 bg-white p-3 shadow-xl border-slate-200 z-50">
-                    <p className="font-bold text-slate-800 mb-1">{title}</p>
-                    {desc}
-                </PopoverContent>
-            </Popover>
-
-            <div className="flex justify-between items-start mb-2">
-                <div className={cn("p-2 rounded-lg", alert ? "bg-red-100" : "bg-slate-50")}>
-                    {icon}
-                </div>
-                {trend && (
-                    <Badge variant="secondary" className={cn(
-                        "font-mono text-xs font-bold",
-                        trendUp ? "text-green-700 bg-green-50" : (alert ? "text-red-700 bg-red-50" : "text-amber-700 bg-amber-50")
-                    )}>
-                        {trend}
-                    </Badge>
-                )}
+        <button
+            onClick={onClick}
+            className={cn(
+                "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group",
+                active
+                    ? "bg-white dark:bg-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none text-primary dark:text-white"
+                    : "text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/5"
+            )}
+        >
+            <div className={cn("transition-colors", active ? "text-primary dark:text-white" : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300")}>
+                {icon}
             </div>
-            <div>
-                <div className="text-slate-500 text-xs font-semibold uppercase tracking-wider mb-1">{title}</div>
-                <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-black text-slate-800">{value}</span>
-                    <span className="text-xs text-slate-400 font-medium">{unit}</span>
-                </div>
-            </div>
-        </div>
+            <span className="font-bold text-sm tracking-tight">{label}</span>
+        </button>
     );
 }
 
-function ReportNavItem({ active, icon, label, onClick }: any) {
+function SummaryCard({ title, value, icon }: { title: string, value: string | number, icon: React.ReactNode }) {
     return (
-        <div
-            onClick={onClick}
-            className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-sm font-medium transition-all",
-                active
-                    ? "bg-slate-900 text-white shadow-md shadow-slate-900/20"
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-            )}
-        >
-            <div className={cn(active ? "text-white" : "text-slate-400")}>{icon}</div>
-            {label}
-        </div>
+        <Card className="border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/50 shadow-md">
+            <CardContent className="p-6">
+                <div className="flex justify-between items-start mb-4">
+                    <div className="p-2 bg-slate-50 dark:bg-slate-800 rounded-lg">{icon}</div>
+                </div>
+                <div>
+                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{title}</div>
+                    <div className="text-3xl font-black text-slate-900 dark:text-white">{value}</div>
+                </div>
+            </CardContent>
+        </Card>
     );
 }

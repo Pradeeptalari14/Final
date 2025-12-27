@@ -47,15 +47,18 @@ export function SlideOver({ isOpen, onClose, title, children }: SlideOverProps) 
                         {/* Header */}
                         <div className="flex items-center justify-between p-4 border-b border-border bg-muted/30">
                             <h2 className="text-lg font-bold text-foreground">{title}</h2>
-                            <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0 rounded-full">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={onClose}
+                                className="h-8 w-8 p-0 rounded-full"
+                            >
                                 <X size={20} />
                             </Button>
                         </div>
 
                         {/* Content */}
-                        <div className="flex-1 overflow-y-auto p-6">
-                            {children}
-                        </div>
+                        <div className="flex-1 overflow-y-auto p-6">{children}</div>
                     </motion.div>
                 </>
             )}

@@ -49,11 +49,17 @@ export const exportStagingToExcel = async (header: any, items: StagingItem[]) =>
 
     // Save
     const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const blob = new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
     saveAs(blob, `Staging_Sheet_${header.date || 'Export'}.xlsx`);
 };
 
-export const exportLoadingToExcel = async (header: any, items: LoadingItem[], stagingItems: StagingItem[]) => {
+export const exportLoadingToExcel = async (
+    header: any,
+    items: LoadingItem[],
+    stagingItems: StagingItem[]
+) => {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Loading Sheet');
 
@@ -64,15 +70,34 @@ export const exportLoadingToExcel = async (header: any, items: LoadingItem[], st
     titleCell.font = { bold: true, size: 14 };
     titleCell.alignment = { horizontal: 'center' };
 
-    worksheet.addRow(['Date', header.date, 'Shift', header.shift, 'Transporter', header.transporter]);
+    worksheet.addRow([
+        'Date',
+        header.date,
+        'Shift',
+        header.shift,
+        'Transporter',
+        header.transporter
+    ]);
     worksheet.addRow([]);
 
     // Actual Table Header (simplified for broad export)
     const tableHeader = [
-        'Sr.No', 'SKU Name', 'Staging Total',
-        'Cell 1', 'Cell 2', 'Cell 3', 'Cell 4', 'Cell 5',
-        'Cell 6', 'Cell 7', 'Cell 8', 'Cell 9', 'Cell 10',
-        'Loose', 'Total Loaded', 'Balance'
+        'Sr.No',
+        'SKU Name',
+        'Staging Total',
+        'Cell 1',
+        'Cell 2',
+        'Cell 3',
+        'Cell 4',
+        'Cell 5',
+        'Cell 6',
+        'Cell 7',
+        'Cell 8',
+        'Cell 9',
+        'Cell 10',
+        'Loose',
+        'Total Loaded',
+        'Balance'
     ];
 
     const headerRow = worksheet.addRow(tableHeader);
@@ -82,13 +107,15 @@ export const exportLoadingToExcel = async (header: any, items: LoadingItem[], st
         cell.alignment = { horizontal: 'center' };
     });
 
-    items.forEach(lItem => {
-        const sItem = stagingItems.find(s => s.srNo === lItem.skuSrNo);
+    items.forEach((lItem) => {
+        const sItem = stagingItems.find((s) => s.srNo === lItem.skuSrNo);
         const rowData = [
             lItem.skuSrNo,
             sItem?.skuName || 'Unknown',
             sItem?.ttlCases || 0,
-            ...Array.from({ length: 10 }).map((_, i) => lItem.cells.find(c => c.col === i)?.value || 0),
+            ...Array.from({ length: 10 }).map(
+                (_, i) => lItem.cells.find((c) => c.col === i)?.value || 0
+            ),
             lItem.looseInput || 0,
             lItem.total,
             lItem.balance
@@ -99,7 +126,9 @@ export const exportLoadingToExcel = async (header: any, items: LoadingItem[], st
     worksheet.getColumn(2).width = 30;
 
     const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const blob = new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
     saveAs(blob, `Loading_Sheet_${header.date || 'Export'}.xlsx`);
 };
 
@@ -118,8 +147,8 @@ export const exportToExcelGeneric = async (data: any[], fileName: string, sheetN
     });
 
     // Data Rows
-    data.forEach(item => {
-        worksheet.addRow(columns.map(col => item[col]));
+    data.forEach((item) => {
+        worksheet.addRow(columns.map((col) => item[col]));
     });
 
     columns.forEach((_, i) => {
@@ -127,6 +156,8 @@ export const exportToExcelGeneric = async (data: any[], fileName: string, sheetN
     });
 
     const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const blob = new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
     saveAs(blob, `${fileName}_${new Date().toISOString().slice(0, 10)}.xlsx`);
 };

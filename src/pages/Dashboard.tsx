@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useData } from '@/contexts/DataContext';
+import { useAppState } from '@/contexts/AppStateContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SheetStatus, Role } from '@/types';
 import { StageColumn } from '@/components/dashboard/StageColumn';
@@ -10,142 +11,312 @@ import { WorkflowRailway } from '@/components/dashboard/WorkflowRailway';
 import { t } from '@/lib/i18n';
 
 export default function DashboardOverview() {
-    const { sheets, currentUser, settings, users } = useData();
+    const { sheets, currentUser, users } = useData();
+    const { settings } = useAppState();
     const navigate = useNavigate();
 
     // STRICT USER FILTERING
-    const relevantSheets = currentUser?.role === Role.ADMIN
-        ? sheets
-        : sheets.filter(sheet => {
-            // Staging Supervisor
-            if (currentUser?.role === Role.STAGING_SUPERVISOR) {
-                const name = sheet.supervisorName?.toLowerCase().trim();
-                const username = currentUser.username?.toLowerCase().trim();
-                const fullname = currentUser.fullName?.toLowerCase().trim();
-                return (name === username || name === fullname);
-            }
-            // Loading Supervisor
-            if (currentUser?.role === Role.LOADING_SUPERVISOR) {
-                // COMPLETED sheets included for historical view/stats
-                return sheet.status === SheetStatus.LOCKED ||
-                    sheet.status === SheetStatus.LOADING_VERIFICATION_PENDING ||
-                    sheet.status === SheetStatus.COMPLETED;
-            }
-            // Shift Lead
-            if (currentUser?.role === Role.SHIFT_LEAD) {
-                return sheet.status !== SheetStatus.DRAFT;
-            }
-            return false;
-        });
+    const relevantSheets =
+        currentUser?.role === Role.ADMIN
+            ? sheets
+            : sheets.filter((sheet) => {
+                  // Staging Supervisor
+                  if (currentUser?.role === Role.STAGING_SUPERVISOR) {
+                      const name = sheet.supervisorName?.toLowerCase().trim();
+                      const username = currentUser.username?.toLowerCase().trim();
+                      const fullname = currentUser.fullName?.toLowerCase().trim();
+                      return name === username || name === fullname;
+                  }
+                  // Loading Supervisor
+                  if (currentUser?.role === Role.LOADING_SUPERVISOR) {
+                      // COMPLETED sheets included for historical view/stats
+                      return (
+                          sheet.status === SheetStatus.LOCKED ||
+                          sheet.status === SheetStatus.LOADING_VERIFICATION_PENDING ||
+                          sheet.status === SheetStatus.COMPLETED
+                      );
+                  }
+                  // Shift Lead
+                  if (currentUser?.role === Role.SHIFT_LEAD) {
+                      return sheet.status !== SheetStatus.DRAFT;
+                  }
+                  return false;
+              });
 
     // Helper for filter links
     const getFilterLinks = (stage: string) => {
         // ALLOW LOADING SUPERVISOR
-        if (currentUser?.role !== Role.ADMIN && currentUser?.role !== Role.SHIFT_LEAD &&
-            currentUser?.role !== Role.STAGING_SUPERVISOR && currentUser?.role !== Role.LOADING_SUPERVISOR) return [];
+        if (
+            currentUser?.role !== Role.ADMIN &&
+            currentUser?.role !== Role.SHIFT_LEAD &&
+            currentUser?.role !== Role.STAGING_SUPERVISOR &&
+            currentUser?.role !== Role.LOADING_SUPERVISOR
+        )
+            return [];
 
         const isRejected = (s: any) => s.rejectionReason && s.rejectionReason.trim() !== '';
 
         if (stage === 'STAGING') {
             // Stats for Staging Supervisor
             if (currentUser?.role === Role.ADMIN || currentUser?.role === Role.STAGING_SUPERVISOR) {
-
-                const draftCount = relevantSheets.filter(s => s.status === SheetStatus.DRAFT && !isRejected(s)).length;
-                const pendingCount = sheets.filter(s => s.status === SheetStatus.STAGING_VERIFICATION_PENDING).length;
-                const lockedCount = sheets.filter(s => s.status === SheetStatus.LOCKED).length;
-                const rejectedCount = relevantSheets.filter(s => s.status === SheetStatus.DRAFT && isRejected(s)).length;
+                const draftCount = relevantSheets.filter(
+                    (s) => s.status === SheetStatus.DRAFT && !isRejected(s)
+                ).length;
+                const pendingCount = sheets.filter(
+                    (s) => s.status === SheetStatus.STAGING_VERIFICATION_PENDING
+                ).length;
+                const lockedCount = sheets.filter((s) => s.status === SheetStatus.LOCKED).length;
+                const rejectedCount = relevantSheets.filter(
+                    (s) => s.status === SheetStatus.DRAFT && isRejected(s)
+                ).length;
 
                 // GLOBAL STATS (Requested by User: See all users' totals)
                 // Use 'sheets' directly instead of 'relevantSheets'
-                const completedCount = sheets.filter(s => s.status === SheetStatus.COMPLETED).length;
+                const completedCount = sheets.filter(
+                    (s) => s.status === SheetStatus.COMPLETED
+                ).length;
                 const totalStagingCount = sheets.length;
 
                 return [
-                    { label: t('total_staging', settings.language), count: totalStagingCount, link: '/database', color: 'bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold' },
-                    { label: t('draft', settings.language), count: draftCount, link: '/admin?section=staging_db&view_mode=VIEW_STAGING_DRAFT', color: 'bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-400 font-bold' },
-                    { label: t('pending_verification', settings.language), count: pendingCount, link: '/admin?section=staging_db&view_mode=VIEW_STAGING_VERIFY', color: 'bg-orange-100 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-500/30 text-orange-900 dark:text-orange-400 font-bold' },
-                    { label: t('locked_not_editable', settings.language), count: lockedCount, link: '/admin?section=staging_db&view_mode=VIEW_LOCKED', color: 'bg-purple-100 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-500/30 text-purple-900 dark:text-purple-400 font-bold' },
-                    { label: t('completed', settings.language), count: completedCount, link: '/admin?section=staging_db&view_mode=VIEW_COMPLETED', color: 'bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold' },
-                    { label: t('rejected', settings.language), count: rejectedCount, link: '/admin?section=staging_db&view_mode=VIEW_STAGING_REJECTED', color: 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold' }
+                    {
+                        label: t('total_staging', settings.language),
+                        count: totalStagingCount,
+                        link: '/database',
+                        color: 'bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold'
+                    },
+                    {
+                        label: t('draft', settings.language),
+                        count: draftCount,
+                        link: '/admin?section=staging_db&view_mode=VIEW_STAGING_DRAFT',
+                        color: 'bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-400 font-bold'
+                    },
+                    {
+                        label: t('pending_verification', settings.language),
+                        count: pendingCount,
+                        link: '/admin?section=staging_db&view_mode=VIEW_STAGING_VERIFY',
+                        color: 'bg-orange-100 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-500/30 text-orange-900 dark:text-orange-400 font-bold'
+                    },
+                    {
+                        label: t('locked_not_editable', settings.language),
+                        count: lockedCount,
+                        link: '/admin?section=staging_db&view_mode=VIEW_LOCKED',
+                        color: 'bg-purple-100 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-500/30 text-purple-900 dark:text-purple-400 font-bold'
+                    },
+                    {
+                        label: t('completed', settings.language),
+                        count: completedCount,
+                        link: '/admin?section=staging_db&view_mode=VIEW_COMPLETED',
+                        color: 'bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold'
+                    },
+                    {
+                        label: t('rejected', settings.language),
+                        count: rejectedCount,
+                        link: '/admin?section=staging_db&view_mode=VIEW_STAGING_REJECTED',
+                        color: 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold'
+                    }
                 ];
             }
 
-            const rejectedCount = relevantSheets.filter(s =>
-                (s.status === SheetStatus.DRAFT || s.status === SheetStatus.STAGING_VERIFICATION_PENDING) && isRejected(s)
+            const rejectedCount = relevantSheets.filter(
+                (s) =>
+                    (s.status === SheetStatus.DRAFT ||
+                        s.status === SheetStatus.STAGING_VERIFICATION_PENDING) &&
+                    isRejected(s)
             ).length;
 
             if (rejectedCount === 0) return [];
             return [
-                { label: t('rejected', settings.language), count: rejectedCount, link: '/admin?section=shift_lead_db&view_mode=VIEW_STAGING_REJECTED', color: 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold' }
+                {
+                    label: t('rejected', settings.language),
+                    count: rejectedCount,
+                    link: '/admin?section=shift_lead_db&view_mode=VIEW_STAGING_REJECTED',
+                    color: 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold'
+                }
             ];
         }
 
         if (stage === 'LOADING') {
             // Admin OR Loading Supervisor
             if (currentUser?.role === Role.ADMIN || currentUser?.role === Role.LOADING_SUPERVISOR) {
-                const loadingSheets = relevantSheets.filter(s => s.status !== SheetStatus.DRAFT && s.status !== SheetStatus.STAGING_VERIFICATION_PENDING);
+                const loadingSheets = relevantSheets.filter(
+                    (s) =>
+                        s.status !== SheetStatus.DRAFT &&
+                        s.status !== SheetStatus.STAGING_VERIFICATION_PENDING
+                );
 
                 // GLOBAL STATS for Total and Completed
-                const globalLoadingSheets = sheets.filter(s => s.status !== SheetStatus.DRAFT && s.status !== SheetStatus.STAGING_VERIFICATION_PENDING);
+                const globalLoadingSheets = sheets.filter(
+                    (s) =>
+                        s.status !== SheetStatus.DRAFT &&
+                        s.status !== SheetStatus.STAGING_VERIFICATION_PENDING
+                );
 
                 // "Total Loading" = Ready to Load + Pending + Rejected (which are Locked/Pending) + Completed
                 // Basically everything passing the "Staging" phase.
                 const totalLoadingCount = globalLoadingSheets.length;
 
-                const completedCount = globalLoadingSheets.filter(s => s.status === SheetStatus.COMPLETED).length;
+                const completedCount = globalLoadingSheets.filter(
+                    (s) => s.status === SheetStatus.COMPLETED
+                ).length;
 
                 // Personal/Actionable Stats
-                const readyCount = loadingSheets.filter(s => s.status === SheetStatus.LOCKED).length;
-                const pendingVerCount = loadingSheets.filter(s => s.status === SheetStatus.LOADING_VERIFICATION_PENDING).length;
-                const rejectedCount = loadingSheets.filter(s => s.status === SheetStatus.LOCKED && isRejected(s)).length;
+                const readyCount = loadingSheets.filter(
+                    (s) => s.status === SheetStatus.LOCKED
+                ).length;
+                const pendingVerCount = loadingSheets.filter(
+                    (s) => s.status === SheetStatus.LOADING_VERIFICATION_PENDING
+                ).length;
+                const rejectedCount = loadingSheets.filter(
+                    (s) => s.status === SheetStatus.LOCKED && isRejected(s)
+                ).length;
 
                 return [
-                    { label: t('total_loading', settings.language), count: totalLoadingCount, link: '/database', color: 'bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold' },
-                    { label: t('ready_to_load', settings.language), count: readyCount, link: '/admin?section=loading_db&view_mode=VIEW_LOADING_READY', color: 'bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 text-blue-900 dark:text-blue-400 font-bold' },
-                    { label: t('pending_verification', settings.language), count: pendingVerCount, link: '/admin?section=loading_db&view_mode=VIEW_LOADING_VERIFY', color: 'bg-orange-100 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-500/30 text-orange-900 dark:text-orange-400 font-bold' },
-                    { label: t('completed', settings.language), count: completedCount, link: '/admin?section=loading_db&view_mode=VIEW_COMPLETED', color: 'bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold' },
-                    { label: t('rejected', settings.language), count: rejectedCount, link: '/admin?section=loading_db&view_mode=VIEW_LOADING_REJECTED', color: 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold' }
+                    {
+                        label: t('total_loading', settings.language),
+                        count: totalLoadingCount,
+                        link: '/database',
+                        color: 'bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold'
+                    },
+                    {
+                        label: t('ready_to_load', settings.language),
+                        count: readyCount,
+                        link: '/admin?section=loading_db&view_mode=VIEW_LOADING_READY',
+                        color: 'bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 text-blue-900 dark:text-blue-400 font-bold'
+                    },
+                    {
+                        label: t('pending_verification', settings.language),
+                        count: pendingVerCount,
+                        link: '/admin?section=loading_db&view_mode=VIEW_LOADING_VERIFY',
+                        color: 'bg-orange-100 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-500/30 text-orange-900 dark:text-orange-400 font-bold'
+                    },
+                    {
+                        label: t('completed', settings.language),
+                        count: completedCount,
+                        link: '/admin?section=loading_db&view_mode=VIEW_COMPLETED',
+                        color: 'bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold'
+                    },
+                    {
+                        label: t('rejected', settings.language),
+                        count: rejectedCount,
+                        link: '/admin?section=loading_db&view_mode=VIEW_LOADING_REJECTED',
+                        color: 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold'
+                    }
                 ];
             }
             return [];
         }
 
-        if (stage === 'SHIFT_LEAD' && (currentUser?.role === Role.ADMIN || currentUser?.role === Role.SHIFT_LEAD)) {
+        if (
+            stage === 'SHIFT_LEAD' &&
+            (currentUser?.role === Role.ADMIN || currentUser?.role === Role.SHIFT_LEAD)
+        ) {
             // ... (Existing Shift Lead logic)
-            const approvalCount = relevantSheets.filter(s =>
-                s.status === SheetStatus.STAGING_VERIFICATION_PENDING ||
-                s.status === SheetStatus.LOADING_VERIFICATION_PENDING
+            const approvalCount = relevantSheets.filter(
+                (s) =>
+                    s.status === SheetStatus.STAGING_VERIFICATION_PENDING ||
+                    s.status === SheetStatus.LOADING_VERIFICATION_PENDING
             ).length;
-            const stagingApprCount = relevantSheets.filter(s => s.status === SheetStatus.DRAFT || s.status === SheetStatus.STAGING_VERIFICATION_PENDING).length;
-            const loadingApprCount = relevantSheets.filter(s => s.status === SheetStatus.LOADING_VERIFICATION_PENDING).length;
-            const completedCount = relevantSheets.filter(s => s.status === SheetStatus.COMPLETED).length;
-            const stagingRejCount = relevantSheets.filter(s => s.status === SheetStatus.DRAFT && isRejected(s)).length;
-            const loadingRejCount = relevantSheets.filter(s => (s.status === SheetStatus.LOADING_VERIFICATION_PENDING) && isRejected(s)).length;
-            const allDoneCount = relevantSheets.filter(s => s.status === SheetStatus.COMPLETED).length;
+            const stagingApprCount = relevantSheets.filter(
+                (s) =>
+                    s.status === SheetStatus.DRAFT ||
+                    s.status === SheetStatus.STAGING_VERIFICATION_PENDING
+            ).length;
+            const loadingApprCount = relevantSheets.filter(
+                (s) => s.status === SheetStatus.LOADING_VERIFICATION_PENDING
+            ).length;
+            const completedCount = relevantSheets.filter(
+                (s) => s.status === SheetStatus.COMPLETED
+            ).length;
+            const stagingRejCount = relevantSheets.filter(
+                (s) => s.status === SheetStatus.DRAFT && isRejected(s)
+            ).length;
+            const loadingRejCount = relevantSheets.filter(
+                (s) => s.status === SheetStatus.LOADING_VERIFICATION_PENDING && isRejected(s)
+            ).length;
+            const allDoneCount = relevantSheets.filter(
+                (s) => s.status === SheetStatus.COMPLETED
+            ).length;
 
             return [
-                { label: t('total_approvals', settings.language), count: approvalCount, link: '/admin?section=shift_lead_db', color: 'bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold' },
-                { label: t('staging_approvals', settings.language), count: stagingApprCount, link: '/admin?section=shift_lead_db&view_mode=VIEW_STAGING_VERIFY', color: 'bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 text-blue-900 dark:text-blue-400 font-bold' },
-                { label: t('loading_approvals', settings.language), count: loadingApprCount, link: '/admin?section=shift_lead_db&view_mode=VIEW_LOADING_VERIFY', color: 'bg-orange-100 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-500/30 text-orange-900 dark:text-orange-400 font-bold' },
-                { label: t('completed', settings.language), count: completedCount, link: '/admin?section=shift_lead_db&view_mode=VIEW_COMPLETED', color: 'bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold' },
-                { label: t('staging_rejected', settings.language), count: stagingRejCount, link: '/admin?section=shift_lead_db&view_mode=VIEW_STAGING_REJECTED', color: 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold' },
-                { label: t('loading_rejected', settings.language), count: loadingRejCount, link: '/admin?section=shift_lead_db&view_mode=VIEW_LOADING_REJECTED', color: 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold' },
-                { label: t('all_done', settings.language), count: allDoneCount, link: '/database', color: 'bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold shadow-sm' }
+                {
+                    label: t('total_approvals', settings.language),
+                    count: approvalCount,
+                    link: '/admin?section=shift_lead_db',
+                    color: 'bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold'
+                },
+                {
+                    label: t('staging_approvals', settings.language),
+                    count: stagingApprCount,
+                    link: '/admin?section=shift_lead_db&view_mode=VIEW_STAGING_VERIFY',
+                    color: 'bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 text-blue-900 dark:text-blue-400 font-bold'
+                },
+                {
+                    label: t('loading_approvals', settings.language),
+                    count: loadingApprCount,
+                    link: '/admin?section=shift_lead_db&view_mode=VIEW_LOADING_VERIFY',
+                    color: 'bg-orange-100 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-500/30 text-orange-900 dark:text-orange-400 font-bold'
+                },
+                {
+                    label: t('completed', settings.language),
+                    count: completedCount,
+                    link: '/admin?section=shift_lead_db&view_mode=VIEW_COMPLETED',
+                    color: 'bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold'
+                },
+                {
+                    label: t('staging_rejected', settings.language),
+                    count: stagingRejCount,
+                    link: '/admin?section=shift_lead_db&view_mode=VIEW_STAGING_REJECTED',
+                    color: 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold'
+                },
+                {
+                    label: t('loading_rejected', settings.language),
+                    count: loadingRejCount,
+                    link: '/admin?section=shift_lead_db&view_mode=VIEW_LOADING_REJECTED',
+                    color: 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold'
+                },
+                {
+                    label: t('all_done', settings.language),
+                    count: allDoneCount,
+                    link: '/database',
+                    color: 'bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold shadow-sm'
+                }
             ];
         }
 
         // 4. TOTAL SHEETS (ADMIN ONLY)
         if (stage === 'TOTAL_SHEETS' && currentUser?.role === Role.ADMIN) {
             const allCount = relevantSheets.length;
-            const completedCount = relevantSheets.filter(s => s.status === SheetStatus.COMPLETED).length;
+            const completedCount = relevantSheets.filter(
+                (s) => s.status === SheetStatus.COMPLETED
+            ).length;
             const activeCount = allCount - completedCount;
             const rejectedCount = relevantSheets.filter(isRejected).length;
 
             return [
-                { label: t('total_sheets', settings.language), count: allCount, link: '/database', color: 'bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold' },
-                { label: t('completed', settings.language), count: completedCount, link: '/database?filter=COMPLETED', color: 'bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold' },
-                { label: t('active', settings.language), count: activeCount, link: '/database?filter=ACTIVE', color: 'bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 text-blue-900 dark:text-blue-400 font-bold' },
-                { label: t('rejected', settings.language), count: rejectedCount, link: '/database?filter=REJECTED', color: 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold' },
+                {
+                    label: t('total_sheets', settings.language),
+                    count: allCount,
+                    link: '/database',
+                    color: 'bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold'
+                },
+                {
+                    label: t('completed', settings.language),
+                    count: completedCount,
+                    link: '/database?filter=COMPLETED',
+                    color: 'bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold'
+                },
+                {
+                    label: t('active', settings.language),
+                    count: activeCount,
+                    link: '/database?filter=ACTIVE',
+                    color: 'bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 text-blue-900 dark:text-blue-400 font-bold'
+                },
+                {
+                    label: t('rejected', settings.language),
+                    count: rejectedCount,
+                    link: '/database?filter=REJECTED',
+                    color: 'bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold'
+                }
             ];
         }
 
@@ -159,13 +330,14 @@ export default function DashboardOverview() {
     const isAdmin = currentUser?.role === Role.ADMIN; // Helper for Admin view layout
 
     // Calculate User Stats for Admin
-    const userStats = isAdmin ? {
-        total: users.length,
-        staging: users.filter(u => u.role === Role.STAGING_SUPERVISOR).length,
-        loading: users.filter(u => u.role === Role.LOADING_SUPERVISOR).length,
-        shift: users.filter(u => u.role === Role.SHIFT_LEAD).length
-    } : null;
-
+    const userStats = isAdmin
+        ? {
+              total: users.length,
+              staging: users.filter((u) => u.role === Role.STAGING_SUPERVISOR).length,
+              loading: users.filter((u) => u.role === Role.LOADING_SUPERVISOR).length,
+              shift: users.filter((u) => u.role === Role.SHIFT_LEAD).length
+          }
+        : null;
 
     return (
         <div className="space-y-3">
@@ -175,8 +347,9 @@ export default function DashboardOverview() {
                 className="flex items-center justify-between"
             >
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-foreground mb-1">{t('dashboard', settings.language)}</h1>
-
+                    <h1 className="text-3xl font-bold tracking-tight text-foreground mb-1">
+                        {t('dashboard', settings.language)}
+                    </h1>
                 </div>
                 {/* New Sheet Button for Staging Supervisor */}
                 {isStagingSupervisor && (
@@ -204,7 +377,11 @@ export default function DashboardOverview() {
                         <StageColumn
                             title="Staging"
                             color="border-slate-200 dark:border-white/10"
-                            items={relevantSheets.filter(s => s.status === SheetStatus.DRAFT || s.status === SheetStatus.STAGING_VERIFICATION_PENDING)}
+                            items={relevantSheets.filter(
+                                (s) =>
+                                    s.status === SheetStatus.DRAFT ||
+                                    s.status === SheetStatus.STAGING_VERIFICATION_PENDING
+                            )}
                             linkTo="/admin?section=staging_db"
                             filters={getFilterLinks('STAGING')}
                             density={settings?.density}
@@ -212,7 +389,11 @@ export default function DashboardOverview() {
                         <StageColumn
                             title="Loading"
                             color="border-blue-500/20"
-                            items={relevantSheets.filter(s => s.status === SheetStatus.LOCKED || s.status === SheetStatus.LOADING_VERIFICATION_PENDING)}
+                            items={relevantSheets.filter(
+                                (s) =>
+                                    s.status === SheetStatus.LOCKED ||
+                                    s.status === SheetStatus.LOADING_VERIFICATION_PENDING
+                            )}
                             linkTo="/admin?section=loading_db"
                             filters={getFilterLinks('LOADING')}
                             density={settings?.density}
@@ -220,16 +401,24 @@ export default function DashboardOverview() {
                         <StageColumn
                             title="Shift Lead"
                             color="border-purple-500/20"
-                            items={relevantSheets.filter(s => s.status === SheetStatus.STAGING_VERIFICATION_PENDING)}
+                            items={relevantSheets.filter(
+                                (s) => s.status === SheetStatus.STAGING_VERIFICATION_PENDING
+                            )}
                             linkTo="/admin?section=shift_lead_db"
                             filters={getFilterLinks('SHIFT_LEAD')}
                             density={settings?.density}
                         />
 
                         {/* 4th Column: Users (Moved & Updated) */}
-                        <div className={`rounded-lg border border-indigo-200 dark:border-indigo-500/20 ${settings?.density === 'compact' ? 'p-2' : 'p-3'} flex flex-col gap-2 transition-colors relative group hover:bg-slate-50 dark:hover:bg-white/[0.02]`}>
-                            <div className={`flex items-center justify-between border-b border-slate-200 dark:border-white/5 ${settings?.density === 'compact' ? 'pb-1' : 'pb-2'}`}>
-                                <h3 className="text-xs font-bold uppercase tracking-wider opacity-70">{t('users', settings.language)}</h3>
+                        <div
+                            className={`rounded-lg border border-indigo-200 dark:border-indigo-500/20 ${settings?.density === 'compact' ? 'p-2' : 'p-3'} flex flex-col gap-2 transition-colors relative group hover:bg-slate-50 dark:hover:bg-white/[0.02]`}
+                        >
+                            <div
+                                className={`flex items-center justify-between border-b border-slate-200 dark:border-white/5 ${settings?.density === 'compact' ? 'pb-1' : 'pb-2'}`}
+                            >
+                                <h3 className="text-xs font-bold uppercase tracking-wider opacity-70">
+                                    {t('users', settings.language)}
+                                </h3>
                                 <span className="text-xs font-mono opacity-50">{users.length}</span>
                             </div>
 
@@ -239,8 +428,12 @@ export default function DashboardOverview() {
                                     onClick={() => navigate('/admin?section=users')}
                                     className="col-span-2 flex items-center justify-between px-4 py-2 rounded bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold hover:scale-[1.02] transition-all group min-h-[40px]"
                                 >
-                                    <span className="text-[10px] uppercase font-bold tracking-wider opacity-70">{t('total_users', settings.language)}</span>
-                                    <span className="font-bold text-2xl">{userStats?.total || 0}</span>
+                                    <span className="text-[10px] uppercase font-bold tracking-wider opacity-70">
+                                        {t('total_users', settings.language)}
+                                    </span>
+                                    <span className="font-bold text-2xl">
+                                        {userStats?.total || 0}
+                                    </span>
                                 </button>
 
                                 {/* Pending (Alert) */}
@@ -248,40 +441,62 @@ export default function DashboardOverview() {
                                     onClick={() => navigate('/admin?section=users&filter=PENDING')}
                                     className="flex flex-col items-center justify-center p-2 rounded bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold hover:scale-[1.02] transition-all relative overflow-hidden"
                                 >
-                                    <div className="absolute top-0 right-0 p-1 opacity-20"><Plus size={24} /></div>
-                                    <span className="font-bold text-lg">{users.filter(u => !u.isApproved).length}</span>
-                                    <span className="text-[9px] opacity-80 uppercase mt-1">{t('pending', settings.language)}</span>
+                                    <div className="absolute top-0 right-0 p-1 opacity-20">
+                                        <Plus size={24} />
+                                    </div>
+                                    <span className="font-bold text-lg">
+                                        {users.filter((u) => !u.isApproved).length}
+                                    </span>
+                                    <span className="text-[9px] opacity-80 uppercase mt-1">
+                                        {t('pending', settings.language)}
+                                    </span>
                                 </button>
 
                                 {/* Staging */}
                                 <button
-                                    onClick={() => navigate('/admin?section=users&filter=STAGING_SUPERVISOR')}
+                                    onClick={() =>
+                                        navigate('/admin?section=users&filter=STAGING_SUPERVISOR')
+                                    }
                                     className="flex flex-col items-center justify-center p-2 rounded bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 text-blue-900 dark:text-blue-400 font-bold hover:scale-[1.02] transition-all"
                                 >
-                                    <span className="font-bold text-lg">{userStats?.staging || 0}</span>
-                                    <span className="text-[9px] opacity-80 uppercase mt-1">{t('staging', settings.language)}</span>
+                                    <span className="font-bold text-lg">
+                                        {userStats?.staging || 0}
+                                    </span>
+                                    <span className="text-[9px] opacity-80 uppercase mt-1">
+                                        {t('staging', settings.language)}
+                                    </span>
                                 </button>
 
                                 {/* Loading */}
                                 <button
-                                    onClick={() => navigate('/admin?section=users&filter=LOADING_SUPERVISOR')}
+                                    onClick={() =>
+                                        navigate('/admin?section=users&filter=LOADING_SUPERVISOR')
+                                    }
                                     className="flex flex-col items-center justify-center p-2 rounded bg-orange-100 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-500/30 text-orange-900 dark:text-orange-400 font-bold hover:scale-[1.02] transition-all"
                                 >
-                                    <span className="font-bold text-lg">{userStats?.loading || 0}</span>
-                                    <span className="text-[9px] opacity-80 uppercase mt-1">{t('loading', settings.language)}</span>
+                                    <span className="font-bold text-lg">
+                                        {userStats?.loading || 0}
+                                    </span>
+                                    <span className="text-[9px] opacity-80 uppercase mt-1">
+                                        {t('loading', settings.language)}
+                                    </span>
                                 </button>
 
                                 {/* Leads */}
                                 <button
-                                    onClick={() => navigate('/admin?section=users&filter=SHIFT_LEAD')}
+                                    onClick={() =>
+                                        navigate('/admin?section=users&filter=SHIFT_LEAD')
+                                    }
                                     className="flex flex-col items-center justify-center p-2 rounded bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold hover:scale-[1.02] transition-all"
                                 >
-                                    <span className="font-bold text-lg">{userStats?.shift || 0}</span>
-                                    <span className="text-[9px] opacity-80 uppercase mt-1">{t('leads', settings.language)}</span>
+                                    <span className="font-bold text-lg">
+                                        {userStats?.shift || 0}
+                                    </span>
+                                    <span className="text-[9px] opacity-80 uppercase mt-1">
+                                        {t('leads', settings.language)}
+                                    </span>
                                 </button>
                             </div>
-
-
                         </div>
                     </div>
 
@@ -290,7 +505,7 @@ export default function DashboardOverview() {
                         <StageColumn
                             title={t('total_sheets', settings.language)}
                             color="border-emerald-500/20"
-                            items={relevantSheets.filter(s => s.status === SheetStatus.COMPLETED)}
+                            items={relevantSheets.filter((s) => s.status === SheetStatus.COMPLETED)}
                             linkTo="/database"
                             filters={getFilterLinks('TOTAL_SHEETS')}
                             density={settings?.density}
@@ -298,20 +513,30 @@ export default function DashboardOverview() {
                             hideItems={true}
                         />
                     </div>
-                </div >
-
+                </div>
             ) : (
                 // SUPERVISOR / DEFAULT LAYOUT (Grid)
-                <div className={`grid gap-4 ${settings?.density === 'compact' ? 'max-h-[600px]' : ''} 
-                    ${isStagingSupervisor || isLoadingSupervisor || isShiftLead ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'}`}>
-
+                <div
+                    className={`grid gap-4 ${settings?.density === 'compact' ? 'max-h-[600px]' : ''} 
+                    ${isStagingSupervisor || isLoadingSupervisor || isShiftLead ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'}`}
+                >
                     {/* 1. Staging Column (Consolidated) */}
-                    {(currentUser?.role === Role.ADMIN || currentUser?.role === Role.STAGING_SUPERVISOR) && (
+                    {(currentUser?.role === Role.ADMIN ||
+                        currentUser?.role === Role.STAGING_SUPERVISOR) && (
                         <StageColumn
                             title="Staging"
                             color="border-slate-200 dark:border-white/10"
-                            items={relevantSheets.filter(s => s.status === SheetStatus.DRAFT || s.status === SheetStatus.STAGING_VERIFICATION_PENDING)}
-                            linkTo={currentUser?.role === Role.ADMIN || currentUser?.role === Role.STAGING_SUPERVISOR ? "/admin?section=staging_db" : undefined}
+                            items={relevantSheets.filter(
+                                (s) =>
+                                    s.status === SheetStatus.DRAFT ||
+                                    s.status === SheetStatus.STAGING_VERIFICATION_PENDING
+                            )}
+                            linkTo={
+                                currentUser?.role === Role.ADMIN ||
+                                currentUser?.role === Role.STAGING_SUPERVISOR
+                                    ? '/admin?section=staging_db'
+                                    : undefined
+                            }
                             filters={getFilterLinks('STAGING')}
                             density={settings?.density}
                             fullWidth={isStagingSupervisor}
@@ -319,12 +544,23 @@ export default function DashboardOverview() {
                     )}
 
                     {/* 2. Loading Column (Admin/Loading SV) */}
-                    {(currentUser?.role === Role.ADMIN || currentUser?.role === Role.LOADING_SUPERVISOR) && (
+                    {(currentUser?.role === Role.ADMIN ||
+                        currentUser?.role === Role.LOADING_SUPERVISOR) && (
                         <StageColumn
                             title="Loading"
                             color="border-blue-500/20"
-                            items={relevantSheets.filter(s => s.status === SheetStatus.LOCKED || s.status === SheetStatus.LOADING_VERIFICATION_PENDING)}
-                            linkTo={currentUser?.role === Role.ADMIN ? "/admin?section=loading_db" : currentUser?.role === Role.LOADING_SUPERVISOR ? "/admin?section=loading_db" : "/admin?section=shift_lead_db&view_mode=VIEW_LOADING_VERIFY"}
+                            items={relevantSheets.filter(
+                                (s) =>
+                                    s.status === SheetStatus.LOCKED ||
+                                    s.status === SheetStatus.LOADING_VERIFICATION_PENDING
+                            )}
+                            linkTo={
+                                currentUser?.role === Role.ADMIN
+                                    ? '/admin?section=loading_db'
+                                    : currentUser?.role === Role.LOADING_SUPERVISOR
+                                      ? '/admin?section=loading_db'
+                                      : '/admin?section=shift_lead_db&view_mode=VIEW_LOADING_VERIFY'
+                            }
                             filters={getFilterLinks('LOADING')}
                             density={settings?.density}
                             fullWidth={isLoadingSupervisor}
@@ -332,11 +568,14 @@ export default function DashboardOverview() {
                     )}
 
                     {/* 3. Shift Lead Column */}
-                    {(currentUser?.role === Role.ADMIN || currentUser?.role === Role.SHIFT_LEAD) && (
+                    {(currentUser?.role === Role.ADMIN ||
+                        currentUser?.role === Role.SHIFT_LEAD) && (
                         <StageColumn
                             title="Shift Lead"
                             color="border-purple-500/20"
-                            items={relevantSheets.filter(s => s.status === SheetStatus.STAGING_VERIFICATION_PENDING)}
+                            items={relevantSheets.filter(
+                                (s) => s.status === SheetStatus.STAGING_VERIFICATION_PENDING
+                            )}
                             linkTo="/admin?section=shift_lead_db"
                             filters={getFilterLinks('SHIFT_LEAD')}
                             density={settings?.density}
@@ -345,12 +584,14 @@ export default function DashboardOverview() {
                     )}
 
                     {/* 4. Completed (Supervisors ONLY - Admin uses Total Sheets layout above) */}
-                    {(!isAdmin && (currentUser?.role === Role.SHIFT_LEAD)) && (
+                    {!isAdmin && currentUser?.role === Role.SHIFT_LEAD && (
                         <div className="h-full">
                             <StageColumn
                                 title="Completed"
                                 color="border-emerald-500/20"
-                                items={relevantSheets.filter(s => s.status === SheetStatus.COMPLETED)}
+                                items={relevantSheets.filter(
+                                    (s) => s.status === SheetStatus.COMPLETED
+                                )}
                                 linkTo={undefined}
                                 filters={getFilterLinks('COMPLETED')}
                                 density={settings?.density}
@@ -358,82 +599,152 @@ export default function DashboardOverview() {
                         </div>
                     )}
                 </div>
-            )
-            }
-
+            )}
 
             {/* Recent Sheets Table */}
             <Card className="border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/20 shadow-sm dark:shadow-none">
                 <CardHeader className={`${settings?.density === 'compact' ? 'py-2' : 'pb-2'}`}>
-                    <CardTitle className="text-lg text-slate-800 dark:text-white">{t('recent_activity', settings.language)} {currentUser?.role !== Role.ADMIN && `(${t('users', settings.language)})`}</CardTitle>
+                    <CardTitle className="text-lg text-slate-800 dark:text-white">
+                        {t('recent_activity', settings.language)}{' '}
+                        {currentUser?.role !== Role.ADMIN && `(${t('users', settings.language)})`}
+                    </CardTitle>
                 </CardHeader>
                 <CardContent className={`${settings?.density === 'compact' ? 'pb-2' : ''}`}>
                     <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-white/5">
                         <table className="w-full text-xs text-left text-slate-600 dark:text-slate-400">
                             <thead className="bg-slate-50 dark:bg-slate-950/50 text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-500 sticky top-0 z-10 backdrop-blur-sm">
                                 <tr>
-                                    <th className={`p-2 ${settings?.density === 'compact' ? 'py-1' : ''}`}>{t('sheet_id', settings.language)}</th>
-                                    <th className={`p-2 ${settings?.density === 'compact' ? 'py-1' : ''}`}>{t('supervisor', settings.language)}</th>
-                                    <th className={`p-2 ${settings?.density === 'compact' ? 'py-1' : ''}`}>{t('status', settings.language)}</th>
-                                    <th className={`p-2 ${settings?.density === 'compact' ? 'py-1' : ''}`}>{t('date', settings.language)}</th>
-                                    <th className={`p-2 text-right ${settings?.density === 'compact' ? 'py-1' : ''}`}>{t('action', settings.language)}</th>
+                                    <th
+                                        className={`p-2 ${settings?.density === 'compact' ? 'py-1' : ''}`}
+                                    >
+                                        {t('sheet_id', settings.language)}
+                                    </th>
+                                    <th
+                                        className={`p-2 ${settings?.density === 'compact' ? 'py-1' : ''}`}
+                                    >
+                                        {t('supervisor', settings.language)}
+                                    </th>
+                                    <th
+                                        className={`p-2 ${settings?.density === 'compact' ? 'py-1' : ''}`}
+                                    >
+                                        {t('status', settings.language)}
+                                    </th>
+                                    <th
+                                        className={`p-2 ${settings?.density === 'compact' ? 'py-1' : ''}`}
+                                    >
+                                        {t('date', settings.language)}
+                                    </th>
+                                    <th
+                                        className={`p-2 text-right ${settings?.density === 'compact' ? 'py-1' : ''}`}
+                                    >
+                                        {t('action', settings.language)}
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-white/5">
                                 {relevantSheets.length === 0 ? (
-                                    <tr><td colSpan={5} className="p-6 text-center opacity-50">{t('no_activity', settings.language)}</td></tr>
+                                    <tr>
+                                        <td colSpan={5} className="p-6 text-center opacity-50">
+                                            {t('no_activity', settings.language)}
+                                        </td>
+                                    </tr>
                                 ) : (
-                                    relevantSheets.filter(s => {
-                                        if (currentUser?.role === Role.STAGING_SUPERVISOR) {
-                                            return s.status === SheetStatus.DRAFT || s.status === SheetStatus.STAGING_VERIFICATION_PENDING;
-                                        }
-                                        return true;
-                                    }).slice(0, 10).map(sheet => (
-                                        <tr
-                                            key={sheet.id}
-                                            className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors cursor-pointer group"
-                                            onClick={() => {
-                                                const isStaging = sheet.status === SheetStatus.DRAFT || sheet.status === SheetStatus.STAGING_VERIFICATION_PENDING;
-                                                navigate(isStaging ? `/sheets/staging/${sheet.id}` : `/sheets/loading/${sheet.id}`);
-                                            }}
-                                        >
-                                            <td className={`p-2 font-mono text-blue-600 dark:text-blue-400 group-hover:text-blue-700 dark:group-hover:text-blue-300 font-medium ${settings?.density === 'compact' ? 'py-1' : ''}`}>
-                                                {sheet.id.startsWith('SH-') ? sheet.id : `# ${sheet.id.slice(-4)}`}
-                                            </td>
-                                            <td className={`p-2 text-slate-700 dark:text-slate-300 ${settings?.density === 'compact' ? 'py-1' : ''}`}>{sheet.supervisorName || '—'}</td>
-                                            <td className={`p-2 ${settings?.density === 'compact' ? 'py-1' : ''}`}>
-                                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider
-                                                    ${sheet.status === SheetStatus.DRAFT ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400' :
-                                                        sheet.status === SheetStatus.LOCKED ? 'bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400' :
-                                                            sheet.status === SheetStatus.COMPLETED ? 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' :
-                                                                'bg-yellow-100 dark:bg-yellow-500/10 text-yellow-700 dark:text-yellow-400'}`}>
-                                                    {sheet.status.replace(/_/g, ' ')}
-                                                </span>
-                                            </td>
-                                            <td className={`p-2 ${settings?.density === 'compact' ? 'py-1' : ''}`}>{new Date(sheet.date).toLocaleDateString()}</td>
-                                            <td className={`p-2 text-right ${settings?.density === 'compact' ? 'py-1' : ''}`}>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="h-6 text-[10px] hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        const isStaging = sheet.status === SheetStatus.DRAFT || sheet.status === SheetStatus.STAGING_VERIFICATION_PENDING;
-                                                        navigate(isStaging ? `/sheets/staging/${sheet.id}` : `/sheets/loading/${sheet.id}`);
-                                                    }}
+                                    relevantSheets
+                                        .filter((s) => {
+                                            if (currentUser?.role === Role.STAGING_SUPERVISOR) {
+                                                return (
+                                                    s.status === SheetStatus.DRAFT ||
+                                                    s.status ===
+                                                        SheetStatus.STAGING_VERIFICATION_PENDING
+                                                );
+                                            }
+                                            return true;
+                                        })
+                                        .slice(0, 10)
+                                        .map((sheet) => (
+                                            <tr
+                                                key={sheet.id}
+                                                className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors cursor-pointer group"
+                                                onClick={() => {
+                                                    const isStaging =
+                                                        sheet.status === SheetStatus.DRAFT ||
+                                                        sheet.status ===
+                                                            SheetStatus.STAGING_VERIFICATION_PENDING;
+                                                    navigate(
+                                                        isStaging
+                                                            ? `/sheets/staging/${sheet.id}`
+                                                            : `/sheets/loading/${sheet.id}`
+                                                    );
+                                                }}
+                                            >
+                                                <td
+                                                    className={`p-2 font-mono text-blue-600 dark:text-blue-400 group-hover:text-blue-700 dark:group-hover:text-blue-300 font-medium ${settings?.density === 'compact' ? 'py-1' : ''}`}
                                                 >
-                                                    {t('open', settings.language)}
-                                                </Button>
-                                            </td>
-                                        </tr>
-                                    ))
+                                                    {sheet.id.startsWith('SH-')
+                                                        ? sheet.id
+                                                        : `# ${sheet.id.slice(-4)}`}
+                                                </td>
+                                                <td
+                                                    className={`p-2 text-slate-700 dark:text-slate-300 ${settings?.density === 'compact' ? 'py-1' : ''}`}
+                                                >
+                                                    {sheet.supervisorName || '—'}
+                                                </td>
+                                                <td
+                                                    className={`p-2 ${settings?.density === 'compact' ? 'py-1' : ''}`}
+                                                >
+                                                    <span
+                                                        className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider
+                                                    ${
+                                                        sheet.status === SheetStatus.DRAFT
+                                                            ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                                                            : sheet.status === SheetStatus.LOCKED
+                                                              ? 'bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400'
+                                                              : sheet.status ===
+                                                                  SheetStatus.COMPLETED
+                                                                ? 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                                                                : 'bg-yellow-100 dark:bg-yellow-500/10 text-yellow-700 dark:text-yellow-400'
+                                                    }`}
+                                                    >
+                                                        {sheet.status.replace(/_/g, ' ')}
+                                                    </span>
+                                                </td>
+                                                <td
+                                                    className={`p-2 ${settings?.density === 'compact' ? 'py-1' : ''}`}
+                                                >
+                                                    {new Date(sheet.date).toLocaleDateString()}
+                                                </td>
+                                                <td
+                                                    className={`p-2 text-right ${settings?.density === 'compact' ? 'py-1' : ''}`}
+                                                >
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-6 text-[10px] hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const isStaging =
+                                                                sheet.status ===
+                                                                    SheetStatus.DRAFT ||
+                                                                sheet.status ===
+                                                                    SheetStatus.STAGING_VERIFICATION_PENDING;
+                                                            navigate(
+                                                                isStaging
+                                                                    ? `/sheets/staging/${sheet.id}`
+                                                                    : `/sheets/loading/${sheet.id}`
+                                                            );
+                                                        }}
+                                                    >
+                                                        {t('open', settings.language)}
+                                                    </Button>
+                                                </td>
+                                            </tr>
+                                        ))
                                 )}
                             </tbody>
                         </table>
                     </div>
                 </CardContent>
             </Card>
-        </div >
+        </div>
     );
 }
-

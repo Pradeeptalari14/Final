@@ -11,16 +11,14 @@ import DatabasePage from './pages/Database';
 import AdminDashboard from './pages/AdminDashboard';
 import ReportsPage from './pages/Reports';
 
-
 export const router = createBrowserRouter([
-
     {
         path: '/login',
-        element: <LoginPage />,
+        element: <LoginPage />
     },
     {
         path: '/register',
-        element: <RegisterPage />,
+        element: <RegisterPage />
     },
     {
         path: '/',
@@ -28,36 +26,35 @@ export const router = createBrowserRouter([
         children: [
             {
                 index: true,
-                element: <DashboardOverview />,
+                element: <DashboardOverview />
             },
             {
                 path: 'database',
-                element: <DatabasePage />,
+                element: <DatabasePage />
             },
             {
                 path: 'reports',
-                element: <ReportsPage />,
+                element: <ReportsPage />
             },
-
 
             // ...
 
             {
                 path: 'sheets/staging/:id',
-                element: <StagingSheet />,
+                element: <StagingSheet />
             },
             {
                 path: 'sheets/loading/:id',
-                element: <LoadingSheet />,
+                element: <LoadingSheet />
             },
             {
                 path: 'settings',
-                element: <SettingsPage />,
+                element: <SettingsPage />
             },
             {
                 path: 'admin',
-                element: <AdminDashboard />,
-            },
-        ],
-    },
+                element: <AdminDashboard />
+            }
+        ]
+    }
 ]);

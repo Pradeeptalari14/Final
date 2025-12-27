@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
-import { Role, User, SheetData } from "@/types";
-import { Button } from "@/components/ui/button";
+import { Role, User, SheetData } from '@/types';
+import { Button } from '@/components/ui/button';
 import {
     Search,
     UserPlus,
@@ -16,6 +16,7 @@ import {
     ChevronDown
 } from 'lucide-react';
 import { useData } from '@/contexts/DataContext';
+import { useAppState } from '@/contexts/AppStateContext';
 import { t } from '@/lib/i18n';
 import { useUserManagement } from '@/hooks/useUserManagement';
 import { UserTable } from './users/UserTable';
@@ -32,8 +33,8 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
     DropdownMenuRadioGroup,
-    DropdownMenuRadioItem,
-} from "@/components/ui/dropdown-menu";
+    DropdownMenuRadioItem
+} from '@/components/ui/dropdown-menu';
 
 interface UserManagementProps {
     users: User[];
@@ -45,12 +46,8 @@ type SortKey = 'name' | 'role' | 'lastActive' | 'status';
 type SortDirection = 'asc' | 'desc';
 
 export function UserManagement({ users, refreshUsers, sheets }: UserManagementProps) {
-    const { currentUser, settings } = useData();
-
-    // STRICT GUARD: Admin only
-    if (currentUser?.role !== Role.ADMIN) {
-        return <div className="p-8 text-center text-red-500 font-bold uppercase tracking-widest">{t('access_denied', settings.language)}</div>;
-    }
+    const { currentUser } = useData();
+    const { settings } = useAppState();
 
     const {
         userSearchQuery,
@@ -83,9 +80,9 @@ export function UserManagement({ users, refreshUsers, sheets }: UserManagementPr
 
         // 1. Status Filter
         if (statusFilter === 'ACTIVE') {
-            result = result.filter(u => u.isApproved && !u.isLocked);
+            result = result.filter((u) => u.isApproved && !u.isLocked);
         } else if (statusFilter === 'LOCKED') {
-            result = result.filter(u => u.isLocked);
+            result = result.filter((u) => u.isLocked);
         }
 
         // 2. Sorting
@@ -98,16 +95,18 @@ export function UserManagement({ users, refreshUsers, sheets }: UserManagementPr
                 case 'role':
                     comparison = a.role.localeCompare(b.role);
                     break;
-                case 'status':
+                case 'status': {
                     // Sort order: Locked > Active > Pending
-                    const getStatusWeight = (u: User) => u.isLocked ? 3 : (u.isApproved ? 2 : 1);
+                    const getStatusWeight = (u: User) => (u.isLocked ? 3 : u.isApproved ? 2 : 1);
                     comparison = getStatusWeight(a) - getStatusWeight(b);
                     break;
-                case 'lastActive':
+                }
+                case 'lastActive': {
                     const timeA = lastActiveMap.get(a.username) || 0;
                     const timeB = lastActiveMap.get(b.username) || 0;
                     comparison = timeA - timeB;
                     break;
+                }
             }
             return sortConfig.direction === 'asc' ? comparison : -comparison;
         });
@@ -115,39 +114,93 @@ export function UserManagement({ users, refreshUsers, sheets }: UserManagementPr
         return result;
     }, [filteredUsers, statusFilter, sortConfig, lastActiveMap]);
 
+    // STRICT GUARD: Admin only
+    if (currentUser?.role !== Role.ADMIN) {
+        return (
+            <div className="p-8 text-center text-red-500 font-bold uppercase tracking-widest">
+                {t('access_denied', settings.language)}
+            </div>
+        );
+    }
+
     // --- Export Handler ---
     const handleExport = () => {
-        const csvHeader = "ID,Full Name,Username,Role,Employee Code,Status,Role Status,Last Active\n";
-        const csvRows = processedUsers.map(user => {
-            const lastActive = lastActiveMap.get(user.username);
-            const lastActiveStr = lastActive ? new Date(lastActive).toISOString() : "Never";
-            const status = user.isLocked ? "LOCKED" : (user.isApproved ? "ACTIVE" : "PENDING");
+        const csvHeader =
+            'ID,Full Name,Username,Role,Employee Code,Status,Role Status,Last Active\n';
+        const csvRows = processedUsers
+            .map((user) => {
+                const lastActive = lastActiveMap.get(user.username);
+                const lastActiveStr = lastActive ? new Date(lastActive).toISOString() : 'Never';
+                const status = user.isLocked ? 'LOCKED' : user.isApproved ? 'ACTIVE' : 'PENDING';
 
-            return [
-                user.id,
-                `"${user.fullName}"`, // Quote names to handle commas
-                user.username,
-                user.role,
-                user.empCode || "N/A",
-                status,
-                user.isDeleted ? "DELETED" : "LIVE",
-                lastActiveStr
-            ].join(",");
-        }).join("\n");
+                return [
+                    user.id,
+                    `"${user.fullName}"`, // Quote names to handle commas
+                    user.username,
+                    user.role,
+                    user.empCode || 'N/A',
+                    status,
+                    user.isDeleted ? 'DELETED' : 'LIVE',
+                    lastActiveStr
+                ].join(',');
+            })
+            .join('\n');
 
-        const blob = new Blob([csvHeader + csvRows], { type: "text/csv;charset=utf-8" });
+        const blob = new Blob([csvHeader + csvRows], { type: 'text/csv;charset=utf-8' });
         saveAs(blob, `user_directory_export_${new Date().toISOString().split('T')[0]}.csv`);
     };
 
     // Sidebar Navigation Items
     const navItems = [
-        { id: 'ALL', label: 'All Users', icon: Users, count: users.length, color: 'text-slate-500' },
-        { id: Role.ADMIN, label: 'Administrators', icon: Shield, count: users.filter(u => u.role === Role.ADMIN).length, color: 'text-indigo-600' },
-        { id: Role.STAGING_SUPERVISOR, label: 'Staging Supervisors', icon: UserCheck, count: users.filter(u => u.role === Role.STAGING_SUPERVISOR).length, color: 'text-blue-600' },
-        { id: Role.LOADING_SUPERVISOR, label: 'Loading Supervisors', icon: LayoutGrid, count: users.filter(u => u.role === Role.LOADING_SUPERVISOR).length, color: 'text-orange-600' },
-        { id: Role.SHIFT_LEAD, label: 'Shift Leads', icon: Star, count: users.filter(u => u.role === Role.SHIFT_LEAD).length, color: 'text-purple-600' },
-        { id: 'PENDING', label: 'Pending Approval', icon: Clock, count: users.filter(u => !u.isApproved).length, color: 'text-amber-600' },
-        { id: 'LOCKED', label: 'Locked Accounts', icon: Shield, count: users.filter(u => u.isLocked).length, color: 'text-red-600' },
+        {
+            id: 'ALL',
+            label: 'All Users',
+            icon: Users,
+            count: users.length,
+            color: 'text-slate-500'
+        },
+        {
+            id: Role.ADMIN,
+            label: 'Administrators',
+            icon: Shield,
+            count: users.filter((u) => u.role === Role.ADMIN).length,
+            color: 'text-indigo-600'
+        },
+        {
+            id: Role.STAGING_SUPERVISOR,
+            label: 'Staging Supervisors',
+            icon: UserCheck,
+            count: users.filter((u) => u.role === Role.STAGING_SUPERVISOR).length,
+            color: 'text-blue-600'
+        },
+        {
+            id: Role.LOADING_SUPERVISOR,
+            label: 'Loading Supervisors',
+            icon: LayoutGrid,
+            count: users.filter((u) => u.role === Role.LOADING_SUPERVISOR).length,
+            color: 'text-orange-600'
+        },
+        {
+            id: Role.SHIFT_LEAD,
+            label: 'Shift Leads',
+            icon: Star,
+            count: users.filter((u) => u.role === Role.SHIFT_LEAD).length,
+            color: 'text-purple-600'
+        },
+        {
+            id: 'PENDING',
+            label: 'Pending Approval',
+            icon: Clock,
+            count: users.filter((u) => !u.isApproved).length,
+            color: 'text-amber-600'
+        },
+        {
+            id: 'LOCKED',
+            label: 'Locked Accounts',
+            icon: Shield,
+            count: users.filter((u) => u.isLocked).length,
+            color: 'text-red-600'
+        }
     ];
 
     return (
@@ -155,17 +208,19 @@ export function UserManagement({ users, refreshUsers, sheets }: UserManagementPr
             {/* LEFT SIDEBAR - DIRECTORY TREE (Mobile: Top horizontal scroll, Desktop: Left vertical sidebar) */}
             <div className="w-full lg:w-64 shrink-0 flex flex-row lg:flex-col gap-2 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0 scrollbar-hide">
                 <div className="px-4 py-2 lg:w-full min-w-[200px]">
-                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 hidden lg:block">Directory</h3>
+                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 hidden lg:block">
+                        Directory
+                    </h3>
                     <div className="flex lg:flex-col gap-1 lg:space-y-1">
                         {navItems.map((item) => (
                             <button
                                 key={item.id}
                                 onClick={() => setFilter(item.id as any)}
                                 className={cn(
-                                    "flex-shrink-0 lg:w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 border lg:border-none border-slate-100 dark:border-slate-800 lg:bg-transparent bg-white dark:bg-slate-900",
+                                    'flex-shrink-0 lg:w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 border lg:border-none border-slate-100 dark:border-slate-800 lg:bg-transparent bg-white dark:bg-slate-900',
                                     userFilter === item.id
-                                        ? "bg-white dark:bg-slate-800 text-indigo-600 shadow-lg shadow-indigo-500/10 lg:scale-105 border-indigo-200 dark:border-indigo-900"
-                                        : "text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-700 lg:hover:pl-4"
+                                        ? 'bg-white dark:bg-slate-800 text-indigo-600 shadow-lg shadow-indigo-500/10 lg:scale-105 border-indigo-200 dark:border-indigo-900'
+                                        : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-700 lg:hover:pl-4'
                                 )}
                             >
                                 <div className="flex items-center gap-3">
@@ -173,7 +228,10 @@ export function UserManagement({ users, refreshUsers, sheets }: UserManagementPr
                                     <span className="whitespace-nowrap">{item.label}</span>
                                 </div>
                                 {item.count > 0 && (
-                                    <Badge variant="secondary" className="ml-2 bg-slate-100 dark:bg-slate-800 text-slate-500 text-[10px] px-1.5 h-5 min-w-[20px] justify-center">
+                                    <Badge
+                                        variant="secondary"
+                                        className="ml-2 bg-slate-100 dark:bg-slate-800 text-slate-500 text-[10px] px-1.5 h-5 min-w-[20px] justify-center"
+                                    >
                                         {item.count}
                                     </Badge>
                                 )}
@@ -184,11 +242,13 @@ export function UserManagement({ users, refreshUsers, sheets }: UserManagementPr
 
                 <div className="mt-auto px-4 py-6 hidden lg:block">
                     <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-xl shadow-indigo-500/20">
-                        <p className="text-xs font-bold opacity-80 mb-1 uppercase tracking-widest">Total Users</p>
+                        <p className="text-xs font-bold opacity-80 mb-1 uppercase tracking-widest">
+                            Total Users
+                        </p>
                         <p className="text-3xl font-black tracking-tight">{users.length}</p>
                         <div className="mt-3 flex items-center gap-2 text-[10px] font-medium bg-white/10 w-fit px-2 py-1 rounded-lg backdrop-blur-sm">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                            {users.filter(u => u.isApproved).length} Active Identities
+                            {users.filter((u) => u.isApproved).length} Active Identities
                         </div>
                     </div>
                 </div>
@@ -200,7 +260,10 @@ export function UserManagement({ users, refreshUsers, sheets }: UserManagementPr
                 <div className="p-4 lg:p-5 border-b border-slate-100 dark:border-slate-800 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 bg-white/50 backdrop-blur-sm sticky top-0 z-20">
                     <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-4 flex-1">
                         <div className="relative w-full max-w-md group">
-                            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                            <Search
+                                size={16}
+                                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors"
+                            />
                             <input
                                 value={userSearchQuery}
                                 onChange={(e) => setUserSearchQuery(e.target.value)}
@@ -213,19 +276,41 @@ export function UserManagement({ users, refreshUsers, sheets }: UserManagementPr
                             {/* FILTER */}
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button variant={statusFilter !== 'ALL' ? "secondary" : "ghost"} size="sm" className={cn("text-slate-500 hover:text-indigo-600 gap-2 shrink-0", statusFilter !== 'ALL' && "text-indigo-600")}>
+                                    <Button
+                                        variant={statusFilter !== 'ALL' ? 'secondary' : 'ghost'}
+                                        size="sm"
+                                        className={cn(
+                                            'text-slate-500 hover:text-indigo-600 gap-2 shrink-0',
+                                            statusFilter !== 'ALL' && 'text-indigo-600'
+                                        )}
+                                    >
                                         <Filter size={16} />
-                                        <span className="hidden sm:inline">{statusFilter === 'ALL' ? 'Filter' : statusFilter === 'ACTIVE' ? 'Active' : 'Locked'}</span>
+                                        <span className="hidden sm:inline">
+                                            {statusFilter === 'ALL'
+                                                ? 'Filter'
+                                                : statusFilter === 'ACTIVE'
+                                                  ? 'Active'
+                                                  : 'Locked'}
+                                        </span>
                                         <ChevronDown size={12} className="opacity-50" />
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="start" className="w-48">
                                     <DropdownMenuLabel>Account Status</DropdownMenuLabel>
                                     <DropdownMenuSeparator />
-                                    <DropdownMenuRadioGroup value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-                                        <DropdownMenuRadioItem value="ALL">Show All Objects</DropdownMenuRadioItem>
-                                        <DropdownMenuRadioItem value="ACTIVE">Active Accounts</DropdownMenuRadioItem>
-                                        <DropdownMenuRadioItem value="LOCKED">Locked Accounts</DropdownMenuRadioItem>
+                                    <DropdownMenuRadioGroup
+                                        value={statusFilter}
+                                        onValueChange={(v) => setStatusFilter(v as any)}
+                                    >
+                                        <DropdownMenuRadioItem value="ALL">
+                                            Show All Objects
+                                        </DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem value="ACTIVE">
+                                            Active Accounts
+                                        </DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem value="LOCKED">
+                                            Locked Accounts
+                                        </DropdownMenuRadioItem>
                                     </DropdownMenuRadioGroup>
                                 </DropdownMenuContent>
                             </DropdownMenu>
@@ -233,32 +318,73 @@ export function UserManagement({ users, refreshUsers, sheets }: UserManagementPr
                             {/* SORT */}
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm" className="text-slate-500 hover:text-indigo-600 gap-2 shrink-0">
-                                        <ArrowUpDown size={16} /> <span className="hidden sm:inline">Sort</span>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-slate-500 hover:text-indigo-600 gap-2 shrink-0"
+                                    >
+                                        <ArrowUpDown size={16} />{' '}
+                                        <span className="hidden sm:inline">Sort</span>
                                         <ChevronDown size={12} className="opacity-50" />
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="start" className="w-48">
                                     <DropdownMenuLabel>Sort Directory By</DropdownMenuLabel>
                                     <DropdownMenuSeparator />
-                                    <DropdownMenuRadioGroup value={sortConfig.key} onValueChange={(v) => setSortConfig({ key: v as SortKey, direction: sortConfig.direction })}>
-                                        <DropdownMenuRadioItem value="name">Full Name</DropdownMenuRadioItem>
-                                        <DropdownMenuRadioItem value="role">Role / Permission</DropdownMenuRadioItem>
-                                        <DropdownMenuRadioItem value="lastActive">Last Activity</DropdownMenuRadioItem>
-                                        <DropdownMenuRadioItem value="status">Account Status</DropdownMenuRadioItem>
+                                    <DropdownMenuRadioGroup
+                                        value={sortConfig.key}
+                                        onValueChange={(v) =>
+                                            setSortConfig({
+                                                key: v as SortKey,
+                                                direction: sortConfig.direction
+                                            })
+                                        }
+                                    >
+                                        <DropdownMenuRadioItem value="name">
+                                            Full Name
+                                        </DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem value="role">
+                                            Role / Permission
+                                        </DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem value="lastActive">
+                                            Last Activity
+                                        </DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem value="status">
+                                            Account Status
+                                        </DropdownMenuRadioItem>
                                     </DropdownMenuRadioGroup>
                                     <DropdownMenuSeparator />
                                     <div className="p-2">
                                         <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
                                             <button
-                                                onClick={() => setSortConfig(p => ({ ...p, direction: 'asc' }))}
-                                                className={cn("flex-1 text-xs font-bold py-1.5 rounded-md text-center transition-all", sortConfig.direction === 'asc' ? "bg-white shadow-sm text-indigo-600" : "text-slate-500")}
+                                                onClick={() =>
+                                                    setSortConfig((p) => ({
+                                                        ...p,
+                                                        direction: 'asc'
+                                                    }))
+                                                }
+                                                className={cn(
+                                                    'flex-1 text-xs font-bold py-1.5 rounded-md text-center transition-all',
+                                                    sortConfig.direction === 'asc'
+                                                        ? 'bg-white shadow-sm text-indigo-600'
+                                                        : 'text-slate-500'
+                                                )}
                                             >
                                                 Asc
                                             </button>
                                             <button
-                                                onClick={() => setSortConfig(p => ({ ...p, direction: 'desc' }))}
-                                                className={cn("flex-1 text-xs font-bold py-1.5 rounded-md text-center transition-all", sortConfig.direction === 'desc' ? "bg-white shadow-sm text-indigo-600" : "text-slate-500")}
+                                                onClick={() =>
+                                                    setSortConfig((p) => ({
+                                                        ...p,
+                                                        direction: 'desc'
+                                                    }))
+                                                }
+                                                className={cn(
+                                                    'flex-1 text-xs font-bold py-1.5 rounded-md text-center transition-all',
+                                                    sortConfig.direction === 'desc'
+                                                        ? 'bg-white shadow-sm text-indigo-600'
+                                                        : 'text-slate-500'
+                                                )}
                                             >
                                                 Desc
                                             </button>
@@ -269,11 +395,20 @@ export function UserManagement({ users, refreshUsers, sheets }: UserManagementPr
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
-                        <Button variant="outline" size="sm" onClick={handleExport} className="hidden lg:flex border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleExport}
+                            className="hidden lg:flex border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50"
+                        >
                             <Download size={16} className="mr-2" /> Export
                         </Button>
-                        <Button onClick={() => setIsAddingUser(true)} className="flex-1 lg:flex-none bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-lg shadow-indigo-500/20 transition-all active:scale-95 justify-center">
-                            <UserPlus size={18} className="mr-2" /> <span className="sm:inline">Add User</span>
+                        <Button
+                            onClick={() => setIsAddingUser(true)}
+                            className="flex-1 lg:flex-none bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-lg shadow-indigo-500/20 transition-all active:scale-95 justify-center"
+                        >
+                            <UserPlus size={18} className="mr-2" />{' '}
+                            <span className="sm:inline">Add User</span>
                         </Button>
                     </div>
                 </div>

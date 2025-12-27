@@ -14,7 +14,10 @@ interface RejectionSectionProps {
     rejectedItems?: RejectedItemDisplay[];
 }
 
-export const RejectionSection: React.FC<RejectionSectionProps> = ({ reason, rejectedItems = [] }) => {
+export const RejectionSection: React.FC<RejectionSectionProps> = ({
+    reason,
+    rejectedItems = []
+}) => {
     if (!reason && rejectedItems.length === 0) return null;
 
     return (
@@ -31,9 +34,16 @@ export const RejectionSection: React.FC<RejectionSectionProps> = ({ reason, reje
                                 <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                                     Sheet Verification Failed
                                 </h3>
-                                <p className="text-slate-500 text-sm mt-0.5">Please address the issues below and resubmit for verification.</p>
+                                <p className="text-slate-500 text-sm mt-0.5">
+                                    Please address the issues below and resubmit for verification.
+                                </p>
                             </div>
-                            <Badge variant="outline" className="text-red-600 border-red-200 bg-red-50 animate-pulse">Action Required</Badge>
+                            <Badge
+                                variant="outline"
+                                className="text-red-600 border-red-200 bg-red-50 animate-pulse"
+                            >
+                                Action Required
+                            </Badge>
                         </div>
 
                         {/* Global Reason */}
@@ -42,7 +52,9 @@ export const RejectionSection: React.FC<RejectionSectionProps> = ({ reason, reje
                                 <div className="absolute top-0 left-4 -translate-y-1/2 bg-white px-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider border border-slate-100 rounded-full">
                                     Rejection Logic
                                 </div>
-                                <p className="text-sm text-slate-700 leading-relaxed font-medium">{reason}</p>
+                                <p className="text-sm text-slate-700 leading-relaxed font-medium">
+                                    {reason}
+                                </p>
                             </div>
                         )}
 
@@ -55,18 +67,27 @@ export const RejectionSection: React.FC<RejectionSectionProps> = ({ reason, reje
                                 <ScrollArea className="h-full max-h-[150px] w-full rounded-md border border-red-100 bg-red-50/30">
                                     <div className="p-2 space-y-1">
                                         {rejectedItems.map((item, idx) => (
-                                            <div key={idx} className="flex flex-col gap-1 bg-white p-2 rounded border border-red-100 text-sm shadow-sm group hover:border-red-300 transition-colors">
+                                            <div
+                                                key={idx}
+                                                className="flex flex-col gap-1 bg-white p-2 rounded border border-red-100 text-sm shadow-sm group hover:border-red-300 transition-colors"
+                                            >
                                                 <div className="flex items-center gap-3">
-                                                    <Badge variant="secondary" className="bg-red-50 text-red-700 border-red-100 font-mono text-[10px] min-w-[2rem] justify-center">
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className="bg-red-50 text-red-700 border-red-100 font-mono text-[10px] min-w-[2rem] justify-center"
+                                                    >
                                                         #{item.id}
                                                     </Badge>
-                                                    <span className="font-medium text-slate-700 line-clamp-1" title={item.name}>
+                                                    <span
+                                                        className="font-medium text-slate-700 line-clamp-1"
+                                                        title={item.name}
+                                                    >
                                                         {item.name}
                                                     </span>
                                                 </div>
                                                 {item.reason && (
                                                     <div className="pl-[3.25rem] text-xs text-red-500 italic">
-                                                        "{item.reason}"
+                                                        &quot;{item.reason}&quot;
                                                     </div>
                                                 )}
                                             </div>

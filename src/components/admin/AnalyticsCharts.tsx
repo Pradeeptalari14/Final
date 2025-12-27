@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { SheetData } from '@/types';
 import { Calendar, Clock } from 'lucide-react';
 import {
@@ -31,12 +31,12 @@ export function AnalyticsCharts({ sheets: allSheets }: AnalyticsChartsProps) {
             if (startDate) {
                 const start = new Date(startDate);
                 start.setHours(0, 0, 0, 0);
-                filtered = filtered.filter(s => new Date(s.date) >= start);
+                filtered = filtered.filter((s) => new Date(s.date) >= start);
             }
             if (endDate) {
                 const end = new Date(endDate);
                 end.setHours(23, 59, 59, 999);
-                filtered = filtered.filter(s => new Date(s.date) <= end);
+                filtered = filtered.filter((s) => new Date(s.date) <= end);
             }
             return filtered;
         }
@@ -47,7 +47,7 @@ export function AnalyticsCharts({ sheets: allSheets }: AnalyticsChartsProps) {
         if (timeRange === '90D') days = 90;
 
         const threshold = new Date(now.setDate(now.getDate() - days));
-        return allSheets.filter(s => new Date(s.date) >= threshold);
+        return allSheets.filter((s) => new Date(s.date) >= threshold);
     }, [allSheets, timeRange, startDate, endDate]);
 
     // 1. Prepare Data: Sheets per Day (Dynamic Range)
@@ -78,7 +78,7 @@ export function AnalyticsCharts({ sheets: allSheets }: AnalyticsChartsProps) {
             const dateStr = d.toISOString().split('T')[0];
 
             // Format label: sparse for longer ranges
-            let displayDate = "";
+            let displayDate = '';
             if (days <= 7) {
                 displayDate = d.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' });
             } else if (days <= 31) {
@@ -87,7 +87,7 @@ export function AnalyticsCharts({ sheets: allSheets }: AnalyticsChartsProps) {
                 displayDate = d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
             }
 
-            const count = filteredSheets.filter(s => s.date === dateStr).length;
+            const count = filteredSheets.filter((s) => s.date === dateStr).length;
             result.push({ date: displayDate, fullDate: dateStr, count });
         }
         return result;
@@ -96,15 +96,17 @@ export function AnalyticsCharts({ sheets: allSheets }: AnalyticsChartsProps) {
     // 2. Prepare Data: Status Distribution (On Filtered Sheets)
     const statusDistribution = useMemo(() => {
         const counts: Record<string, number> = {};
-        filteredSheets.forEach(s => {
+        filteredSheets.forEach((s) => {
             const status = s.status || 'UNKNOWN';
             counts[status] = (counts[status] || 0) + 1;
         });
 
-        return Object.entries(counts).map(([name, value]) => ({
-            name: name.replace(/_/g, ' '),
-            value
-        })).filter(i => i.value > 0);
+        return Object.entries(counts)
+            .map(([name, value]) => ({
+                name: name.replace(/_/g, ' '),
+                value
+            }))
+            .filter((i) => i.value > 0);
     }, [filteredSheets]);
 
     // Colors for Pie Chart
@@ -121,7 +123,13 @@ export function AnalyticsCharts({ sheets: allSheets }: AnalyticsChartsProps) {
                             onClick={() => setTimeRange(range)}
                             className={`px-3 py-1 rounded-md text-[10px] uppercase font-bold transition-all ${timeRange === range ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
                         >
-                            {range === '7D' ? '7 Days' : range === '30D' ? '30 Days' : range === '90D' ? '3 Months' : 'Custom'}
+                            {range === '7D'
+                                ? '7 Days'
+                                : range === '30D'
+                                  ? '30 Days'
+                                  : range === '90D'
+                                    ? '3 Months'
+                                    : 'Custom'}
                         </button>
                     ))}
                 </div>
@@ -134,7 +142,9 @@ export function AnalyticsCharts({ sheets: allSheets }: AnalyticsChartsProps) {
                         <div className="flex items-center gap-2 px-3 py-1.5 border-r border-slate-100 dark:border-white/5">
                             <Calendar className="w-3.5 h-3.5 text-slate-400 group-hover:text-primary transition-colors" />
                             <div className="flex flex-col">
-                                <span className="text-[7px] uppercase font-bold text-slate-400 leading-tight">Start Time</span>
+                                <span className="text-[7px] uppercase font-bold text-slate-400 leading-tight">
+                                    Start Time
+                                </span>
                                 <input
                                     type="datetime-local"
                                     value={startDate}
@@ -146,7 +156,9 @@ export function AnalyticsCharts({ sheets: allSheets }: AnalyticsChartsProps) {
                         <div className="flex items-center gap-2 px-3 py-1.5">
                             <Clock className="w-3.5 h-3.5 text-slate-400 group-hover:text-primary transition-colors" />
                             <div className="flex flex-col">
-                                <span className="text-[7px] uppercase font-bold text-slate-400 leading-tight">End Time</span>
+                                <span className="text-[7px] uppercase font-bold text-slate-400 leading-tight">
+                                    End Time
+                                </span>
                                 <input
                                     type="datetime-local"
                                     value={endDate}
@@ -165,13 +177,22 @@ export function AnalyticsCharts({ sheets: allSheets }: AnalyticsChartsProps) {
                     <CardHeader>
                         <CardTitle>Daily Activity</CardTitle>
                         <CardDescription>
-                            Sheets created in the last {timeRange === '7D' ? '7 days' : timeRange === '30D' ? '30 days' : '3 months'}
+                            Sheets created in the last{' '}
+                            {timeRange === '7D'
+                                ? '7 days'
+                                : timeRange === '30D'
+                                  ? '30 days'
+                                  : '3 months'}
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="h-[300px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={dailyActivity}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                                <CartesianGrid
+                                    strokeDasharray="3 3"
+                                    vertical={false}
+                                    stroke="#E2E8F0"
+                                />
                                 <XAxis
                                     dataKey="date"
                                     tick={{ fontSize: 12, fill: '#64748B' }}
@@ -186,7 +207,11 @@ export function AnalyticsCharts({ sheets: allSheets }: AnalyticsChartsProps) {
                                 />
                                 <Tooltip
                                     cursor={{ fill: '#F1F5F9' }}
-                                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                    contentStyle={{
+                                        borderRadius: '8px',
+                                        border: 'none',
+                                        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                                    }}
                                 />
                                 <Bar
                                     dataKey="count"
@@ -218,19 +243,34 @@ export function AnalyticsCharts({ sheets: allSheets }: AnalyticsChartsProps) {
                                     dataKey="value"
                                 >
                                     {statusDistribution.map((_, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        <Cell
+                                            key={`cell-${index}`}
+                                            fill={COLORS[index % COLORS.length]}
+                                        />
                                     ))}
                                 </Pie>
                                 <Tooltip
-                                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                    contentStyle={{
+                                        borderRadius: '8px',
+                                        border: 'none',
+                                        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                                    }}
                                 />
                             </PieChart>
                         </ResponsiveContainer>
                         <div className="flex flex-wrap justify-center gap-4 mt-2">
                             {statusDistribution.map((entry, index) => (
-                                <div key={index} className="flex items-center gap-2 text-xs text-slate-600">
-                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                                    <span>{entry.name} ({entry.value})</span>
+                                <div
+                                    key={index}
+                                    className="flex items-center gap-2 text-xs text-slate-600"
+                                >
+                                    <div
+                                        className="w-2 h-2 rounded-full"
+                                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                                    />
+                                    <span>
+                                        {entry.name} ({entry.value})
+                                    </span>
                                 </div>
                             ))}
                         </div>

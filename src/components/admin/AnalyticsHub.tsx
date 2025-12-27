@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { SheetData, SheetStatus } from '@/types';
 import {
     XAxis,
@@ -15,7 +15,7 @@ import {
     Area,
     AreaChart,
     BarChart,
-    Bar,
+    Bar
 } from 'recharts';
 import {
     TrendingUp,
@@ -65,7 +65,7 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
 
         const threshold = new Date(now.setDate(now.getDate() - days));
 
-        return allSheets.filter(s => {
+        return allSheets.filter((s) => {
             const dateMatch = new Date(s.date) >= threshold;
             return dateMatch;
         });
@@ -78,14 +78,17 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
         let totalTarget = 0;
         let totalActual = 0;
 
-        filteredData.forEach(s => {
+        filteredData.forEach((s) => {
             totalTarget += s.stagingItems.reduce((acc, item) => acc + (item.ttlCases || 0), 0);
             totalActual += (s.loadingItems || []).reduce((acc, item) => acc + (item.total || 0), 0);
-            totalActual += (s.additionalItems || []).reduce((acc, item) => acc + (item.total || 0), 0);
+            totalActual += (s.additionalItems || []).reduce(
+                (acc, item) => acc + (item.total || 0),
+                0
+            );
         });
 
         const efficiency = totalTarget > 0 ? (totalActual / totalTarget) * 100 : 0;
-        const completed = filteredData.filter(s => s.status === SheetStatus.COMPLETED).length;
+        const completed = filteredData.filter((s) => s.status === SheetStatus.COMPLETED).length;
         const completionRate = totalSheets > 0 ? (completed / totalSheets) * 100 : 0;
 
         return [
@@ -138,48 +141,82 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
 
     // 3. Supervisor Radar Data (Aggregate Real Metrics)
     const supervisorQuality = useMemo(() => {
-        const supMap: Record<string, { rejections: number, items: number, target: number, actual: number, sheets: number, comments: number }> = {};
+        const supMap: Record<
+            string,
+            {
+                rejections: number;
+                items: number;
+                target: number;
+                actual: number;
+                sheets: number;
+                comments: number;
+            }
+        > = {};
 
-        filteredData.forEach(s => {
+        filteredData.forEach((s) => {
             const name = s.supervisorName || 'Unknown';
-            if (!supMap[name]) supMap[name] = { rejections: 0, items: 0, target: 0, actual: 0, sheets: 0, comments: 0 };
+            if (!supMap[name])
+                supMap[name] = {
+                    rejections: 0,
+                    items: 0,
+                    target: 0,
+                    actual: 0,
+                    sheets: 0,
+                    comments: 0
+                };
 
-            supMap[name].rejections += s.stagingItems.filter(i => i.isRejected).length;
+            supMap[name].rejections += s.stagingItems.filter((i) => i.isRejected).length;
             supMap[name].items += s.stagingItems.length;
             supMap[name].target += s.stagingItems.reduce((acc, i) => acc + (i.ttlCases || 0), 0);
-            supMap[name].actual += (s.loadingItems || []).reduce((acc, i) => acc + (i.total || 0), 0) + (s.additionalItems || []).reduce((acc, i) => acc + (i.total || 0), 0);
+            supMap[name].actual +=
+                (s.loadingItems || []).reduce((acc, i) => acc + (i.total || 0), 0) +
+                (s.additionalItems || []).reduce((acc, i) => acc + (i.total || 0), 0);
             supMap[name].sheets += 1;
             supMap[name].comments += s.comments?.length || 0;
         });
 
         const averages = Object.values(supMap);
-        if (averages.length === 0) return [
-            { subject: 'Accuracy', A: 0, fullMark: 100 },
-            { subject: 'Speed', A: 0, fullMark: 100 },
-            { subject: 'Adherence', A: 0, fullMark: 100 },
-            { subject: 'Activity', A: 0, fullMark: 100 },
-            { subject: 'Clarity', A: 0, fullMark: 100 },
-        ];
+        if (averages.length === 0)
+            return [
+                { subject: 'Accuracy', A: 0, fullMark: 100 },
+                { subject: 'Speed', A: 0, fullMark: 100 },
+                { subject: 'Adherence', A: 0, fullMark: 100 },
+                { subject: 'Activity', A: 0, fullMark: 100 },
+                { subject: 'Clarity', A: 0, fullMark: 100 }
+            ];
 
-        const avgAccuracy = averages.reduce((acc, s) => acc + (s.items > 0 ? (1 - s.rejections / s.items) * 100 : 100), 0) / averages.length;
-        const avgAdherence = averages.reduce((acc, s) => acc + (s.target > 0 ? (s.actual / s.target) * 100 : 0), 0) / averages.length;
+        const avgAccuracy =
+            averages.reduce(
+                (acc, s) => acc + (s.items > 0 ? (1 - s.rejections / s.items) * 100 : 100),
+                0
+            ) / averages.length;
+        const avgAdherence =
+            averages.reduce((acc, s) => acc + (s.target > 0 ? (s.actual / s.target) * 100 : 0), 0) /
+            averages.length;
         const avgActivity = (averages.reduce((acc, s) => acc + s.sheets, 0) / averages.length) * 10; // Scaled for radar
-        const avgClarity = averages.reduce((acc, s) => acc + (s.sheets > 0 ? (s.comments / s.sheets) * 100 : 0), 0) / averages.length;
+        const avgClarity =
+            averages.reduce(
+                (acc, s) => acc + (s.sheets > 0 ? (s.comments / s.sheets) * 100 : 0),
+                0
+            ) / averages.length;
 
         return [
             { subject: 'Accuracy', A: Math.min(100, Math.round(avgAccuracy)), fullMark: 100 },
             { subject: 'Speed', A: 85, fullMark: 100 }, // Time calculation requires more complex diffing, keeping static for now
             { subject: 'Adherence', A: Math.min(100, Math.round(avgAdherence)), fullMark: 100 },
             { subject: 'Activity', A: Math.min(100, Math.round(avgActivity)), fullMark: 100 },
-            { subject: 'Clarity', A: Math.min(100, Math.round(avgClarity)), fullMark: 100 },
+            { subject: 'Clarity', A: Math.min(100, Math.round(avgClarity)), fullMark: 100 }
         ];
     }, [filteredData]);
 
     // 4. Performance Data (Daily)
     const dailyPerformance = useMemo(() => {
-        const groups: Record<string, { date: string, target: number, actual: number, efficiency: number }> = {};
+        const groups: Record<
+            string,
+            { date: string; target: number; actual: number; efficiency: number }
+        > = {};
 
-        filteredData.forEach(s => {
+        filteredData.forEach((s) => {
             if (!groups[s.date]) {
                 const d = new Date(s.date);
                 groups[s.date] = {
@@ -190,14 +227,20 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
                 };
             }
             const t = s.stagingItems.reduce((acc, item) => acc + (item.ttlCases || 0), 0);
-            const a = ((s.loadingItems || []).reduce((acc, item) => acc + (item.total || 0), 0)) +
-                ((s.additionalItems || []).reduce((acc, item) => acc + (item.total || 0), 0));
+            const a =
+                (s.loadingItems || []).reduce((acc, item) => acc + (item.total || 0), 0) +
+                (s.additionalItems || []).reduce((acc, item) => acc + (item.total || 0), 0);
             groups[s.date].target += t;
             groups[s.date].actual += a;
-            groups[s.date].efficiency = groups[s.date].target > 0 ? (groups[s.date].actual / groups[s.date].target) * 100 : 0;
+            groups[s.date].efficiency =
+                groups[s.date].target > 0
+                    ? (groups[s.date].actual / groups[s.date].target) * 100
+                    : 0;
         });
 
-        return Object.values(groups).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        return Object.values(groups).sort(
+            (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+        );
     }, [filteredData]);
 
     // 7. Velocity Forecast (Real Real-Time Data)
@@ -206,7 +249,7 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
         const uniqueDays = new Set<string>();
 
         // Use ALL sheets to build a robust historical profile, not just filtered
-        allSheets.forEach(s => {
+        allSheets.forEach((s) => {
             // Prefer loadingStartTime, fallback to createdAt or date
             const ts = s.loadingStartTime || s.createdAt || s.date;
             const d = new Date(ts);
@@ -230,7 +273,7 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
         // Find Peaks
         let peakLoad = 0;
         let peakTime = '';
-        profile.forEach(p => {
+        profile.forEach((p) => {
             if (p.load > peakLoad) {
                 peakLoad = p.load;
                 peakTime = p.time;
@@ -238,44 +281,55 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
         });
 
         // Filter for display (e.g. 06:00 to 22:00 usually, or just non-zero)
-        const displayData = profile.filter(p => p.load > 0);
+        const displayData = profile.filter((p) => p.load > 0);
 
         // If no data, return a localized default or empty
-        if (displayData.length === 0) return {
-            chartData: [],
-            peakTime: 'N/A',
-            peakLoad: 0,
-            rec: 'Insufficient data for prediction',
-            efficiencyGain: '0%'
-        };
+        if (displayData.length === 0)
+            return {
+                chartData: [],
+                peakTime: 'N/A',
+                peakLoad: 0,
+                rec: 'Insufficient data for prediction',
+                efficiencyGain: '0%'
+            };
 
         return {
             chartData: displayData,
             peakTime,
             peakLoad,
-            rec: peakLoad > 500
-                ? `Peak load of ${peakLoad} cases at ${peakTime}. Recommend deploying 2 extra loaders.`
-                : `Optimum flow detected at ${peakTime}. Standard staffing is sufficient.`,
+            rec:
+                peakLoad > 500
+                    ? `Peak load of ${peakLoad} cases at ${peakTime}. Recommend deploying 2 extra loaders.`
+                    : `Optimum flow detected at ${peakTime}. Standard staffing is sufficient.`,
             efficiencyGain: peakLoad > 500 ? '+15% throughput' : 'Stable'
         };
     }, [allSheets]);
 
     // 5. CSV Export
     const handleExport = () => {
-        const headers = ['Date', 'ID', 'Shift', 'Destination', 'Target (Cases)', 'Actual (Cases)', 'Status'];
-        const rows = filteredData.map(s => {
+        const headers = [
+            'Date',
+            'ID',
+            'Shift',
+            'Destination',
+            'Target (Cases)',
+            'Actual (Cases)',
+            'Status'
+        ];
+        const rows = filteredData.map((s) => {
             const target = s.stagingItems.reduce((acc, item) => acc + (item.ttlCases || 0), 0);
-            const actual = ((s.loadingItems || []).reduce((acc, item) => acc + (item.total || 0), 0)) +
-                ((s.additionalItems || []).reduce((acc, item) => acc + (item.total || 0), 0));
+            const actual =
+                (s.loadingItems || []).reduce((acc, item) => acc + (item.total || 0), 0) +
+                (s.additionalItems || []).reduce((acc, item) => acc + (item.total || 0), 0);
             return [s.date, s.id, s.shift, s.destination, target, actual, s.status];
         });
 
-        const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+        const csvContent = [headers, ...rows].map((e) => e.join(',')).join('\n');
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
+        const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", `unicharm_futuristic_analytics_${timeRange}.csv`);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `unicharm_futuristic_analytics_${timeRange}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -287,7 +341,7 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
         if (!query) return;
 
         // Try find sheet
-        const foundSheet = allSheets.find(s => s.id.toLowerCase() === query);
+        const foundSheet = allSheets.find((s) => s.id.toLowerCase() === query);
         if (foundSheet) {
             setSelectedSheet(foundSheet);
             setSelectedUser(null);
@@ -295,23 +349,25 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
         }
 
         // Try find user
-        const foundUser = users.find(u =>
-            u.fullName.toLowerCase().includes(query) ||
-            u.username.toLowerCase() === query ||
-            u.empCode?.toLowerCase() === query
+        const foundUser = users.find(
+            (u) =>
+                u.fullName.toLowerCase().includes(query) ||
+                u.username.toLowerCase() === query ||
+                u.empCode?.toLowerCase() === query
         );
 
         if (foundUser) {
             // Aggregate user performance
-            const userSheets = allSheets.filter(s =>
-                s.supervisorName === foundUser.fullName ||
-                s.loadingSvName === foundUser.fullName ||
-                s.createdBy === foundUser.username
+            const userSheets = allSheets.filter(
+                (s) =>
+                    s.supervisorName === foundUser.fullName ||
+                    s.loadingSvName === foundUser.fullName ||
+                    s.createdBy === foundUser.username
             );
 
             let tT = 0;
             let tA = 0;
-            userSheets.forEach(s => {
+            userSheets.forEach((s) => {
                 tT += s.stagingItems.reduce((acc, i) => acc + (i.ttlCases || 0), 0);
                 tA += (s.loadingItems || []).reduce((acc, i) => acc + (i.total || 0), 0);
                 tA += (s.additionalItems || []).reduce((acc, i) => acc + (i.total || 0), 0);
@@ -321,7 +377,8 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
                 ...foundUser,
                 stats: {
                     totalSheets: userSheets.length,
-                    completedSheets: userSheets.filter(s => s.status === SheetStatus.COMPLETED).length,
+                    completedSheets: userSheets.filter((s) => s.status === SheetStatus.COMPLETED)
+                        .length,
                     totalCases: tA,
                     efficiency: tT > 0 ? (tA / tT) * 100 : 0
                 }
@@ -343,10 +400,14 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
                         </div>
                     </div>
                     <div>
-                        <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-none">Management Hub</h2>
+                        <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
+                            Management Hub
+                        </h2>
                         <div className="flex items-center gap-2 mt-2">
                             <span className="flex h-2 w-2 rounded-full bg-emerald-500" />
-                            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-[0.3em]">Live Operational Stream</p>
+                            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-[0.3em]">
+                                Live Operational Stream
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -355,7 +416,10 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
                     {/* Deep Dive Search */}
                     <div className="relative flex-1 min-w-[300px] xl:max-w-md group">
                         <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                            <Search size={16} className="text-indigo-400 group-focus-within:text-indigo-600 transition-colors" />
+                            <Search
+                                size={16}
+                                className="text-indigo-400 group-focus-within:text-indigo-600 transition-colors"
+                            />
                         </div>
                         <Input
                             value={searchId}
@@ -379,10 +443,10 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
                                     key={r}
                                     onClick={() => setTimeRange(r)}
                                     className={cn(
-                                        "px-3 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all",
+                                        'px-3 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all',
                                         timeRange === r
-                                            ? "bg-white dark:bg-slate-700 text-indigo-600 shadow-xl shadow-indigo-500/10 scale-105"
-                                            : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                                            ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-xl shadow-indigo-500/10 scale-105'
+                                            : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
                                     )}
                                 >
                                     {r}
@@ -404,33 +468,57 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
             {/* KPI GRID - GLASS BLUR CARDS */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {kpis.map((kpi, idx) => (
-                    <Card key={idx} className={cn(
-                        "relative border-none shadow-xl shadow-slate-200/40 dark:shadow-none dark:border rounded-2xl overflow-hidden group hover:-translate-y-1 transition-all duration-300",
-                        kpi.glow
-                    )}>
+                    <Card
+                        key={idx}
+                        className={cn(
+                            'relative border-none shadow-xl shadow-slate-200/40 dark:shadow-none dark:border rounded-2xl overflow-hidden group hover:-translate-y-1 transition-all duration-300',
+                            kpi.glow
+                        )}
+                    >
                         <CardContent className="p-5 relative z-10">
                             <div className="flex justify-between items-start mb-4">
-                                <div className={cn("p-2.5 rounded-xl transition-all duration-500 group-hover:rotate-[15deg] shadow-sm", kpi.bg, kpi.color)}>
+                                <div
+                                    className={cn(
+                                        'p-2.5 rounded-xl transition-all duration-500 group-hover:rotate-[15deg] shadow-sm',
+                                        kpi.bg,
+                                        kpi.color
+                                    )}
+                                >
                                     <kpi.icon size={20} />
                                 </div>
                                 <div className="flex gap-2">
-                                    <div className={cn(
-                                        "px-2.5 py-1 rounded-full flex items-center gap-1 text-[9px] font-black tracking-widest",
-                                        kpi.isUp ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
-                                    )}>
-                                        {kpi.isUp ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                                    <div
+                                        className={cn(
+                                            'px-2.5 py-1 rounded-full flex items-center gap-1 text-[9px] font-black tracking-widest',
+                                            kpi.isUp
+                                                ? 'bg-emerald-50 text-emerald-600'
+                                                : 'bg-rose-50 text-rose-600'
+                                        )}
+                                    >
+                                        {kpi.isUp ? (
+                                            <TrendingUp size={12} />
+                                        ) : (
+                                            <TrendingDown size={12} />
+                                        )}
                                         {kpi.trend}
                                     </div>
                                     <div className="group/info relative">
-                                        <Info size={16} className="text-slate-300 hover:text-indigo-400 cursor-help transition-colors" />
+                                        <Info
+                                            size={16}
+                                            className="text-slate-300 hover:text-indigo-400 cursor-help transition-colors"
+                                        />
                                         <div className="absolute right-0 top-full mt-2 w-48 p-3 bg-slate-800 text-white text-[10px] rounded-xl opacity-0 invisible group-hover/info:opacity-100 group-hover/info:visible transition-all z-50 pointer-events-none shadow-xl font-medium">
                                             {kpi.description}
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter mb-1">{kpi.value}</h3>
-                            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-[0.2em]">{kpi.label}</p>
+                            <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter mb-1">
+                                {kpi.value}
+                            </h3>
+                            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-[0.2em]">
+                                {kpi.label}
+                            </p>
                         </CardContent>
                     </Card>
                 ))}
@@ -447,13 +535,19 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
                                 <Activity className="text-indigo-600" size={20} />
                                 Operational Pulse
                                 <div className="group/info relative ml-2 inline-block">
-                                    <Info size={14} className="text-slate-300 hover:text-indigo-400 cursor-help transition-colors" />
+                                    <Info
+                                        size={14}
+                                        className="text-slate-300 hover:text-indigo-400 cursor-help transition-colors"
+                                    />
                                     <div className="absolute left-0 top-full mt-2 w-64 p-3 bg-slate-800 text-white text-[10px] rounded-xl opacity-0 invisible group-hover/info:opacity-100 group-hover/info:visible transition-all z-50 pointer-events-none shadow-xl font-medium">
-                                        Shows historical efficiency trends vs production volume to identify bottlenecks.
+                                        Shows historical efficiency trends vs production volume to
+                                        identify bottlenecks.
                                     </div>
                                 </div>
                             </CardTitle>
-                            <CardDescription className="text-xs font-bold mt-1">Historical efficiency over time</CardDescription>
+                            <CardDescription className="text-xs font-bold mt-1">
+                                Historical efficiency over time
+                            </CardDescription>
                         </div>
                     </CardHeader>
                     <CardContent className="p-4 h-[250px]">
@@ -465,7 +559,11 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
                                         <stop offset="95%" stopColor="#4f46e5" stopOpacity={0} />
                                     </linearGradient>
                                 </defs>
-                                <CartesianGrid strokeDasharray="10 10" vertical={false} stroke="#f8fafc" />
+                                <CartesianGrid
+                                    strokeDasharray="10 10"
+                                    vertical={false}
+                                    stroke="#f8fafc"
+                                />
                                 <XAxis
                                     dataKey="date"
                                     axisLine={false}
@@ -512,25 +610,45 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
                         <div className="flex items-center justify-between">
                             <Hexagon className="text-indigo-400 mb-2" size={24} />
                             <div className="group/info relative">
-                                <Info size={14} className="text-indigo-400 hover:text-white cursor-help transition-colors" />
+                                <Info
+                                    size={14}
+                                    className="text-indigo-400 hover:text-white cursor-help transition-colors"
+                                />
                                 <div className="absolute right-0 top-full mt-2 w-48 p-3 bg-black/80 text-white text-[10px] rounded-xl opacity-0 invisible group-hover/info:opacity-100 group-hover/info:visible transition-all z-50 pointer-events-none shadow-xl font-medium backdrop-blur-md">
-                                    Visualizes supervisor performance across 5 key standardized metrics (Accuracy, Speed, etc).
+                                    Visualizes supervisor performance across 5 key standardized
+                                    metrics (Accuracy, Speed, etc).
                                 </div>
                             </div>
                         </div>
                         <CardTitle className="text-lg font-black">Quality Radar</CardTitle>
-                        <CardDescription className="text-indigo-300 font-bold text-xs opacity-70">Standardized Metrics</CardDescription>
+                        <CardDescription className="text-indigo-300 font-bold text-xs opacity-70">
+                            Standardized Metrics
+                        </CardDescription>
                     </CardHeader>
 
                     <CardContent className="h-[220px] relative z-10 flex items-center justify-center -mt-4">
                         <ResponsiveContainer width="100%" height="100%">
-                            <RadarChart cx="50%" cy="50%" outerRadius="70%" data={supervisorQuality}>
+                            <RadarChart
+                                cx="50%"
+                                cy="50%"
+                                outerRadius="70%"
+                                data={supervisorQuality}
+                            >
                                 <PolarGrid stroke="rgba(255,255,255,0.1)" />
                                 <PolarAngleAxis
                                     dataKey="subject"
-                                    tick={{ fill: 'rgba(255,255,255,0.6)', fontSize: 9, fontWeight: 700 }}
+                                    tick={{
+                                        fill: 'rgba(255,255,255,0.6)',
+                                        fontSize: 9,
+                                        fontWeight: 700
+                                    }}
                                 />
-                                <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                                <PolarRadiusAxis
+                                    angle={30}
+                                    domain={[0, 100]}
+                                    tick={false}
+                                    axisLine={false}
+                                />
                                 <Radar
                                     name="Standard"
                                     dataKey="A"
@@ -544,9 +662,12 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
 
                     <CardContent className="relative z-10 px-6 pb-6">
                         <div className="p-4 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md">
-                            <h4 className="text-[9px] font-black uppercase tracking-[0.2em] mb-2">Live Insights</h4>
+                            <h4 className="text-[9px] font-black uppercase tracking-[0.2em] mb-2">
+                                Live Insights
+                            </h4>
                             <p className="text-[10px] text-indigo-100 leading-relaxed font-bold">
-                                Current fleet documentation compliance is at <span className="text-emerald-400">88%</span>.
+                                Current fleet documentation compliance is at{' '}
+                                <span className="text-emerald-400">88%</span>.
                             </p>
                         </div>
                     </CardContent>
@@ -557,10 +678,19 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
             {/* DEEP DIVE MODAL / OVERLAY */}
             {(selectedSheet || selectedUser) && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-300">
-                    <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-2xl" onClick={() => { setSelectedSheet(null); setSelectedUser(null); }} />
+                    <div
+                        className="absolute inset-0 bg-slate-950/80 backdrop-blur-2xl"
+                        onClick={() => {
+                            setSelectedSheet(null);
+                            setSelectedUser(null);
+                        }}
+                    />
                     <Card className="relative w-full max-w-4xl h-full max-h-[85vh] rounded-[2rem] border-none shadow-2xl shadow-indigo-500/20 overflow-hidden flex flex-col bg-white dark:bg-slate-900">
                         <button
-                            onClick={() => { setSelectedSheet(null); setSelectedUser(null); }}
+                            onClick={() => {
+                                setSelectedSheet(null);
+                                setSelectedUser(null);
+                            }}
                             className="absolute top-4 right-4 w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-rose-500 transition-colors z-20"
                         >
                             <X size={20} />
@@ -576,18 +706,30 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
                                             </div>
                                             <div>
                                                 <div className="flex items-center gap-2 mb-1">
-                                                    <span className="px-2 py-0.5 bg-indigo-100 text-indigo-600 rounded-md text-[9px] font-black tracking-widest uppercase">Analytical Portal</span>
-                                                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-600 rounded-md text-[9px] font-black tracking-widest uppercase">Verified</span>
+                                                    <span className="px-2 py-0.5 bg-indigo-100 text-indigo-600 rounded-md text-[9px] font-black tracking-widest uppercase">
+                                                        Analytical Portal
+                                                    </span>
+                                                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-600 rounded-md text-[9px] font-black tracking-widest uppercase">
+                                                        Verified
+                                                    </span>
                                                 </div>
-                                                <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">Sheet {selectedSheet.id}</h2>
+                                                <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">
+                                                    Sheet {selectedSheet.id}
+                                                </h2>
                                             </div>
                                         </div>
                                         <div className="flex gap-4">
                                             <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
                                                 <Calendar className="text-indigo-500" size={20} />
                                                 <div>
-                                                    <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest">Captured Date</p>
-                                                    <p className="text-sm font-black">{new Date(selectedSheet.date).toLocaleDateString()}</p>
+                                                    <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest">
+                                                        Captured Date
+                                                    </p>
+                                                    <p className="text-sm font-black">
+                                                        {new Date(
+                                                            selectedSheet.date
+                                                        ).toLocaleDateString()}
+                                                    </p>
                                                 </div>
                                             </div>
                                         </div>
@@ -596,16 +738,46 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
                                     {/* 3-COLUMN METRICS GRID */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                         {[
-                                            { label: 'Efficiency', val: '94.2%', icon: Zap, col: 'indigo' },
-                                            { label: 'Time to Load', val: '42 Min', icon: Clock3, col: 'amber' },
-                                            { label: 'Damage Rate', val: '0.0%', icon: AlertCircle, col: 'emerald' },
-                                            { label: 'Total Volume', val: '1,450', icon: Layers, col: 'blue' }
+                                            {
+                                                label: 'Efficiency',
+                                                val: '94.2%',
+                                                icon: Zap,
+                                                col: 'indigo'
+                                            },
+                                            {
+                                                label: 'Time to Load',
+                                                val: '42 Min',
+                                                icon: Clock3,
+                                                col: 'amber'
+                                            },
+                                            {
+                                                label: 'Damage Rate',
+                                                val: '0.0%',
+                                                icon: AlertCircle,
+                                                col: 'emerald'
+                                            },
+                                            {
+                                                label: 'Total Volume',
+                                                val: '1,450',
+                                                icon: Layers,
+                                                col: 'blue'
+                                            }
                                         ].map((m, i) => (
-                                            <div key={i} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
-                                                <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center mb-3 bg-white shadow-sm", `text-${m.col}-500`)}>
+                                            <div
+                                                key={i}
+                                                className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700"
+                                            >
+                                                <div
+                                                    className={cn(
+                                                        'w-10 h-10 rounded-xl flex items-center justify-center mb-3 bg-white shadow-sm',
+                                                        `text-${m.col}-500`
+                                                    )}
+                                                >
                                                     <m.icon size={18} />
                                                 </div>
-                                                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">{m.label}</p>
+                                                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">
+                                                    {m.label}
+                                                </p>
                                                 <p className="text-xl font-black">{m.val}</p>
                                             </div>
                                         ))}
@@ -615,20 +787,43 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
                                         {/* SKU Analysis Chart */}
                                         <div className="lg:col-span-2 p-6 rounded-3xl bg-white dark:bg-slate-800 shadow-xl border border-slate-50 dark:border-slate-700">
                                             <div className="flex items-center justify-between mb-6">
-                                                <h4 className="text-sm font-black">SKU Fulfillment Performance</h4>
+                                                <h4 className="text-sm font-black">
+                                                    SKU Fulfillment Performance
+                                                </h4>
                                                 <BarChart3 className="text-slate-300" size={16} />
                                             </div>
                                             <div className="h-[180px]">
                                                 <ResponsiveContainer width="100%" height="100%">
-                                                    <BarChart data={selectedSheet.stagingItems.slice(0, 6)}>
+                                                    <BarChart
+                                                        data={selectedSheet.stagingItems.slice(
+                                                            0,
+                                                            6
+                                                        )}
+                                                    >
                                                         <XAxis dataKey="skuName" hide />
                                                         <YAxis hide />
                                                         <Tooltip
                                                             cursor={{ fill: 'rgba(0,0,0,0.02)' }}
-                                                            contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 40px rgba(0,0,0,0.1)', fontSize: '11px' }}
+                                                            contentStyle={{
+                                                                borderRadius: '16px',
+                                                                border: 'none',
+                                                                boxShadow:
+                                                                    '0 20px 40px rgba(0,0,0,0.1)',
+                                                                fontSize: '11px'
+                                                            }}
                                                         />
-                                                        <Bar dataKey="ttlCases" fill="#4f46e5" radius={[6, 6, 0, 0]} barSize={32} />
-                                                        <Bar dataKey="loose" fill="#e2e8f0" radius={[6, 6, 0, 0]} barSize={32} />
+                                                        <Bar
+                                                            dataKey="ttlCases"
+                                                            fill="#4f46e5"
+                                                            radius={[6, 6, 0, 0]}
+                                                            barSize={32}
+                                                        />
+                                                        <Bar
+                                                            dataKey="loose"
+                                                            fill="#e2e8f0"
+                                                            radius={[6, 6, 0, 0]}
+                                                            barSize={32}
+                                                        />
                                                     </BarChart>
                                                 </ResponsiveContainer>
                                             </div>
@@ -638,22 +833,56 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
                                         <div className="space-y-4">
                                             <div className="p-6 rounded-3xl bg-indigo-900 text-white relative overflow-hidden">
                                                 <div className="relative z-10">
-                                                    <h4 className="text-sm font-black mb-4">Workflow Pulse</h4>
+                                                    <h4 className="text-sm font-black mb-4">
+                                                        Workflow Pulse
+                                                    </h4>
                                                     <div className="space-y-6">
                                                         {[
-                                                            { label: 'Staging Started', time: '08:00 AM', completed: true },
-                                                            { label: 'Verification Done', time: '08:45 AM', completed: true },
-                                                            { label: 'Loading Commenced', time: '09:00 AM', completed: true },
-                                                            { label: 'Quality Sign-off', time: '09:42 AM', completed: true }
+                                                            {
+                                                                label: 'Staging Started',
+                                                                time: '08:00 AM',
+                                                                completed: true
+                                                            },
+                                                            {
+                                                                label: 'Verification Done',
+                                                                time: '08:45 AM',
+                                                                completed: true
+                                                            },
+                                                            {
+                                                                label: 'Loading Commenced',
+                                                                time: '09:00 AM',
+                                                                completed: true
+                                                            },
+                                                            {
+                                                                label: 'Quality Sign-off',
+                                                                time: '09:42 AM',
+                                                                completed: true
+                                                            }
                                                         ].map((step, i) => (
-                                                            <div key={i} className="flex gap-3 relative">
-                                                                {i < 3 && <div className="absolute left-[11px] top-6 bottom-[-20px] w-0.5 bg-indigo-500/30" />}
-                                                                <div className={cn("w-5 h-5 rounded-full flex items-center justify-center shrink-0 z-10", step.completed ? "bg-emerald-400 text-indigo-900" : "bg-indigo-700 text-indigo-400")}>
+                                                            <div
+                                                                key={i}
+                                                                className="flex gap-3 relative"
+                                                            >
+                                                                {i < 3 && (
+                                                                    <div className="absolute left-[11px] top-6 bottom-[-20px] w-0.5 bg-indigo-500/30" />
+                                                                )}
+                                                                <div
+                                                                    className={cn(
+                                                                        'w-5 h-5 rounded-full flex items-center justify-center shrink-0 z-10',
+                                                                        step.completed
+                                                                            ? 'bg-emerald-400 text-indigo-900'
+                                                                            : 'bg-indigo-700 text-indigo-400'
+                                                                    )}
+                                                                >
                                                                     <CheckCircle2 size={12} />
                                                                 </div>
                                                                 <div>
-                                                                    <p className="text-xs font-black text-white leading-none">{step.label}</p>
-                                                                    <p className="text-[9px] text-indigo-300 font-bold mt-0.5 tracking-widest">{step.time}</p>
+                                                                    <p className="text-xs font-black text-white leading-none">
+                                                                        {step.label}
+                                                                    </p>
+                                                                    <p className="text-[9px] text-indigo-300 font-bold mt-0.5 tracking-widest">
+                                                                        {step.time}
+                                                                    </p>
                                                                 </div>
                                                             </div>
                                                         ))}
@@ -675,38 +904,79 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
                                             </div>
                                         </div>
                                         <div>
-                                            <span className="text-[9px] font-black uppercase tracking-[0.4em] text-indigo-600 mb-1 block">Performance Portfolio</span>
-                                            <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">{selectedUser.fullName}</h2>
+                                            <span className="text-[9px] font-black uppercase tracking-[0.4em] text-indigo-600 mb-1 block">
+                                                Performance Portfolio
+                                            </span>
+                                            <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">
+                                                {selectedUser.fullName}
+                                            </h2>
                                             <div className="flex items-center gap-3 mt-2">
-                                                <span className="px-3 py-1 bg-slate-100 rounded-full text-[9px] font-black uppercase tracking-widest text-slate-500">{selectedUser.role}</span>
-                                                <span className="px-3 py-1 bg-slate-100 rounded-full text-[9px] font-black uppercase tracking-widest text-slate-500">EMP: {selectedUser.empCode}</span>
+                                                <span className="px-3 py-1 bg-slate-100 rounded-full text-[9px] font-black uppercase tracking-widest text-slate-500">
+                                                    {selectedUser.role}
+                                                </span>
+                                                <span className="px-3 py-1 bg-slate-100 rounded-full text-[9px] font-black uppercase tracking-widest text-slate-500">
+                                                    EMP: {selectedUser.empCode}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                                         <div className="p-6 rounded-[2.5rem] bg-indigo-50 border border-indigo-100">
-                                            <h4 className="text-[9px] font-black uppercase tracking-widest text-indigo-400 mb-4">Aggregate Efficiency</h4>
-                                            <div className="text-4xl font-black text-indigo-600 tracking-tighter mb-3">{selectedUser.stats.efficiency.toFixed(1)}%</div>
+                                            <h4 className="text-[9px] font-black uppercase tracking-widest text-indigo-400 mb-4">
+                                                Aggregate Efficiency
+                                            </h4>
+                                            <div className="text-4xl font-black text-indigo-600 tracking-tighter mb-3">
+                                                {selectedUser.stats.efficiency.toFixed(1)}%
+                                            </div>
                                             <div className="flex items-center gap-2 text-emerald-600">
                                                 <TrendingUp size={16} />
-                                                <span className="text-xs font-black">+3.2% vs Mean</span>
+                                                <span className="text-xs font-black">
+                                                    +3.2% vs Mean
+                                                </span>
                                             </div>
                                         </div>
 
                                         <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4">
                                             {[
-                                                { label: 'Operations Handled', val: selectedUser.stats.totalSheets, icon: Layers, det: 'Active Sheets' },
-                                                { label: 'Completed Flows', val: selectedUser.stats.completedSheets, icon: CheckCircle2, det: 'Full Success' },
-                                                { label: 'Production Volume', val: (selectedUser.stats.totalCases / 1000).toFixed(1) + 'K', icon: Zap, det: 'Units Moved' }
+                                                {
+                                                    label: 'Operations Handled',
+                                                    val: selectedUser.stats.totalSheets,
+                                                    icon: Layers,
+                                                    det: 'Active Sheets'
+                                                },
+                                                {
+                                                    label: 'Completed Flows',
+                                                    val: selectedUser.stats.completedSheets,
+                                                    icon: CheckCircle2,
+                                                    det: 'Full Success'
+                                                },
+                                                {
+                                                    label: 'Production Volume',
+                                                    val:
+                                                        (
+                                                            selectedUser.stats.totalCases / 1000
+                                                        ).toFixed(1) + 'K',
+                                                    icon: Zap,
+                                                    det: 'Units Moved'
+                                                }
                                             ].map((s, i) => (
-                                                <div key={i} className="p-5 rounded-[2rem] bg-white border border-slate-100 shadow-sm">
+                                                <div
+                                                    key={i}
+                                                    className="p-5 rounded-[2rem] bg-white border border-slate-100 shadow-sm"
+                                                >
                                                     <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center mb-4 text-indigo-500">
                                                         <s.icon size={20} />
                                                     </div>
-                                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">{s.label}</p>
-                                                    <p className="text-xl font-black mb-1">{s.val}</p>
-                                                    <p className="text-[9px] font-bold text-slate-300">{s.det}</p>
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">
+                                                        {s.label}
+                                                    </p>
+                                                    <p className="text-xl font-black mb-1">
+                                                        {s.val}
+                                                    </p>
+                                                    <p className="text-[9px] font-bold text-slate-300">
+                                                        {s.det}
+                                                    </p>
                                                 </div>
                                             ))}
                                         </div>
@@ -719,24 +989,50 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
                                             Recent Operational Activity
                                         </h4>
                                         <div className="space-y-3">
-                                            {allSheets.filter(s => s.supervisorName === selectedUser.fullName).slice(0, 5).map((s, i) => (
-                                                <div key={i} className="group flex items-center justify-between p-4 rounded-3xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all cursor-pointer" onClick={() => { setSelectedSheet(s); setSelectedUser(null); }}>
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400">
-                                                            {s.id.substring(0, 2)}
+                                            {allSheets
+                                                .filter(
+                                                    (s) =>
+                                                        s.supervisorName === selectedUser.fullName
+                                                )
+                                                .slice(0, 5)
+                                                .map((s, i) => (
+                                                    <div
+                                                        key={i}
+                                                        className="group flex items-center justify-between p-4 rounded-3xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all cursor-pointer"
+                                                        onClick={() => {
+                                                            setSelectedSheet(s);
+                                                            setSelectedUser(null);
+                                                        }}
+                                                    >
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400">
+                                                                {s.id.substring(0, 2)}
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-xs font-black">
+                                                                    Sheet {s.id}
+                                                                </p>
+                                                                <p className="text-[9px] text-slate-500 font-bold mt-0.5 uppercase tracking-widest">
+                                                                    {s.destination}
+                                                                </p>
+                                                            </div>
                                                         </div>
-                                                        <div>
-                                                            <p className="text-xs font-black">Sheet {s.id}</p>
-                                                            <p className="text-[9px] text-slate-500 font-bold mt-0.5 uppercase tracking-widest">{s.destination}</p>
+                                                        <div className="text-right">
+                                                            <p className="text-xs font-black text-indigo-400">
+                                                                {s.status}
+                                                            </p>
+                                                            <p className="text-[9px] text-slate-500 font-bold mt-0.5 uppercase tracking-widest">
+                                                                {new Date(
+                                                                    s.date
+                                                                ).toLocaleDateString()}
+                                                            </p>
                                                         </div>
+                                                        <ArrowRight
+                                                            size={16}
+                                                            className="text-slate-700 group-hover:text-white transition-colors"
+                                                        />
                                                     </div>
-                                                    <div className="text-right">
-                                                        <p className="text-xs font-black text-indigo-400">{s.status}</p>
-                                                        <p className="text-[9px] text-slate-500 font-bold mt-0.5 uppercase tracking-widest">{new Date(s.date).toLocaleDateString()}</p>
-                                                    </div>
-                                                    <ArrowRight size={16} className="text-slate-700 group-hover:text-white transition-colors" />
-                                                </div>
-                                            ))}
+                                                ))}
                                         </div>
                                     </div>
                                 </div>
@@ -757,16 +1053,23 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
                         </div>
                         <div>
                             <div className="flex items-center gap-2">
-                                <h4 className="text-lg font-black tracking-tight">System Velocity Optimize</h4>
+                                <h4 className="text-lg font-black tracking-tight">
+                                    System Velocity Optimize
+                                </h4>
                                 <div className="group/info relative">
-                                    <Info size={14} className="text-slate-400 hover:text-white cursor-help transition-colors" />
+                                    <Info
+                                        size={14}
+                                        className="text-slate-400 hover:text-white cursor-help transition-colors"
+                                    />
                                     <div className="absolute bottom-full left-0 mb-2 w-64 p-3 bg-black/80 text-white text-[10px] rounded-xl opacity-0 invisible group-hover/info:opacity-100 group-hover/info:visible transition-all z-50 pointer-events-none shadow-xl font-medium backdrop-blur-md">
-                                        Predictive AI analysis suggesting resource allocation based on incoming load.
+                                        Predictive AI analysis suggesting resource allocation based
+                                        on incoming load.
                                     </div>
                                 </div>
                             </div>
                             <p className="text-indigo-300 font-bold max-w-sm mt-1 text-xs">
-                                Predictive loading suggests Shift C will handle a peak of **{(velocityMetrics.peakLoad / 1000).toFixed(1)}K cases**.
+                                Predictive loading suggests Shift C will handle a peak of **
+                                {(velocityMetrics.peakLoad / 1000).toFixed(1)}K cases**.
                             </p>
                         </div>
                     </div>
@@ -782,7 +1085,10 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
             {/* PROJECTION MODAL */}
             {showProjection && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 sm:p-12 animate-in fade-in duration-300">
-                    <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-2xl" onClick={() => setShowProjection(false)} />
+                    <div
+                        className="absolute inset-0 bg-slate-950/80 backdrop-blur-2xl"
+                        onClick={() => setShowProjection(false)}
+                    />
                     <Card className="relative w-full max-w-4xl h-auto max-h-[90vh] rounded-[2.5rem] border-none shadow-2xl shadow-indigo-500/20 overflow-hidden flex flex-col bg-white dark:bg-slate-900">
                         <button
                             onClick={() => setShowProjection(false)}
@@ -797,23 +1103,49 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
                                     <Zap size={32} />
                                 </div>
                                 <div>
-                                    <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">Velocity Forecast</h2>
-                                    <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">AI-Driven Resource Optimization</p>
+                                    <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">
+                                        Velocity Forecast
+                                    </h2>
+                                    <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">
+                                        AI-Driven Resource Optimization
+                                    </p>
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="p-6 rounded-3xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
-                                    <h4 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-4">Predicted Hourly Load (Avg)</h4>
+                                    <h4 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-4">
+                                        Predicted Hourly Load (Avg)
+                                    </h4>
                                     <div className="h-[200px]">
                                         <ResponsiveContainer width="100%" height="100%">
                                             <BarChart data={velocityMetrics.chartData}>
-                                                <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#64748b' }} />
+                                                <XAxis
+                                                    dataKey="time"
+                                                    axisLine={false}
+                                                    tickLine={false}
+                                                    tick={{
+                                                        fontSize: 10,
+                                                        fontWeight: 700,
+                                                        fill: '#64748b'
+                                                    }}
+                                                />
                                                 <Tooltip
                                                     cursor={{ fill: 'rgba(245, 158, 11, 0.1)' }}
-                                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 20px rgba(0,0,0,0.1)', fontSize: '12px', fontWeight: 'bold' }}
+                                                    contentStyle={{
+                                                        borderRadius: '12px',
+                                                        border: 'none',
+                                                        boxShadow: '0 10px 20px rgba(0,0,0,0.1)',
+                                                        fontSize: '12px',
+                                                        fontWeight: 'bold'
+                                                    }}
                                                 />
-                                                <Bar dataKey="load" fill="#f59e0b" radius={[6, 6, 0, 0]} barSize={32} />
+                                                <Bar
+                                                    dataKey="load"
+                                                    fill="#f59e0b"
+                                                    radius={[6, 6, 0, 0]}
+                                                    barSize={32}
+                                                />
                                             </BarChart>
                                         </ResponsiveContainer>
                                     </div>
@@ -821,15 +1153,23 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
 
                                 <div className="space-y-4">
                                     <div className="p-6 rounded-3xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800">
-                                        <h4 className="text-xs font-black uppercase tracking-widest text-indigo-400 mb-2">Recommendation</h4>
+                                        <h4 className="text-xs font-black uppercase tracking-widest text-indigo-400 mb-2">
+                                            Recommendation
+                                        </h4>
                                         <p className="text-lg font-black text-slate-900 dark:text-white leading-tight">
                                             {velocityMetrics.rec}
                                         </p>
                                     </div>
                                     <div className="p-6 rounded-3xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800">
-                                        <h4 className="text-xs font-black uppercase tracking-widest text-emerald-500 mb-2">Efficiency Gain</h4>
+                                        <h4 className="text-xs font-black uppercase tracking-widest text-emerald-500 mb-2">
+                                            Efficiency Gain
+                                        </h4>
                                         <p className="text-lg font-black text-slate-900 dark:text-white leading-tight">
-                                            Projected <span className="text-emerald-600 dark:text-emerald-400">{velocityMetrics.efficiencyGain}</span> with optimized allocation.
+                                            Projected{' '}
+                                            <span className="text-emerald-600 dark:text-emerald-400">
+                                                {velocityMetrics.efficiencyGain}
+                                            </span>{' '}
+                                            with optimized allocation.
                                         </p>
                                     </div>
                                 </div>

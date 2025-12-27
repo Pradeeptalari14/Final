@@ -3,7 +3,11 @@ import { useApp } from '../../AppContext';
 import { Role, SheetStatus } from '../../types';
 import { Clock, AlertTriangle, Calendar, Activity } from 'lucide-react';
 
-export const StaffPerformanceWidget = ({ onNavigate }: { onNavigate?: (page: string, filter?: string) => void }) => {
+export const StaffPerformanceWidget = ({
+    onNavigate
+}: {
+    onNavigate?: (page: string, filter?: string) => void;
+}) => {
     const { users, sheets, currentUser } = useApp();
 
     // Helper for robust date checking
@@ -41,7 +45,7 @@ export const StaffPerformanceWidget = ({ onNavigate }: { onNavigate?: (page: str
 
     const staffStats = useMemo(() => {
         return users
-            .filter(u => {
+            .filter((u) => {
                 if (!u.isApproved) return false;
 
                 // Role-based visibility
@@ -54,19 +58,28 @@ export const StaffPerformanceWidget = ({ onNavigate }: { onNavigate?: (page: str
                 // Admin sees both
                 return u.role === Role.STAGING_SUPERVISOR || u.role === Role.LOADING_SUPERVISOR;
             })
-            .map(u => {
-                const userSheets = sheets.filter(s =>
-                    s.supervisorName === u.username || s.loadingSvName === u.username ||
-                    s.createdBy === u.username || s.completedBy === u.username
+            .map((u) => {
+                const userSheets = sheets.filter(
+                    (s) =>
+                        s.supervisorName === u.username ||
+                        s.loadingSvName === u.username ||
+                        s.createdBy === u.username ||
+                        s.completedBy === u.username
                 );
 
                 // Metrics
-                const completedToday = userSheets.filter(s => s.status === SheetStatus.COMPLETED && isToday(s.date)).length;
-                const completedYesterday = userSheets.filter(s => s.status === SheetStatus.COMPLETED && isYesterday(s.date)).length;
-                const totalCompleted = userSheets.filter(s => s.status === SheetStatus.COMPLETED).length;
+                const completedToday = userSheets.filter(
+                    (s) => s.status === SheetStatus.COMPLETED && isToday(s.date)
+                ).length;
+                const completedYesterday = userSheets.filter(
+                    (s) => s.status === SheetStatus.COMPLETED && isYesterday(s.date)
+                ).length;
+                const totalCompleted = userSheets.filter(
+                    (s) => s.status === SheetStatus.COMPLETED
+                ).length;
 
                 // Active (Locked/Draft owned by user)
-                const active = userSheets.filter(s => s.status !== SheetStatus.COMPLETED).length;
+                const active = userSheets.filter((s) => s.status !== SheetStatus.COMPLETED).length;
 
                 // Last Active Timestamp
                 // Find the most recent sheet interaction
@@ -75,11 +88,12 @@ export const StaffPerformanceWidget = ({ onNavigate }: { onNavigate?: (page: str
                     const timeB = new Date(b.updatedAt || b.createdAt).getTime();
                     return timeB - timeA;
                 })[0];
-                const lastActiveTime = lastSheet ? (lastSheet.updatedAt || lastSheet.createdAt) : undefined;
-
+                const lastActiveTime = lastSheet
+                    ? lastSheet.updatedAt || lastSheet.createdAt
+                    : undefined;
 
                 // SLA Breaches (Last 24h)
-                const breaches = userSheets.filter(s => {
+                const breaches = userSheets.filter((s) => {
                     if (!s.loadingStartTime || !s.loadingEndTime) return false;
 
                     // Simple HH:mm diff
@@ -118,7 +132,7 @@ export const StaffPerformanceWidget = ({ onNavigate }: { onNavigate?: (page: str
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                    {staffStats.map(staff => (
+                    {staffStats.map((staff) => (
                         <tr
                             key={staff.id}
                             className="hover:bg-blue-50 cursor-pointer transition-colors group"
@@ -127,30 +141,48 @@ export const StaffPerformanceWidget = ({ onNavigate }: { onNavigate?: (page: str
                         >
                             <td className="p-3 font-medium text-slate-700">
                                 <div className="flex items-center gap-2">
-                                    <div className={`w-2 h-2 rounded-full ${staff.role === Role.STAGING_SUPERVISOR ? 'bg-blue-500' : 'bg-orange-500'}`}></div>
+                                    <div
+                                        className={`w-2 h-2 rounded-full ${staff.role === Role.STAGING_SUPERVISOR ? 'bg-blue-500' : 'bg-orange-500'}`}
+                                    ></div>
                                     <div className="flex flex-col">
                                         <span>{staff.fullName || staff.username}</span>
-                                        <span className="text-[10px] text-slate-400 uppercase">{staff.role.replace('_SUPERVISOR', '')}</span>
+                                        <span className="text-[10px] text-slate-400 uppercase">
+                                            {staff.role.replace('_SUPERVISOR', '')}
+                                        </span>
                                     </div>
                                 </div>
                             </td>
                             <td className="p-3 text-center text-xs text-slate-500">
                                 {formatTimeAgo(staff.lastActiveTime)}
                             </td>
-                            <td className="p-3 text-center font-bold text-emerald-600 bg-emerald-50/50 rounded-lg">{staff.completedToday}</td>
-                            <td className="p-3 text-center font-medium text-slate-600">{staff.completedYesterday}</td>
-                            <td className="p-3 text-center font-bold text-slate-800">{staff.totalCompleted}</td>
+                            <td className="p-3 text-center font-bold text-emerald-600 bg-emerald-50/50 rounded-lg">
+                                {staff.completedToday}
+                            </td>
+                            <td className="p-3 text-center font-medium text-slate-600">
+                                {staff.completedYesterday}
+                            </td>
+                            <td className="p-3 text-center font-bold text-slate-800">
+                                {staff.totalCompleted}
+                            </td>
                             <td className="p-3 text-center">
                                 {staff.active > 0 ? (
-                                    <span className="text-green-600 text-xs font-bold flex items-center justify-center gap-1"><Activity size={12} /> Working</span>
+                                    <span className="text-green-600 text-xs font-bold flex items-center justify-center gap-1">
+                                        <Activity size={12} /> Working
+                                    </span>
                                 ) : (
-                                    <span className="text-slate-400 text-xs flex items-center justify-center gap-1">Idle</span>
+                                    <span className="text-slate-400 text-xs flex items-center justify-center gap-1">
+                                        Idle
+                                    </span>
                                 )}
                             </td>
                         </tr>
                     ))}
                     {staffStats.length === 0 && (
-                        <tr><td colSpan={6} className="p-4 text-center text-slate-400">No active staff found.</td></tr>
+                        <tr>
+                            <td colSpan={6} className="p-4 text-center text-slate-400">
+                                No active staff found.
+                            </td>
+                        </tr>
                     )}
                 </tbody>
             </table>

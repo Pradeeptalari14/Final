@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useApp } from './AppContext';
 import { Auth } from './components/Auth';
@@ -7,9 +6,15 @@ import { Role, SheetStatus, SheetData } from './types';
 import { PlusCircle, Search, Edit3, Eye, Lock, Printer, Loader2 } from 'lucide-react';
 
 // Lazy Load Pages to prevent ReferenceError / Circular Initializations
-const AdminDashboard = React.lazy(() => import('./components/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
-const StagingSheet = React.lazy(() => import('./components/StagingSheet').then(module => ({ default: module.StagingSheet })));
-const LoadingSheet = React.lazy(() => import('./components/LoadingSheet').then(module => ({ default: module.LoadingSheet })));
+const AdminDashboard = React.lazy(() =>
+    import('./components/AdminDashboard').then((module) => ({ default: module.AdminDashboard }))
+);
+const StagingSheet = React.lazy(() =>
+    import('./components/StagingSheet').then((module) => ({ default: module.StagingSheet }))
+);
+const LoadingSheet = React.lazy(() =>
+    import('./components/LoadingSheet').then((module) => ({ default: module.LoadingSheet }))
+);
 
 interface ErrorBoundaryState {
     hasError: boolean;
@@ -29,7 +34,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, Error
     }
 
     componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-        console.error("Uncaught error:", error, errorInfo);
+        console.error('Uncaught error:', error, errorInfo);
     }
 
     render() {
@@ -87,7 +92,7 @@ const App = () => {
 
     const effectiveUser = currentUser;
 
-    const activeSheet = selectedSheetId ? sheets.find(s => s.id === selectedSheetId) : null;
+    const activeSheet = selectedSheetId ? sheets.find((s) => s.id === selectedSheetId) : null;
 
     // ... handlers ...
     const handleNavigate = (page: string, filter?: string) => {
@@ -161,48 +166,90 @@ const App = () => {
     const renderContent = () => {
         switch (currentPage) {
             case 'dashboard':
-                return <AdminDashboard viewMode="analytics" onViewSheet={(s) => handleViewSheet(s)} onNavigate={handleNavigate} />;
+                return (
+                    <AdminDashboard
+                        viewMode="analytics"
+                        onViewSheet={(s) => handleViewSheet(s)}
+                        onNavigate={handleNavigate}
+                    />
+                );
 
             case 'admin':
-                return <AdminDashboard viewMode="users" onViewSheet={(s) => handleViewSheet(s)} initialSearch={initialSearch} />;
+                return (
+                    <AdminDashboard
+                        viewMode="users"
+                        onViewSheet={(s) => handleViewSheet(s)}
+                        initialSearch={initialSearch}
+                    />
+                );
 
             case 'database':
-                return <AdminDashboard viewMode="database" onViewSheet={(s) => handleViewSheet(s)} onNavigate={handleNavigate} />;
+                return (
+                    <AdminDashboard
+                        viewMode="database"
+                        onViewSheet={(s) => handleViewSheet(s)}
+                        onNavigate={handleNavigate}
+                    />
+                );
 
             case 'staging-db':
-                return <AdminDashboard viewMode="staging-db" onViewSheet={(s) => handleViewSheet(s)} onNavigate={handleNavigate} />;
+                return (
+                    <AdminDashboard
+                        viewMode="staging-db"
+                        onViewSheet={(s) => handleViewSheet(s)}
+                        onNavigate={handleNavigate}
+                    />
+                );
 
             case 'loading-db':
-                return <AdminDashboard viewMode="loading-db" onViewSheet={(s) => handleViewSheet(s)} onNavigate={handleNavigate} />;
-
+                return (
+                    <AdminDashboard
+                        viewMode="loading-db"
+                        onViewSheet={(s) => handleViewSheet(s)}
+                        onNavigate={handleNavigate}
+                    />
+                );
 
             case 'approvals':
-                return <AdminDashboard viewMode="approvals" onViewSheet={(s) => handleViewSheet(s)} onNavigate={handleNavigate} />;
-
+                return (
+                    <AdminDashboard
+                        viewMode="approvals"
+                        onViewSheet={(s) => handleViewSheet(s)}
+                        onNavigate={handleNavigate}
+                    />
+                );
 
             case 'staging-editor':
-                return <StagingSheet
-                    key={isCreatingNew ? 'new' : activeSheet?.id}
-                    existingSheet={isCreatingNew ? undefined : activeSheet || undefined}
-                    onCancel={() => handleNavigate('staging')}
-                    onLock={(updatedSheet) => { handleNavigate('staging'); }}
-                    initialPreview={openInPreviewMode}
-                />;
+                return (
+                    <StagingSheet
+                        key={isCreatingNew ? 'new' : activeSheet?.id}
+                        existingSheet={isCreatingNew ? undefined : activeSheet || undefined}
+                        onCancel={() => handleNavigate('staging')}
+                        onLock={(updatedSheet) => {
+                            handleNavigate('staging');
+                        }}
+                        initialPreview={openInPreviewMode}
+                    />
+                );
 
             case 'loading-editor':
                 if (!activeSheet) return <div>Error loading sheet data. Please try again.</div>;
-                return <LoadingSheet
-                    key={activeSheet.id}
-                    sheet={activeSheet}
-                    onClose={() => handleNavigate('loading')}
-                    initialPreview={openInPreviewMode}
-                />;
+                return (
+                    <LoadingSheet
+                        key={activeSheet.id}
+                        sheet={activeSheet}
+                        onClose={() => handleNavigate('loading')}
+                        initialPreview={openInPreviewMode}
+                    />
+                );
 
             case 'staging':
             case 'loading':
                 const isStagingView = currentPage === 'staging';
-                const filteredSheets = sheets.filter(s => {
-                    const matchesSearch = s.id.includes(searchTerm) || s.supervisorName.toLowerCase().includes(searchTerm.toLowerCase());
+                const filteredSheets = sheets.filter((s) => {
+                    const matchesSearch =
+                        s.id.includes(searchTerm) ||
+                        s.supervisorName.toLowerCase().includes(searchTerm.toLowerCase());
                     if (isStagingView) {
                         const matchesFilter = stagingFilter === 'ALL' || s.status === stagingFilter;
                         return matchesSearch && matchesFilter;
@@ -214,7 +261,10 @@ const App = () => {
                         // Logic Update:
                         let matchesFilter = false;
                         if (loadingFilter === 'ALL') {
-                            matchesFilter = s.status === SheetStatus.LOCKED || s.status === SheetStatus.LOADING_VERIFICATION_PENDING || s.status === SheetStatus.COMPLETED;
+                            matchesFilter =
+                                s.status === SheetStatus.LOCKED ||
+                                s.status === SheetStatus.LOADING_VERIFICATION_PENDING ||
+                                s.status === SheetStatus.COMPLETED;
                         } else {
                             matchesFilter = s.status === loadingFilter;
                         }
@@ -226,41 +276,90 @@ const App = () => {
                     <div className="space-y-6">
                         <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-lg shadow-sm border border-slate-200">
                             <div className="relative w-full md:w-96">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
+                                <Search
+                                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
+                                    size={18}
+                                />
                                 <input
                                     type="text"
                                     placeholder="Search by Sheet ID or Supervisor..."
                                     className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                                     value={searchTerm}
-                                    onChange={e => setSearchTerm(e.target.value)}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
                                 />
                             </div>
 
                             {/* Sidebar Filters */}
                             {isStagingView ? (
                                 <div className="flex bg-slate-100 p-1 rounded-lg overflow-x-auto">
-                                    <button onClick={() => setStagingFilter('ALL')} className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${stagingFilter === 'ALL' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}>All</button>
-                                    <button onClick={() => setStagingFilter('DRAFT')} className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${stagingFilter === 'DRAFT' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}>Drafts</button>
-                                    <button onClick={() => setStagingFilter('STAGING_VERIFICATION_PENDING')} className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${stagingFilter === 'STAGING_VERIFICATION_PENDING' ? 'bg-white shadow-sm text-yellow-600' : 'text-slate-500 hover:text-slate-700'}`}>Pending</button>
-                                    <button onClick={() => setStagingFilter('LOCKED')} className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${stagingFilter === 'LOCKED' ? 'bg-white shadow-sm text-green-600' : 'text-slate-500 hover:text-slate-700'}`}>Locked</button>
+                                    <button
+                                        onClick={() => setStagingFilter('ALL')}
+                                        className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${stagingFilter === 'ALL' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}
+                                    >
+                                        All
+                                    </button>
+                                    <button
+                                        onClick={() => setStagingFilter('DRAFT')}
+                                        className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${stagingFilter === 'DRAFT' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+                                    >
+                                        Drafts
+                                    </button>
+                                    <button
+                                        onClick={() =>
+                                            setStagingFilter('STAGING_VERIFICATION_PENDING')
+                                        }
+                                        className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${stagingFilter === 'STAGING_VERIFICATION_PENDING' ? 'bg-white shadow-sm text-yellow-600' : 'text-slate-500 hover:text-slate-700'}`}
+                                    >
+                                        Pending
+                                    </button>
+                                    <button
+                                        onClick={() => setStagingFilter('LOCKED')}
+                                        className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${stagingFilter === 'LOCKED' ? 'bg-white shadow-sm text-green-600' : 'text-slate-500 hover:text-slate-700'}`}
+                                    >
+                                        Locked
+                                    </button>
                                 </div>
                             ) : (
                                 <div className="flex bg-slate-100 p-1 rounded-lg overflow-x-auto">
-                                    <button onClick={() => setLoadingFilter('ALL')} className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${loadingFilter === 'ALL' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}>All</button>
-                                    <button onClick={() => setLoadingFilter('LOCKED')} className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${loadingFilter === 'LOCKED' ? 'bg-white shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}>Ready</button>
-                                    <button onClick={() => setLoadingFilter('LOADING_VERIFICATION_PENDING')} className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${loadingFilter === 'LOADING_VERIFICATION_PENDING' ? 'bg-white shadow-sm text-yellow-600' : 'text-slate-500 hover:text-slate-700'}`}>Pending</button>
-                                    <button onClick={() => setLoadingFilter('COMPLETED')} className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${loadingFilter === 'COMPLETED' ? 'bg-white shadow-sm text-green-600' : 'text-slate-500 hover:text-slate-700'}`}>Completed</button>
+                                    <button
+                                        onClick={() => setLoadingFilter('ALL')}
+                                        className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${loadingFilter === 'ALL' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}
+                                    >
+                                        All
+                                    </button>
+                                    <button
+                                        onClick={() => setLoadingFilter('LOCKED')}
+                                        className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${loadingFilter === 'LOCKED' ? 'bg-white shadow-sm text-orange-600' : 'text-slate-500 hover:text-slate-700'}`}
+                                    >
+                                        Ready
+                                    </button>
+                                    <button
+                                        onClick={() =>
+                                            setLoadingFilter('LOADING_VERIFICATION_PENDING')
+                                        }
+                                        className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${loadingFilter === 'LOADING_VERIFICATION_PENDING' ? 'bg-white shadow-sm text-yellow-600' : 'text-slate-500 hover:text-slate-700'}`}
+                                    >
+                                        Pending
+                                    </button>
+                                    <button
+                                        onClick={() => setLoadingFilter('COMPLETED')}
+                                        className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${loadingFilter === 'COMPLETED' ? 'bg-white shadow-sm text-green-600' : 'text-slate-500 hover:text-slate-700'}`}
+                                    >
+                                        Completed
+                                    </button>
                                 </div>
                             )}
 
-                            {isStagingView && (effectiveUser.role === Role.ADMIN || effectiveUser.role === Role.STAGING_SUPERVISOR) && (
-                                <button
-                                    onClick={handleCreateSheet}
-                                    className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg flex items-center justify-center gap-2 font-medium shadow-lg shadow-blue-500/30 transition-all"
-                                >
-                                    <PlusCircle size={20} /> New Staging Sheet
-                                </button>
-                            )}
+                            {isStagingView &&
+                                (effectiveUser.role === Role.ADMIN ||
+                                    effectiveUser.role === Role.STAGING_SUPERVISOR) && (
+                                    <button
+                                        onClick={handleCreateSheet}
+                                        className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg flex items-center justify-center gap-2 font-medium shadow-lg shadow-blue-500/30 transition-all"
+                                    >
+                                        <PlusCircle size={20} /> New Staging Sheet
+                                    </button>
+                                )}
                         </div>
 
                         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -276,41 +375,74 @@ const App = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
-                                    {filteredSheets.map(sheet => (
-                                        <tr key={sheet.id} className="hover:bg-slate-50 transition cursor-pointer" onClick={() => handleViewSheet(sheet, currentPage)}>
-                                            <td className="p-4 font-mono font-medium text-blue-600">{sheet.id}</td>
+                                    {filteredSheets.map((sheet) => (
+                                        <tr
+                                            key={sheet.id}
+                                            className="hover:bg-slate-50 transition cursor-pointer"
+                                            onClick={() => handleViewSheet(sheet, currentPage)}
+                                        >
+                                            <td className="p-4 font-mono font-medium text-blue-600">
+                                                {sheet.id}
+                                            </td>
                                             <td className="p-4 text-slate-600">{sheet.date}</td>
                                             <td className="p-4 text-slate-600">{sheet.shift}</td>
                                             <td className="p-4">
-                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold
-                                                ${sheet.status === SheetStatus.DRAFT ? 'bg-slate-100 text-slate-600' :
-                                                        sheet.status === SheetStatus.LOCKED ? 'bg-orange-100 text-orange-600' :
-                                                            'bg-green-100 text-green-600'}`}>
+                                                <span
+                                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold
+                                                ${
+                                                    sheet.status === SheetStatus.DRAFT
+                                                        ? 'bg-slate-100 text-slate-600'
+                                                        : sheet.status === SheetStatus.LOCKED
+                                                          ? 'bg-orange-100 text-orange-600'
+                                                          : 'bg-green-100 text-green-600'
+                                                }`}
+                                                >
                                                     {sheet.status}
                                                 </span>
                                             </td>
-                                            <td className="p-4 text-slate-600 font-medium">{sheet.loadingDockNo || sheet.destination || '-'}</td>
+                                            <td className="p-4 text-slate-600 font-medium">
+                                                {sheet.loadingDockNo || sheet.destination || '-'}
+                                            </td>
                                             <td className="p-4 text-center">
                                                 <div className="flex items-center justify-center gap-2">
-                                                    <button className="p-2 text-slate-400 hover:text-blue-600 transition-colors" title="View/Edit">
-                                                        {sheet.status === SheetStatus.DRAFT ? <Edit3 size={18} /> :
-                                                            (sheet.status === SheetStatus.LOCKED && !isStagingView) ? <Lock size={18} /> : <Eye size={18} />}
+                                                    <button
+                                                        className="p-2 text-slate-400 hover:text-blue-600 transition-colors"
+                                                        title="View/Edit"
+                                                    >
+                                                        {sheet.status === SheetStatus.DRAFT ? (
+                                                            <Edit3 size={18} />
+                                                        ) : sheet.status === SheetStatus.LOCKED &&
+                                                          !isStagingView ? (
+                                                            <Lock size={18} />
+                                                        ) : (
+                                                            <Eye size={18} />
+                                                        )}
                                                     </button>
-                                                    {!isStagingView && sheet.status === SheetStatus.COMPLETED && (
-                                                        <button
-                                                            className="p-2 text-slate-400 hover:text-green-600 transition-colors"
-                                                            title="Print Preview"
-                                                            onClick={(e) => handlePrintSheet(e, sheet)}
-                                                        >
-                                                            <Printer size={18} />
-                                                        </button>
-                                                    )}
+                                                    {!isStagingView &&
+                                                        sheet.status === SheetStatus.COMPLETED && (
+                                                            <button
+                                                                className="p-2 text-slate-400 hover:text-green-600 transition-colors"
+                                                                title="Print Preview"
+                                                                onClick={(e) =>
+                                                                    handlePrintSheet(e, sheet)
+                                                                }
+                                                            >
+                                                                <Printer size={18} />
+                                                            </button>
+                                                        )}
                                                 </div>
                                             </td>
                                         </tr>
                                     ))}
                                     {filteredSheets.length === 0 && (
-                                        <tr><td colSpan={6} className="p-8 text-center text-slate-400 italic">No sheets found.</td></tr>
+                                        <tr>
+                                            <td
+                                                colSpan={6}
+                                                className="p-8 text-center text-slate-400 italic"
+                                            >
+                                                No sheets found.
+                                            </td>
+                                        </tr>
                                     )}
                                 </tbody>
                             </table>
@@ -321,8 +453,6 @@ const App = () => {
             case 'audit':
                 return <AdminDashboard viewMode="audit" onViewSheet={(s) => handleViewSheet(s)} />;
 
-
-
             default:
                 return <div>Page Not Found</div>;
         }
@@ -331,14 +461,16 @@ const App = () => {
     return (
         <ErrorBoundary>
             <Layout currentPage={currentPage} onNavigate={handleNavigate}>
-                <React.Suspense fallback={
-                    <div className="flex items-center justify-center p-24 text-slate-400">
-                        <div className="flex flex-col items-center gap-3">
-                            <Loader2 className="animate-spin text-blue-500" size={32} />
-                            <p className="text-sm font-medium">Loading component...</p>
+                <React.Suspense
+                    fallback={
+                        <div className="flex items-center justify-center p-24 text-slate-400">
+                            <div className="flex flex-col items-center gap-3">
+                                <Loader2 className="animate-spin text-blue-500" size={32} />
+                                <p className="text-sm font-medium">Loading component...</p>
+                            </div>
                         </div>
-                    </div>
-                }>
+                    }
+                >
                     {renderContent()}
                 </React.Suspense>
             </Layout>

@@ -16,8 +16,8 @@
 1.  **Create Project**: Import this repository into Vercel.
 2.  **Environment Variables**:
     - In Vercel Project Settings, add the following variables:
-      - `VITE_SUPABASE_URL`: (Your Project URL)
-      - `VITE_SUPABASE_ANON_KEY`: (Your Anon Key)
+        - `VITE_SUPABASE_URL`: (Your Project URL)
+        - `VITE_SUPABASE_ANON_KEY`: (Your Anon Key)
 3.  **Deploy**: Vercel will automatically detect the Vite build settings.
     - Build Command: `npm run build`
     - Output Directory: `dist`

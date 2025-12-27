@@ -1,78 +1,97 @@
-import { useData } from "@/contexts/DataContext";
-import { Role } from "@/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { t } from "@/lib/i18n";
-
+import { useData } from '@/contexts/DataContext';
+import { useAppState } from '@/contexts/AppStateContext';
+import { Role } from '@/types';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { t } from '@/lib/i18n';
 
 export default function SettingsPage() {
-    const { devRole, setDevRole, settings, updateSettings, currentUser } = useData();
-
+    const { currentUser } = useData();
+    const { devRole, setDevRole, settings, updateSettings } = useAppState();
 
     // Add/Edit User Form State
 
     // State cleaned
 
-
-
-
-
-
-
-
-
-
-
-
     return (
         <div className="p-8 space-y-6 pb-20">
-            <h2 className="text-3xl font-bold text-foreground tracking-tight">{t('settings', settings.language)}</h2>
+            <h2 className="text-3xl font-bold text-foreground tracking-tight">
+                {t('settings', settings.language)}
+            </h2>
 
             {/* PERSONALIZATION SECTION */}
             <Card className="border-border bg-card/40">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                        {t('personalization', settings.language)} <Badge variant="secondary" className="bg-blue-500/10 text-blue-400 border-blue-500/20">New</Badge>
+                        {t('personalization', settings.language)}{' '}
+                        <Badge
+                            variant="secondary"
+                            className="bg-blue-500/10 text-blue-400 border-blue-500/20"
+                        >
+                            New
+                        </Badge>
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-
                     {/* Theme & Accent */}
                     <div className="space-y-3">
-                        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('appearance', settings.language)}</label>
+                        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                            {t('appearance', settings.language)}
+                        </label>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="bg-card p-4 rounded-lg border border-border flex items-center justify-between">
                                 <div>
-                                    <div className="text-sm text-foreground font-medium">{t('theme_mode', settings.language)}</div>
-                                    <div className="text-xs text-muted-foreground">{t('theme_desc', settings.language)}</div>
+                                    <div className="text-sm text-foreground font-medium">
+                                        {t('theme_mode', settings.language)}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                        {t('theme_desc', settings.language)}
+                                    </div>
                                 </div>
                                 <div className="flex bg-muted p-1 rounded-lg border border-border">
                                     <button
                                         type="button"
                                         onClick={() => updateSettings({ theme: 'light' })}
                                         className={`px-3 py-1.5 rounded-md text-xs transition-all ${settings?.theme === 'light' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-                                    >{t('light', settings.language)}</button>
+                                    >
+                                        {t('light', settings.language)}
+                                    </button>
                                     <button
                                         type="button"
                                         onClick={() => updateSettings({ theme: 'dark' })}
                                         className={`px-3 py-1.5 rounded-md text-xs transition-all ${settings?.theme === 'dark' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-                                    >{t('dark', settings.language)}</button>
+                                    >
+                                        {t('dark', settings.language)}
+                                    </button>
                                 </div>
                             </div>
 
                             <div className="bg-card p-4 rounded-lg border border-border flex items-center justify-between">
                                 <div>
-                                    <div className="text-sm text-foreground font-medium">{t('accent_color', settings.language)}</div>
-                                    <div className="text-xs text-muted-foreground">{t('accent_desc', settings.language)}</div>
+                                    <div className="text-sm text-foreground font-medium">
+                                        {t('accent_color', settings.language)}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                        {t('accent_desc', settings.language)}
+                                    </div>
                                 </div>
                                 <div className="flex gap-2">
                                     {['blue', 'emerald', 'purple'].map((color) => (
                                         <button
                                             key={color}
                                             type="button"
-                                            onClick={() => updateSettings({ accentColor: color as any })}
+                                            onClick={() =>
+                                                updateSettings({ accentColor: color as any })
+                                            }
                                             className={`w-8 h-8 rounded-full border-2 transition-all ${settings?.accentColor === color ? 'border-primary scale-110' : 'border-transparent hover:scale-105'}`}
-                                            style={{ backgroundColor: color === 'blue' ? '#3b82f6' : color === 'emerald' ? '#10b981' : '#a855f7' }}
+                                            style={{
+                                                backgroundColor:
+                                                    color === 'blue'
+                                                        ? '#3b82f6'
+                                                        : color === 'emerald'
+                                                          ? '#10b981'
+                                                          : '#a855f7'
+                                            }}
                                         />
                                     ))}
                                 </div>
@@ -82,114 +101,160 @@ export default function SettingsPage() {
 
                     {/* View Options */}
                     <div className="space-y-3">
-                        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('view_options', settings.language)}</label>
+                        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                            {t('view_options', settings.language)}
+                        </label>
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                             {/* Density */}
                             <div className="bg-card p-4 rounded-lg border border-border">
                                 <div className="mb-3">
-                                    <div className="text-sm text-foreground font-medium">{t('density', settings.language)}</div>
-                                    <div className="text-xs text-muted-foreground">{t('density_desc', settings.language)}</div>
+                                    <div className="text-sm text-foreground font-medium">
+                                        {t('density', settings.language)}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                        {t('density_desc', settings.language)}
+                                    </div>
                                 </div>
                                 <div className="flex bg-muted p-1 rounded-lg border border-border w-full">
                                     <button
                                         type="button"
                                         onClick={() => updateSettings({ density: 'compact' })}
                                         className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.density === 'compact' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-                                    >{t('compact', settings.language)}</button>
+                                    >
+                                        {t('compact', settings.language)}
+                                    </button>
                                     <button
                                         type="button"
                                         onClick={() => updateSettings({ density: 'comfortable' })}
                                         className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.density === 'comfortable' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-                                    >{t('comfortable', settings.language)}</button>
+                                    >
+                                        {t('comfortable', settings.language)}
+                                    </button>
                                 </div>
                             </div>
 
                             {/* Font Size */}
                             <div className="bg-card p-4 rounded-lg border border-border">
                                 <div className="mb-3">
-                                    <div className="text-sm text-foreground font-medium">{t('text_size', settings.language)}</div>
-                                    <div className="text-xs text-muted-foreground">{t('text_size_desc', settings.language)}</div>
+                                    <div className="text-sm text-foreground font-medium">
+                                        {t('text_size', settings.language)}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                        {t('text_size_desc', settings.language)}
+                                    </div>
                                 </div>
                                 <div className="flex bg-muted p-1 rounded-lg border border-border w-full">
                                     <button
                                         type="button"
                                         onClick={() => updateSettings({ fontSize: 'small' })}
                                         className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.fontSize === 'small' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-                                    >A-</button>
+                                    >
+                                        A-
+                                    </button>
                                     <button
                                         type="button"
                                         onClick={() => updateSettings({ fontSize: 'medium' })}
                                         className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.fontSize === 'medium' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-                                    >A</button>
+                                    >
+                                        A
+                                    </button>
                                     <button
                                         type="button"
                                         onClick={() => updateSettings({ fontSize: 'large' })}
                                         className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.fontSize === 'large' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-                                    >A+</button>
+                                    >
+                                        A+
+                                    </button>
                                 </div>
                             </div>
 
                             {/* Sidebar */}
                             <div className="bg-card p-4 rounded-lg border border-border">
                                 <div className="mb-3">
-                                    <div className="text-sm text-foreground font-medium">{t('sidebar', settings.language)}</div>
-                                    <div className="text-xs text-muted-foreground">{t('sidebar_collapsed_desc', settings.language)}</div>
+                                    <div className="text-sm text-foreground font-medium">
+                                        {t('sidebar', settings.language)}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                        {t('sidebar_collapsed_desc', settings.language)}
+                                    </div>
                                 </div>
                                 <div className="flex bg-muted p-1 rounded-lg border border-border w-full">
                                     <button
                                         type="button"
                                         onClick={() => updateSettings({ sidebarCollapsed: false })}
                                         className={`flex-1 py-1.5 rounded-md text-xs transition-all ${!settings?.sidebarCollapsed ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-                                    >{t('expanded', settings.language)}</button>
+                                    >
+                                        {t('expanded', settings.language)}
+                                    </button>
                                     <button
                                         type="button"
                                         onClick={() => updateSettings({ sidebarCollapsed: true })}
                                         className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.sidebarCollapsed ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-                                    >{t('collapsed', settings.language)}</button>
+                                    >
+                                        {t('collapsed', settings.language)}
+                                    </button>
                                 </div>
                             </div>
 
                             {/* Language */}
                             <div className="bg-card p-4 rounded-lg border border-border">
                                 <div className="mb-3">
-                                    <div className="text-sm text-foreground font-medium">{t('language', settings.language)}</div>
-                                    <div className="text-xs text-muted-foreground">{t('language_desc', settings.language)}</div>
+                                    <div className="text-sm text-foreground font-medium">
+                                        {t('language', settings.language)}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                        {t('language_desc', settings.language)}
+                                    </div>
                                 </div>
                                 <div className="flex bg-muted p-1 rounded-lg border border-border w-full">
                                     <button
                                         type="button"
                                         onClick={() => updateSettings({ language: 'en' })}
                                         className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.language === 'en' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-                                    >{t('english', settings.language)}</button>
+                                    >
+                                        {t('english', settings.language)}
+                                    </button>
                                     <button
                                         type="button"
                                         onClick={() => updateSettings({ language: 'jp' })}
                                         className={`flex-1 py-1.5 rounded-md text-xs transition-all ${settings?.language === 'jp' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-                                    >{t('japanese', settings.language)}</button>
+                                    >
+                                        {t('japanese', settings.language)}
+                                    </button>
                                 </div>
                             </div>
 
                             {/* Default Tab */}
                             <div className="bg-card p-4 rounded-lg border border-border">
                                 <div className="mb-3">
-                                    <div className="text-sm text-foreground font-medium">{t('default_tab', settings.language)}</div>
-                                    <div className="text-xs text-muted-foreground">{t('default_tab_desc', settings.language)}</div>
+                                    <div className="text-sm text-foreground font-medium">
+                                        {t('default_tab', settings.language)}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                        {t('default_tab_desc', settings.language)}
+                                    </div>
                                 </div>
                                 <select
                                     className="w-full bg-muted border border-border rounded-lg px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                                     value={settings?.defaultTab || 'staging_db'}
                                     onChange={(e) => updateSettings({ defaultTab: e.target.value })}
                                 >
-                                    <option value="staging_db">{t('staging', settings.language)}</option>
-                                    <option value="loading_db">{t('loading', settings.language)}</option>
-                                    <option value="shift_lead_db">{t('shift_lead', settings.language)}</option>
-                                    <option value="user_management">{t('users', settings.language)}</option>
+                                    <option value="staging_db">
+                                        {t('staging', settings.language)}
+                                    </option>
+                                    <option value="loading_db">
+                                        {t('loading', settings.language)}
+                                    </option>
+                                    <option value="shift_lead_db">
+                                        {t('shift_lead', settings.language)}
+                                    </option>
+                                    <option value="user_management">
+                                        {t('users', settings.language)}
+                                    </option>
                                 </select>
                             </div>
-
                         </div>
                     </div>
-
                 </CardContent>
             </Card>
 
@@ -212,9 +277,10 @@ export default function SettingsPage() {
                                     onClick={() => setDevRole(role)}
                                     className={`
                                         p-3 rounded-lg border text-left transition-all text-xs
-                                        ${devRole === role
-                                            ? 'bg-primary/20 border-primary text-primary shadow-sm'
-                                            : 'bg-background border-border text-muted-foreground hover:bg-muted hover:border-border'
+                                        ${
+                                            devRole === role
+                                                ? 'bg-primary/20 border-primary text-primary shadow-sm'
+                                                : 'bg-background border-border text-muted-foreground hover:bg-muted hover:border-border'
                                         }
                                     `}
                                 >

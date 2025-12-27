@@ -13,8 +13,8 @@ export const SkuSelector: React.FC<SkuSelectorProps> = ({
     value,
     onChange,
     disabled,
-    placeholder = "Select or type SKU...",
-    className = ""
+    placeholder = 'Select or type SKU...',
+    className = ''
 }) => {
     return (
         <div className="relative w-full group">

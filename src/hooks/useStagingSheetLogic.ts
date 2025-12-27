@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
+import { useAppState } from '@/contexts/AppStateContext';
 import { SheetData, SheetStatus, Role, StagingItem } from '@/types';
 
 const EMPTY_ITEM: StagingItem = {
@@ -15,7 +16,16 @@ const EMPTY_ITEM: StagingItem = {
 export const useStagingSheetLogic = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { addSheet, updateSheet, deleteSheet, sheets, refreshSheets, currentUser, devRole, loading: dataLoading } = useData();
+    const {
+        addSheet,
+        updateSheet,
+        deleteSheet,
+        sheets,
+        refreshSheets,
+        currentUser,
+        loading: dataLoading
+    } = useData();
+    const { devRole } = useAppState();
 
     // Determine effective role
     const currentRole = (devRole || currentUser?.role) as Role | undefined;
@@ -44,7 +54,7 @@ export const useStagingSheetLogic = () => {
         }
 
         if (id && id !== 'new') {
-            const existing = sheets.find(s => s.id === id);
+            const existing = sheets.find((s) => s.id === id);
             if (existing && !isDirty.current) {
                 setFormData(existing);
             } else if (!existing && !dataLoading) {
@@ -52,16 +62,17 @@ export const useStagingSheetLogic = () => {
                 refreshSheets();
             }
         } else if (id === 'new' && currentUser && !isDirty.current) {
-            setFormData(prev => ({
+            setFormData((prev) => ({
                 ...prev,
-                supervisorName: prev.supervisorName || currentUser.fullName || currentUser.username || '',
+                supervisorName:
+                    prev.supervisorName || currentUser.fullName || currentUser.username || '',
                 empCode: prev.empCode || currentUser.empCode || ''
             }));
         }
     }, [id, sheets, currentUser, dataLoading, refreshSheets]);
 
     const handleHeaderChange = (field: string, value: any) => {
-        setFormData(prev => ({ ...prev, [field]: value }));
+        setFormData((prev) => ({ ...prev, [field]: value }));
         isDirty.current = true;
     };
 
@@ -71,10 +82,10 @@ export const useStagingSheetLogic = () => {
         try {
             // Determine ID: If previously saved (but nav pending), use that. Else if new, generate. Else existing.
             const isNew = id === 'new' && !formData.id;
-            const targetId = isNew ? `SH-${Date.now()}` : (formData.id || id!);
+            const targetId = isNew ? `SH-${Date.now()}` : formData.id || id!;
 
             const sheetToSave: SheetData = {
-                ...dataToSave as SheetData,
+                ...(dataToSave as SheetData),
                 id: targetId,
                 updatedAt: new Date().toISOString(),
                 status: dataToSave.status || SheetStatus.DRAFT
@@ -83,7 +94,7 @@ export const useStagingSheetLogic = () => {
             // If new, invoke addSheet (which does INSERT)
             if (isNew) {
                 // Optimistically set ID to prevent double-save creating duplicates
-                setFormData(prev => ({ ...prev, id: targetId }));
+                setFormData((prev) => ({ ...prev, id: targetId }));
 
                 const { error } = await addSheet(sheetToSave);
                 if (error) throw error;
@@ -94,7 +105,6 @@ export const useStagingSheetLogic = () => {
                 const { error } = await updateSheet(sheetToSave);
                 if (error) throw error;
             }
-
         } catch (err: any) {
             console.error(err);
         } finally {
@@ -103,7 +113,7 @@ export const useStagingSheetLogic = () => {
     };
 
     const handleDelete = async () => {
-        if (!confirm("Are you sure you want to delete this sheet? This cannot be undone.")) return;
+        if (!confirm('Are you sure you want to delete this sheet? This cannot be undone.')) return;
         setLoading(true);
         try {
             const currentId = id === 'new' ? formData.id : id;
@@ -113,7 +123,7 @@ export const useStagingSheetLogic = () => {
                 navigate('/database');
             }
         } catch (error) {
-            console.error("Delete failed", error);
+            console.error('Delete failed', error);
         } finally {
             setLoading(false);
         }
@@ -131,7 +141,8 @@ export const useStagingSheetLogic = () => {
     };
 
     const updateItem = (index: number, field: keyof StagingItem, value: string | number) => {
-        if (formData.status === SheetStatus.LOCKED || formData.status === SheetStatus.COMPLETED) return;
+        if (formData.status === SheetStatus.LOCKED || formData.status === SheetStatus.COMPLETED)
+            return;
 
         const newItems = [...(formData.stagingItems || [])];
         newItems[index] = { ...newItems[index], [field]: value };
@@ -143,37 +154,46 @@ export const useStagingSheetLogic = () => {
             const cases = Number(item.casesPerPlt) || 0;
             const full = Number(item.fullPlt) || 0;
             const loose = Number(item.loose) || 0;
-            newItems[index].ttlCases = (cases * full) + loose;
+            newItems[index].ttlCases = cases * full + loose;
         }
 
         setFormData({ ...formData, stagingItems: newItems });
     };
 
     const addItem = () => {
-        if (formData.status !== SheetStatus.LOCKED && formData.status !== SheetStatus.STAGING_VERIFICATION_PENDING) {
+        if (
+            formData.status !== SheetStatus.LOCKED &&
+            formData.status !== SheetStatus.STAGING_VERIFICATION_PENDING
+        ) {
             setFormData({
                 ...formData,
-                stagingItems: [...(formData.stagingItems || []), { ...EMPTY_ITEM, srNo: (formData.stagingItems?.length || 0) + 1 }]
+                stagingItems: [
+                    ...(formData.stagingItems || []),
+                    { ...EMPTY_ITEM, srNo: (formData.stagingItems?.length || 0) + 1 }
+                ]
             });
         }
     };
 
     const handleVerificationAction = (approve: boolean, reason?: string) => {
         if (approve) {
-            if (confirm("Are you sure you want to verify and lock this sheet?")) {
+            if (confirm('Are you sure you want to verify and lock this sheet?')) {
                 const updated = {
                     ...formData,
                     status: SheetStatus.LOCKED,
                     lockedBy: currentUser?.username,
                     lockedAt: new Date().toISOString(),
                     slSign: currentUser?.fullName,
-                    history: [...(formData.history || []), {
-                        id: Date.now().toString(),
-                        actor: currentUser?.username || 'Unknown',
-                        action: 'STAGING_VERIFIED',
-                        timestamp: new Date().toISOString(),
-                        details: 'Verified and Locked State'
-                    }]
+                    history: [
+                        ...(formData.history || []),
+                        {
+                            id: Date.now().toString(),
+                            actor: currentUser?.username || 'Unknown',
+                            action: 'STAGING_VERIFIED',
+                            timestamp: new Date().toISOString(),
+                            details: 'Verified and Locked State'
+                        }
+                    ]
                 };
                 setFormData(updated);
                 handleSave(updated);
@@ -191,13 +211,16 @@ export const useStagingSheetLogic = () => {
                     status: SheetStatus.DRAFT,
                     rejectionReason: reason,
                     comments: [...(formData.comments || []), newComment],
-                    history: [...(formData.history || []), {
-                        id: Date.now().toString(),
-                        actor: currentUser?.username || 'Unknown',
-                        action: 'STAGING_REJECTED',
-                        timestamp: new Date().toISOString(),
-                        details: `Rejected: ${reason}`
-                    }]
+                    history: [
+                        ...(formData.history || []),
+                        {
+                            id: Date.now().toString(),
+                            actor: currentUser?.username || 'Unknown',
+                            action: 'STAGING_REJECTED',
+                            timestamp: new Date().toISOString(),
+                            details: `Rejected: ${reason}`
+                        }
+                    ]
                 };
                 setFormData(updated);
                 handleSave(updated);
@@ -206,10 +229,14 @@ export const useStagingSheetLogic = () => {
     };
 
     const handleToggleRejection = (srNo: number, reason?: string) => {
-        setFormData(prev => {
-            const newItems = prev.stagingItems?.map(item =>
+        setFormData((prev) => {
+            const newItems = prev.stagingItems?.map((item) =>
                 item.srNo === srNo
-                    ? { ...item, isRejected: !item.isRejected, rejectionReason: !item.isRejected ? reason : undefined }
+                    ? {
+                          ...item,
+                          isRejected: !item.isRejected,
+                          rejectionReason: !item.isRejected ? reason : undefined
+                      }
                     : item
             );
             return { ...prev, stagingItems: newItems };

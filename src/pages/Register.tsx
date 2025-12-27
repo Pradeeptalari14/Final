@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -19,7 +18,11 @@ export default function RegisterPage() {
     });
 
     const formatRole = (role: string) => {
-        return role.replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+        return role
+            .replace(/_/g, ' ')
+            .split(' ')
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
     };
 
     const handleRegister = async (e: React.FormEvent) => {
@@ -27,16 +30,20 @@ export default function RegisterPage() {
         setLoading(true);
 
         if (formData.password !== formData.confirmPassword) {
-            alert("Passwords do not match");
+            alert('Passwords do not match');
             setLoading(false);
             return;
         }
 
         try {
             // Check if user exists
-            const { data: existing } = await supabase.from('users').select('*').eq('data->>username', formData.username).single();
+            const { data: existing } = await supabase
+                .from('users')
+                .select('*')
+                .eq('data->>username', formData.username)
+                .single();
             if (existing) {
-                throw new Error("Username already taken");
+                throw new Error('Username already taken');
             }
 
             const newId = crypto.randomUUID();
@@ -57,12 +64,11 @@ export default function RegisterPage() {
 
             if (error) throw error;
 
-            alert("Registration successful! Waiting for Admin Approval.");
+            alert('Registration successful! Waiting for Admin Approval.');
             navigate('/login');
-
         } catch (error: any) {
             console.error(error);
-            alert(error.message || "Registration failed");
+            alert(error.message || 'Registration failed');
         } finally {
             setLoading(false);
         }
@@ -79,7 +85,10 @@ export default function RegisterPage() {
                 <div className="absolute inset-0 bg-slate-900/5 backdrop-blur-[1px]" />
                 <div
                     className="absolute inset-0 pointer-events-none"
-                    style={{ background: 'radial-gradient(circle at center, transparent 0%, rgba(2,6,23,0.1) 100%)' }}
+                    style={{
+                        background:
+                            'radial-gradient(circle at center, transparent 0%, rgba(2,6,23,0.1) 100%)'
+                    }}
                 />
             </div>
 
@@ -89,7 +98,11 @@ export default function RegisterPage() {
                 animate={{ opacity: 1, x: 0 }}
                 className="absolute top-10 left-12 z-20 flex items-center gap-5"
             >
-                <img src="/unicharm-logo.png" alt="Unicharm" className="w-14 h-auto drop-shadow-2xl brightness-110" />
+                <img
+                    src="/unicharm-logo.png"
+                    alt="Unicharm"
+                    className="w-14 h-auto drop-shadow-2xl brightness-110"
+                />
                 <div className="flex flex-col">
                     <h1 className="text-2xl font-serif font-black text-slate-800 tracking-tight leading-none">
                         Unicharm Operations
@@ -127,7 +140,9 @@ export default function RegisterPage() {
                                 Access Request Portal
                             </span>
                         </div>
-                        <h2 className="text-3xl font-bold text-white tracking-tight">Create Account</h2>
+                        <h2 className="text-3xl font-bold text-white tracking-tight">
+                            Create Account
+                        </h2>
                     </div>
 
                     <form onSubmit={handleRegister} className="space-y-4">
@@ -136,7 +151,9 @@ export default function RegisterPage() {
                                 type="text"
                                 placeholder="Username"
                                 value={formData.username}
-                                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                                onChange={(e) =>
+                                    setFormData({ ...formData, username: e.target.value })
+                                }
                                 className="w-full h-12 bg-white/5 border border-white/10 rounded-xl px-4 text-white placeholder-white/20 focus:outline-none focus:border-blue-500/50 transition-all text-sm font-medium"
                                 required
                             />
@@ -145,10 +162,12 @@ export default function RegisterPage() {
                         <div className="grid grid-cols-2 gap-3">
                             <div className="relative">
                                 <input
-                                    type={showPassword ? "text" : "password"}
+                                    type={showPassword ? 'text' : 'password'}
                                     placeholder="Password"
                                     value={formData.password}
-                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                    onChange={(e) =>
+                                        setFormData({ ...formData, password: e.target.value })
+                                    }
                                     className="w-full h-12 bg-white/5 border border-white/10 rounded-xl px-4 text-white text-[13px] focus:outline-none focus:border-blue-500/50 transition-all placeholder:text-white/20 font-medium"
                                     required
                                 />
@@ -165,7 +184,12 @@ export default function RegisterPage() {
                                     type="password"
                                     placeholder="Confirm"
                                     value={formData.confirmPassword}
-                                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                                    onChange={(e) =>
+                                        setFormData({
+                                            ...formData,
+                                            confirmPassword: e.target.value
+                                        })
+                                    }
                                     className="w-full h-12 bg-white/5 border border-white/10 rounded-xl px-4 text-white text-[13px] focus:outline-none focus:border-blue-500/50 transition-all placeholder:text-white/20 font-medium"
                                     required
                                 />
@@ -175,10 +199,12 @@ export default function RegisterPage() {
                         <div className="relative">
                             <select
                                 value={formData.role}
-                                onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
+                                onChange={(e) =>
+                                    setFormData({ ...formData, role: e.target.value as Role })
+                                }
                                 className="w-full h-12 bg-white/5 border border-white/10 rounded-xl px-4 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-all appearance-none cursor-pointer font-medium"
                             >
-                                {Object.values(Role).map(role => (
+                                {Object.values(Role).map((role) => (
                                     <option key={role} value={role} className="text-black">
                                         {formatRole(role)}
                                     </option>
@@ -191,7 +217,11 @@ export default function RegisterPage() {
                             disabled={loading}
                             className="w-full h-14 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl shadow-2xl transition-all active:scale-[0.98] mt-4 flex items-center justify-center uppercase tracking-[0.2em] text-xs"
                         >
-                            {loading ? <Loader2 className="animate-spin w-5 h-5" /> : "Request Access"}
+                            {loading ? (
+                                <Loader2 className="animate-spin w-5 h-5" />
+                            ) : (
+                                'Request Access'
+                            )}
                         </Button>
                     </form>
 

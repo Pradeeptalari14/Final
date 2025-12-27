@@ -35,22 +35,47 @@ export const VerificationFooter: React.FC<VerificationFooterProps> = ({
                     type="header"
                 />
 
-                <div className={`w-full max-w-3xl pointer-events-auto ${isStaging ? 'bg-purple-50/95 border-purple-200' : 'bg-blue-50/95 border-blue-200'} backdrop-blur-sm border rounded-2xl shadow-2xl p-4 flex flex-col md:flex-row items-center gap-4`}>
-
+                <div
+                    className={`w-full max-w-3xl pointer-events-auto ${isStaging ? 'bg-purple-50/95 border-purple-200' : 'bg-blue-50/95 border-blue-200'} backdrop-blur-sm border rounded-2xl shadow-2xl p-4 flex flex-col md:flex-row items-center gap-4`}
+                >
                     <div className="flex-1 w-full">
-                        <h4 className={`text-xs font-bold ${isStaging ? 'text-purple-700' : 'text-blue-700'} uppercase tracking-wider mb-2 flex items-center gap-2`}>
-                            <ClipboardList size={14} /> Verification Checklist ({isStaging ? 'Staging' : 'Loading'} Level)
+                        <h4
+                            className={`text-xs font-bold ${isStaging ? 'text-purple-700' : 'text-blue-700'} uppercase tracking-wider mb-2 flex items-center gap-2`}
+                        >
+                            <ClipboardList size={14} /> Verification Checklist (
+                            {isStaging ? 'Staging' : 'Loading'} Level)
                         </h4>
                         <div className="grid grid-cols-3 gap-2">
                             {['Qty Matches', 'Pallet OK', 'Supervisor Name'].map((label, idx) => {
-                                const key = ['qty', 'condition', 'sign'][idx] as keyof typeof checks;
+                                const key = ['qty', 'condition', 'sign'][
+                                    idx
+                                ] as keyof typeof checks;
                                 return (
-                                    <label key={key} className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer p-1.5 hover:bg-white/50 rounded-lg transition-colors border border-transparent hover:border-purple-100">
-                                        <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${checks[key] ? (isStaging ? 'bg-purple-600 border-purple-600' : 'bg-blue-600 border-blue-600') + ' text-white' : 'bg-white border-slate-300'}`}>
-                                            {checks[key] && <CheckCircle size={10} strokeWidth={4} />}
+                                    <label
+                                        key={key}
+                                        className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer p-1.5 hover:bg-white/50 rounded-lg transition-colors border border-transparent hover:border-purple-100"
+                                    >
+                                        <div
+                                            className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${checks[key] ? (isStaging ? 'bg-purple-600 border-purple-600' : 'bg-blue-600 border-blue-600') + ' text-white' : 'bg-white border-slate-300'}`}
+                                        >
+                                            {checks[key] && (
+                                                <CheckCircle size={10} strokeWidth={4} />
+                                            )}
                                         </div>
-                                        <input type="checkbox" className="hidden" checked={checks[key]} onChange={() => setChecks(prev => ({ ...prev, [key]: !prev[key] }))} />
-                                        <span className="font-medium text-xs md:text-sm whitespace-nowrap">{label}</span>
+                                        <input
+                                            type="checkbox"
+                                            className="hidden"
+                                            checked={checks[key]}
+                                            onChange={() =>
+                                                setChecks((prev) => ({
+                                                    ...prev,
+                                                    [key]: !prev[key]
+                                                }))
+                                            }
+                                        />
+                                        <span className="font-medium text-xs md:text-sm whitespace-nowrap">
+                                            {label}
+                                        </span>
                                     </label>
                                 );
                             })}
@@ -58,7 +83,11 @@ export const VerificationFooter: React.FC<VerificationFooterProps> = ({
                     </div>
 
                     <div className="flex gap-2 shrink-0 border-t md:border-t-0 md:border-l border-slate-200/50 pt-3 md:pt-0 md:pl-4 w-full md:w-auto justify-end">
-                        <Button variant="outline" onClick={() => setIsRejectModalOpen(true)} className="text-red-500 border-red-200 hover:bg-red-50 h-10">
+                        <Button
+                            variant="outline"
+                            onClick={() => setIsRejectModalOpen(true)}
+                            className="text-red-500 border-red-200 hover:bg-red-50 h-10"
+                        >
                             <AlertTriangle className="mr-2" size={16} /> Reject
                         </Button>
                         <Button
@@ -66,7 +95,8 @@ export const VerificationFooter: React.FC<VerificationFooterProps> = ({
                             disabled={!Object.values(checks).every(Boolean)}
                             className={`${isStaging ? 'bg-purple-600 hover:bg-purple-500' : 'bg-blue-600 hover:bg-blue-600'} text-white gap-2 transition-all h-10 ${!Object.values(checks).every(Boolean) ? 'opacity-50 cursor-not-allowed' : 'shadow-lg hover:scale-105'}`}
                         >
-                            <Lock size={16} /> {isStaging ? 'Verify & Lock Sheet' : 'Verify & Complete'}
+                            <Lock size={16} />{' '}
+                            {isStaging ? 'Verify & Lock Sheet' : 'Verify & Complete'}
                         </Button>
                     </div>
                 </div>

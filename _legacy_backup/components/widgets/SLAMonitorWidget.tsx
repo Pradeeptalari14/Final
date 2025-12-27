@@ -8,16 +8,14 @@ export const SLAMonitorWidget = () => {
 
     const slaStats = useMemo(() => {
         // Only care about COMPLETED loading sheets where data exists
-        const validSheets = sheets.filter(s =>
-            s.status === SheetStatus.COMPLETED &&
-            s.loadingStartTime &&
-            s.loadingEndTime
+        const validSheets = sheets.filter(
+            (s) => s.status === SheetStatus.COMPLETED && s.loadingStartTime && s.loadingEndTime
         );
 
         let breached = 0;
         let withinSla = 0;
 
-        validSheets.forEach(s => {
+        validSheets.forEach((s) => {
             // Simple HH:mm diff (Assuming same day for simplicity unless dates diff)
             // In real app, use full timestamps. Here we assume HH:mm formats.
             const start = new Date(`1970-01-01T${s.loadingStartTime}:00`);
@@ -53,7 +51,9 @@ export const SLAMonitorWidget = () => {
             </div>
 
             <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs text-slate-500 text-center">
-                <span className="font-bold text-slate-700">Service Level Agreement:</span> Loading duration must not exceed <span className="font-bold text-slate-800">40 minutes</span>.
+                <span className="font-bold text-slate-700">Service Level Agreement:</span> Loading
+                duration must not exceed{' '}
+                <span className="font-bold text-slate-800">40 minutes</span>.
             </div>
         </div>
     );

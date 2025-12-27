@@ -3,8 +3,9 @@ import { SheetData, Role, User } from '@/types';
 import { Search, History, Download, Calendar, Clock } from 'lucide-react';
 import { exportToExcelGeneric } from '@/lib/excelExport';
 import { Button } from '@/components/ui/button';
-import { useData } from "@/contexts/DataContext";
-import { t } from "@/lib/i18n";
+import { useData } from '@/contexts/DataContext';
+import { useAppState } from '@/contexts/AppStateContext';
+import { t } from '@/lib/i18n';
 
 interface AuditLogViewProps {
     sheets: SheetData[];
@@ -12,19 +13,16 @@ interface AuditLogViewProps {
 }
 
 export function AuditLogView({ sheets, currentUser }: AuditLogViewProps) {
-    const { settings, securityLogs, activityLogs } = useData();
+    const { securityLogs, activityLogs } = useData();
+    const { settings } = useAppState();
     const [searchQuery, setSearchQuery] = useState('');
     const [logType, setLogType] = useState<'operational' | 'security' | 'activity'>('operational');
-    const [categoryFilter, setCategoryFilter] = useState<'ALL' | 'STAGING' | 'LOADING' | 'USERS' | 'SHIFTLEAD'>('ALL');
+    const [categoryFilter, setCategoryFilter] = useState<
+        'ALL' | 'STAGING' | 'LOADING' | 'USERS' | 'SHIFTLEAD'
+    >('ALL');
     const [timeFilter, setTimeFilter] = useState<'ALL' | '30D' | '90D' | 'CUSTOM'>('ALL');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
-
-    // STRICT GUARD
-    const isAuthorized = currentUser?.role === Role.ADMIN || currentUser?.role === Role.SHIFT_LEAD;
-    if (!isAuthorized) {
-        return <div className="p-8 text-center text-red-500 font-bold uppercase tracking-widest">{t('access_denied', settings.language)}</div>;
-    }
 
     const logs = useMemo(() => {
         let baseLogs: any[] = [];
@@ -35,8 +33,8 @@ export function AuditLogView({ sheets, currentUser }: AuditLogViewProps) {
             baseLogs = [...activityLogs];
         } else {
             if (!sheets) return [];
-            baseLogs = sheets.flatMap(sheet =>
-                (sheet.history || []).map(log => ({
+            baseLogs = sheets.flatMap((sheet) =>
+                (sheet.history || []).map((log) => ({
                     ...log,
                     sheetId: sheet.id,
                     supervisor: sheet.supervisorName,
@@ -55,65 +53,99 @@ export function AuditLogView({ sheets, currentUser }: AuditLogViewProps) {
                 if (startDate) {
                     const start = new Date(startDate);
                     start.setHours(0, 0, 0, 0);
-                    baseLogs = baseLogs.filter(log => new Date(log.timestamp) >= start);
+                    baseLogs = baseLogs.filter((log) => new Date(log.timestamp) >= start);
                 }
                 if (endDate) {
                     const end = new Date(endDate);
                     end.setHours(23, 59, 59, 999);
-                    baseLogs = baseLogs.filter(log => new Date(log.timestamp) <= end);
+                    baseLogs = baseLogs.filter((log) => new Date(log.timestamp) <= end);
                 }
             } else {
                 const now = new Date();
                 const days = timeFilter === '30D' ? 30 : 90;
                 const threshold = new Date(now.setDate(now.getDate() - days));
-                baseLogs = baseLogs.filter(log => new Date(log.timestamp) >= threshold);
+                baseLogs = baseLogs.filter((log) => new Date(log.timestamp) >= threshold);
             }
         }
 
         // 3. Category/Role Filtering
         if (categoryFilter !== 'ALL') {
-            baseLogs = baseLogs.filter(log => {
+            baseLogs = baseLogs.filter((log) => {
                 const action = (log.action || '').toUpperCase();
 
                 if (categoryFilter === 'STAGING') return action.includes('STAGING');
                 if (categoryFilter === 'LOADING') return action.includes('LOADING');
-                if (categoryFilter === 'USERS') return action.includes('USER') || action.includes('LOGIN') || action.includes('LOCKOUT');
-                if (categoryFilter === 'SHIFTLEAD') return action.includes('VERIFIED') || action.includes('REJECTED') || action.includes('ADMIN');
+                if (categoryFilter === 'USERS')
+                    return (
+                        action.includes('USER') ||
+                        action.includes('LOGIN') ||
+                        action.includes('LOCKOUT')
+                    );
+                if (categoryFilter === 'SHIFTLEAD')
+                    return (
+                        action.includes('VERIFIED') ||
+                        action.includes('REJECTED') ||
+                        action.includes('ADMIN')
+                    );
                 return true;
             });
         }
 
         // 4. User Role Constraints (Privacy/Context)
         if (currentUser?.role === Role.STAGING_SUPERVISOR) {
-            baseLogs = baseLogs.filter(log =>
-                log.action.startsWith('STAGING_') ||
-                log.actor === currentUser.username ||
-                (log as any).supervisor === currentUser.username
+            baseLogs = baseLogs.filter(
+                (log) =>
+                    log.action.startsWith('STAGING_') ||
+                    log.actor === currentUser.username ||
+                    (log as any).supervisor === currentUser.username
             );
         } else if (currentUser?.role === Role.LOADING_SUPERVISOR) {
-            baseLogs = baseLogs.filter(log =>
-                log.action.startsWith('LOADING_') ||
-                log.action === 'REJECTED_LOADING' ||
-                log.actor === currentUser.username
+            baseLogs = baseLogs.filter(
+                (log) =>
+                    log.action.startsWith('LOADING_') ||
+                    log.action === 'REJECTED_LOADING' ||
+                    log.actor === currentUser.username
             );
         }
 
         // 5. Search Filter
         if (searchQuery) {
             const q = searchQuery.toLowerCase();
-            baseLogs = baseLogs.filter(log =>
-                (log.actor || '').toLowerCase().includes(q) ||
-                (log.details || '').toLowerCase().includes(q) ||
-                (log.action || '').toLowerCase().includes(q) ||
-                (log.sheetId || '').toLowerCase().includes(q)
+            baseLogs = baseLogs.filter(
+                (log) =>
+                    (log.actor || '').toLowerCase().includes(q) ||
+                    (log.details || '').toLowerCase().includes(q) ||
+                    (log.action || '').toLowerCase().includes(q) ||
+                    (log.sheetId || '').toLowerCase().includes(q)
             );
         }
 
         return baseLogs;
-    }, [sheets, currentUser, searchQuery, logType, securityLogs, activityLogs, categoryFilter, timeFilter]);
+    }, [
+        sheets,
+        currentUser,
+        searchQuery,
+        logType,
+        securityLogs,
+        activityLogs,
+        categoryFilter,
+        timeFilter,
+        startDate,
+        endDate
+    ]);
+
+    // STRICT GUARD
+    const isAuthorized = currentUser?.role === Role.ADMIN || currentUser?.role === Role.SHIFT_LEAD;
+    if (!isAuthorized) {
+        return (
+            <div className="p-8 text-center text-red-500 font-bold uppercase tracking-widest">
+                {t('access_denied', settings.language)}
+            </div>
+        );
+    }
 
     const handleExportLogs = () => {
-        const exportData = logs.map(log => ({
+        const exportData = logs.map((log) => ({
             Timestamp: new Date(log.timestamp).toLocaleString(),
             Actor: log.actor,
             Action: log.action,
@@ -131,7 +163,9 @@ export function AuditLogView({ sheets, currentUser }: AuditLogViewProps) {
                 <div className="flex flex-col gap-1">
                     <div className="flex items-center gap-2">
                         <History className="text-blue-500" size={24} />
-                        <h3 className="text-xl font-bold text-foreground">{t('system_audit_logs', settings.language)}</h3>
+                        <h3 className="text-xl font-bold text-foreground">
+                            {t('system_audit_logs', settings.language)}
+                        </h3>
                     </div>
 
                     <div className="flex flex-wrap gap-2 mt-2">
@@ -147,27 +181,39 @@ export function AuditLogView({ sheets, currentUser }: AuditLogViewProps) {
                                 onClick={() => setLogType('security')}
                                 className={`px-3 py-1 rounded-md text-[10px] uppercase font-bold transition-all ${logType === 'security' ? 'bg-red-500 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                             >
-                                Security {securityLogs.length > 0 && <span className="ml-1 px-1 bg-white/20 rounded">{securityLogs.length}</span>}
+                                Security{' '}
+                                {securityLogs.length > 0 && (
+                                    <span className="ml-1 px-1 bg-white/20 rounded">
+                                        {securityLogs.length}
+                                    </span>
+                                )}
                             </button>
                             <button
                                 onClick={() => setLogType('activity')}
                                 className={`px-3 py-1 rounded-md text-[10px] uppercase font-bold transition-all ${logType === 'activity' ? 'bg-emerald-500 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                             >
-                                Activity {activityLogs.length > 0 && <span className="ml-1 px-1 bg-white/20 rounded">{activityLogs.length}</span>}
+                                Activity{' '}
+                                {activityLogs.length > 0 && (
+                                    <span className="ml-1 px-1 bg-white/20 rounded">
+                                        {activityLogs.length}
+                                    </span>
+                                )}
                             </button>
                         </div>
 
                         {/* Category Filter Toggle */}
                         <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 w-fit">
-                            {(['ALL', 'STAGING', 'LOADING', 'USERS', 'SHIFTLEAD'] as const).map((cat) => (
-                                <button
-                                    key={cat}
-                                    onClick={() => setCategoryFilter(cat)}
-                                    className={`px-3 py-1 rounded-md text-[10px] uppercase font-bold transition-all ${categoryFilter === cat ? 'bg-white dark:bg-slate-600 text-foreground shadow-sm' : 'text-slate-500 hover:text-foreground'}`}
-                                >
-                                    {cat}
-                                </button>
-                            ))}
+                            {(['ALL', 'STAGING', 'LOADING', 'USERS', 'SHIFTLEAD'] as const).map(
+                                (cat) => (
+                                    <button
+                                        key={cat}
+                                        onClick={() => setCategoryFilter(cat)}
+                                        className={`px-3 py-1 rounded-md text-[10px] uppercase font-bold transition-all ${categoryFilter === cat ? 'bg-white dark:bg-slate-600 text-foreground shadow-sm' : 'text-slate-500 hover:text-foreground'}`}
+                                    >
+                                        {cat}
+                                    </button>
+                                )
+                            )}
                         </div>
 
                         {/* NEW: Time Range Filter Toggle */}
@@ -205,7 +251,9 @@ export function AuditLogView({ sheets, currentUser }: AuditLogViewProps) {
                                     <div className="flex items-center gap-2 px-3 py-1.5 border-r border-slate-100 dark:border-white/5">
                                         <Calendar className="w-3.5 h-3.5 text-indigo-500" />
                                         <div className="flex flex-col">
-                                            <span className="text-[7px] uppercase font-bold text-slate-400 leading-tight">Start Time</span>
+                                            <span className="text-[7px] uppercase font-bold text-slate-400 leading-tight">
+                                                Start Time
+                                            </span>
                                             <input
                                                 type="datetime-local"
                                                 value={startDate}
@@ -217,7 +265,9 @@ export function AuditLogView({ sheets, currentUser }: AuditLogViewProps) {
                                     <div className="flex items-center gap-2 px-3 py-1.5">
                                         <Clock className="w-3.5 h-3.5 text-indigo-500" />
                                         <div className="flex flex-col">
-                                            <span className="text-[7px] uppercase font-bold text-slate-400 leading-tight">End Time</span>
+                                            <span className="text-[7px] uppercase font-bold text-slate-400 leading-tight">
+                                                End Time
+                                            </span>
                                             <input
                                                 type="datetime-local"
                                                 value={endDate}
@@ -234,7 +284,10 @@ export function AuditLogView({ sheets, currentUser }: AuditLogViewProps) {
 
                 <div className="flex items-center gap-2">
                     <div className="relative">
-                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                        <Search
+                            size={14}
+                            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+                        />
                         <input
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
@@ -242,7 +295,12 @@ export function AuditLogView({ sheets, currentUser }: AuditLogViewProps) {
                             placeholder={t('search_logs_placeholder', settings.language)}
                         />
                     </div>
-                    <Button variant="outline" size="sm" onClick={handleExportLogs} className="gap-2">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleExportLogs}
+                        className="gap-2"
+                    >
                         <Download size={14} /> {t('export', settings.language)}
                     </Button>
                 </div>
@@ -253,59 +311,102 @@ export function AuditLogView({ sheets, currentUser }: AuditLogViewProps) {
                     <table className="w-full text-left text-sm table-fixed">
                         <thead className="bg-slate-50 dark:bg-slate-950/50 sticky top-0 z-10">
                             <tr>
-                                <th className="px-4 py-3 font-semibold text-slate-500 dark:text-slate-400 w-[16%]">{t('timestamp', settings.language)}</th>
-                                <th className="px-4 py-3 font-semibold text-slate-500 dark:text-slate-400 w-[14%]">{t('actor', settings.language)}</th>
-                                <th className="px-4 py-3 font-semibold text-slate-500 dark:text-slate-400 w-[14%]">{t('action', settings.language)}</th>
-                                <th className="px-4 py-3 font-semibold text-slate-500 dark:text-slate-400 w-[10%]">Severity</th>
-                                <th className="px-4 py-3 font-semibold text-slate-500 dark:text-slate-400 w-[10%]">{t('sheet_ref', settings.language)}</th>
-                                <th className="px-4 py-3 font-semibold text-slate-500 dark:text-slate-400 w-[36%]">{t('details', settings.language)}</th>
+                                <th className="px-4 py-3 font-semibold text-slate-500 dark:text-slate-400 w-[16%]">
+                                    {t('timestamp', settings.language)}
+                                </th>
+                                <th className="px-4 py-3 font-semibold text-slate-500 dark:text-slate-400 w-[14%]">
+                                    {t('actor', settings.language)}
+                                </th>
+                                <th className="px-4 py-3 font-semibold text-slate-500 dark:text-slate-400 w-[14%]">
+                                    {t('action', settings.language)}
+                                </th>
+                                <th className="px-4 py-3 font-semibold text-slate-500 dark:text-slate-400 w-[10%]">
+                                    Severity
+                                </th>
+                                <th className="px-4 py-3 font-semibold text-slate-500 dark:text-slate-400 w-[10%]">
+                                    {t('sheet_ref', settings.language)}
+                                </th>
+                                <th className="px-4 py-3 font-semibold text-slate-500 dark:text-slate-400 w-[36%]">
+                                    {t('details', settings.language)}
+                                </th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                             {logs.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-8 text-center text-slate-400">
+                                    <td
+                                        colSpan={5}
+                                        className="px-6 py-8 text-center text-slate-400"
+                                    >
                                         {t('no_logs_found', settings.language)}
                                     </td>
                                 </tr>
-                            ) : logs.map((log, i) => (
-                                <tr key={i} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
-                                    <td className="px-4 py-3 text-slate-500 font-mono text-[10px] truncate">
-                                        {new Date(log.timestamp).toLocaleString()}
-                                    </td>
-                                    <td className="px-4 py-3 font-medium text-slate-700 dark:text-slate-300 truncate">
-                                        {log.actor}
-                                    </td>
-                                    <td className="px-4 py-3 overflow-hidden">
-                                        <span className={`
+                            ) : (
+                                logs.map((log, i) => (
+                                    <tr
+                                        key={i}
+                                        className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors"
+                                    >
+                                        <td className="px-4 py-3 text-slate-500 font-mono text-[10px] truncate">
+                                            {new Date(log.timestamp).toLocaleString()}
+                                        </td>
+                                        <td className="px-4 py-3 font-medium text-slate-700 dark:text-slate-300 truncate">
+                                            {log.actor}
+                                        </td>
+                                        <td className="px-4 py-3 overflow-hidden">
+                                            <span
+                                                className={`
                                             px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider whitespace-nowrap
-                                            ${log.action.includes('REJECT') ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' :
-                                                log.action.includes('CLICK') ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' :
-                                                    log.action.includes('VERIFIED') || log.action === 'COMPLETED' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' :
-                                                        'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'}
-                                        `}>
-                                            {log.action.includes('CLICK') ? log.action : t(log.action.toLowerCase() as any, settings.language).replace(/_/g, ' ')}
-                                        </span>
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <span className={`
+                                            ${
+                                                log.action.includes('REJECT')
+                                                    ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                                                    : log.action.includes('CLICK')
+                                                      ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
+                                                      : log.action.includes('VERIFIED') ||
+                                                          log.action === 'COMPLETED'
+                                                        ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                                        : 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+                                            }
+                                        `}
+                                            >
+                                                {log.action.includes('CLICK')
+                                                    ? log.action
+                                                    : t(
+                                                          log.action.toLowerCase() as any,
+                                                          settings.language
+                                                      ).replace(/_/g, ' ')}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span
+                                                className={`
                                             px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider
-                                            ${log.severity === 'CRITICAL' ? 'bg-red-600 text-white' :
-                                                log.severity === 'HIGH' ? 'bg-orange-100 text-orange-600' :
-                                                    log.severity === 'MEDIUM' ? 'bg-amber-100 text-amber-600' :
-                                                        'bg-slate-100 text-slate-600'}
-                                        `}>
-                                            {log.severity || 'LOW'}
-                                        </span>
-                                    </td>
-                                    <td className="px-4 py-3 font-mono text-xs text-slate-500 truncate">
-                                        {log.sheetId ? log.sheetId.slice(0, 8) : '-'}
-                                    </td>
-                                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400 truncate text-xs" title={log.details}>
-                                        {log.details}
-                                    </td>
-                                </tr>
-                            ))}
+                                            ${
+                                                log.severity === 'CRITICAL'
+                                                    ? 'bg-red-600 text-white'
+                                                    : log.severity === 'HIGH'
+                                                      ? 'bg-orange-100 text-orange-600'
+                                                      : log.severity === 'MEDIUM'
+                                                        ? 'bg-amber-100 text-amber-600'
+                                                        : 'bg-slate-100 text-slate-600'
+                                            }
+                                        `}
+                                            >
+                                                {log.severity || 'LOW'}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3 font-mono text-xs text-slate-500 truncate">
+                                            {log.sheetId ? log.sheetId.slice(0, 8) : '-'}
+                                        </td>
+                                        <td
+                                            className="px-4 py-3 text-slate-600 dark:text-slate-400 truncate text-xs"
+                                            title={log.details}
+                                        >
+                                            {log.details}
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>

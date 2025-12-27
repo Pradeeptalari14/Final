@@ -18,7 +18,7 @@ export const supabase = (() => {
         console.error('Supabase Initialization Failed:', error);
         // Return a mock/proxy that alerts on use, preventing white-screen crash on boot
         return new Proxy({} as any, {
-            get: () => () => Promise.reject("Supabase not initialized properly. Check .env")
+            get: () => () => Promise.reject('Supabase not initialized properly. Check .env')
         });
     }
 })();

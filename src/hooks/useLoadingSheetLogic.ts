@@ -51,99 +51,139 @@ export const useLoadingSheetLogic = () => {
     // Initial Data Load
     useEffect(() => {
         if (!id) return;
-        const found = sheets.find(s => s.id === id);
+        const found = sheets.find((s) => s.id === id);
         if (found) {
-            setCurrentSheet(found);
-            setLoading(false);
+            queueMicrotask(() => {
+                setCurrentSheet(found);
+                setLoading(false);
+            });
         } else {
             refreshSheets();
         }
-    }, [id, sheets]);
+    }, [id, sheets, refreshSheets]);
 
     // Role-based redirect
     useEffect(() => {
         if (!currentSheet || !currentUser) return;
         const isStagingUser = currentUser.role === Role.STAGING_SUPERVISOR;
-        if (isStagingUser && (currentSheet.status === SheetStatus.LOCKED || currentSheet.status === SheetStatus.LOADING_VERIFICATION_PENDING)) {
+        if (
+            isStagingUser &&
+            (currentSheet.status === SheetStatus.LOCKED ||
+                currentSheet.status === SheetStatus.LOADING_VERIFICATION_PENDING)
+        ) {
             navigate(`/sheets/staging/${currentSheet.id}`, { replace: true });
         }
     }, [currentSheet, currentUser, navigate]);
+
+    const generateLoadingItems = (sheet: SheetData) => {
+        const updatedLoadingItems = sheet.stagingItems
+            .filter((item) => item.skuName && item.ttlCases > 0)
+            .map((item) => ({
+                skuSrNo: item.srNo,
+                cells: [],
+                looseInput: undefined,
+                total: 0,
+                balance: item.ttlCases
+            }));
+
+        const updatedAdditionalItems =
+            sheet.additionalItems && sheet.additionalItems.length > 0
+                ? sheet.additionalItems
+                : Array.from({ length: 5 }, (_, i) => ({
+                      id: i + 1,
+                      skuName: '',
+                      counts: Array(10).fill(0),
+                      total: 0
+                  }));
+
+        setCurrentSheet((prev) =>
+            prev
+                ? {
+                      ...prev,
+                      loadingItems: updatedLoadingItems,
+                      additionalItems: updatedAdditionalItems
+                  }
+                : null
+        );
+    };
 
     // Sync Local State
     useEffect(() => {
         if (!currentSheet) return;
 
-        setTransporter(currentSheet.transporter || '');
-        setLoadingDock(currentSheet.loadingDockNo || '');
-        setShift(currentSheet.shift || '');
-        setDestination(currentSheet.destination || '');
+        queueMicrotask(() => {
+            setTransporter(currentSheet.transporter || '');
+            setLoadingDock(currentSheet.loadingDockNo || '');
+            setShift(currentSheet.shift || '');
+            setDestination(currentSheet.destination || '');
 
-        const currentUserCode = currentUser?.empCode || '';
+            const currentUserCode = currentUser?.empCode || '';
 
-        // If sheet is fresh for loading (LOCKED), auto-fill with current Loading Supervisor's code.
-        // Otherwise (in progress), respect the saved value.
-        if (currentSheet.status === SheetStatus.LOCKED) {
-            setEmpCode(currentUserCode);
-        } else {
-            setEmpCode((currentSheet.empCode && currentSheet.empCode.trim() !== '') ? currentSheet.empCode : currentUserCode);
-        }
+            if (currentSheet.status === SheetStatus.LOCKED) {
+                setEmpCode(currentUserCode);
+            } else {
+                setEmpCode(
+                    currentSheet.empCode && currentSheet.empCode.trim() !== ''
+                        ? currentSheet.empCode
+                        : currentUserCode
+                );
+            }
 
-        setStartTime(currentSheet.loadingStartTime || new Date().toLocaleTimeString('en-US', { hour12: false }));
-        setEndTime(currentSheet.loadingEndTime || '');
-
-        const currentUserName = currentUser?.fullName || currentUser?.username || '';
-        const initialPickingBy = (currentSheet.pickingBy && currentSheet.pickingBy.trim() !== '') ? currentSheet.pickingBy : (currentSheet.supervisorName || currentSheet.createdBy || currentUserName);
-        setPickingBy(initialPickingBy);
-
-        // Auto-fill Picking By Emp Code: 
-        // 1. If Locked -> use Staging Sup's code (currentSheet.empCode)
-        // 2. If Saved -> use saved value
-        // 3. Fallback: If empty, try to find user by Name in the users list
-        if (currentSheet.status === SheetStatus.LOCKED) {
-            setPickingByEmpCode(currentSheet.empCode || '');
-        } else if (currentSheet.pickingByEmpCode) {
-            setPickingByEmpCode(currentSheet.pickingByEmpCode);
-        } else {
-            // Fallback for existing sheets without captured code
-            const foundUser = users.find(u =>
-                (u.username && u.username.toLowerCase().trim() === initialPickingBy.toLowerCase().trim()) ||
-                (u.fullName && u.fullName.toLowerCase().trim() === initialPickingBy.toLowerCase().trim())
+            setStartTime(
+                currentSheet.loadingStartTime ||
+                    new Date().toLocaleTimeString('en-US', { hour12: false })
             );
-            setPickingByEmpCode(foundUser?.empCode || '-');
-        }
+            setEndTime(currentSheet.loadingEndTime || '');
 
+            const currentUserName = currentUser?.fullName || currentUser?.username || '';
+            const initialPickingBy =
+                currentSheet.pickingBy && currentSheet.pickingBy.trim() !== ''
+                    ? currentSheet.pickingBy
+                    : currentSheet.supervisorName || currentSheet.createdBy || currentUserName;
+            setPickingBy(initialPickingBy);
 
-        const initialPickingCrosscheckedBy = (currentSheet.pickingCrosscheckedBy && currentSheet.pickingCrosscheckedBy.trim() !== '') ? currentSheet.pickingCrosscheckedBy : currentUserName;
-        setPickingCrosscheckedBy(initialPickingCrosscheckedBy);
-
-        // Auto-fill Picking Crosschecked By Emp Code:
-        if (currentSheet.pickingCrosscheckedByEmpCode) {
-            setPickingCrosscheckedByEmpCode(currentSheet.pickingCrosscheckedByEmpCode);
-        } else {
-            // Fallback lookup
-            const foundUser = users.find(u =>
-                (u.username && u.username.toLowerCase().trim() === initialPickingCrosscheckedBy.toLowerCase().trim()) ||
-                (u.fullName && u.fullName.toLowerCase().trim() === initialPickingCrosscheckedBy.toLowerCase().trim())
+            setPickingByEmpCode(
+                currentSheet.status === SheetStatus.LOCKED
+                    ? currentSheet.empCode || ''
+                    : currentSheet.pickingByEmpCode || ''
             );
-            setPickingCrosscheckedByEmpCode(foundUser?.empCode || '-');
-        }
-        setVehicleNo(currentSheet.vehicleNo || '');
-        setDriverName(currentSheet.driverName || '');
-        setSealNo(currentSheet.sealNo || '');
-        setRegSerialNo(currentSheet.regSerialNo || '');
-        setSupervisorName((currentSheet.loadingSvName && currentSheet.loadingSvName.trim() !== '') ? currentSheet.loadingSvName : currentUserName);
-        setSvName((currentSheet.loadingSvName && currentSheet.loadingSvName.trim() !== '') ? currentSheet.loadingSvName : currentUserName);
-        setSvSign(currentSheet.loadingSupervisorSign || '');
-        setSlSign(currentSheet.slSign || '');
-        setDeoSign(currentSheet.deoSign || '');
-        setCapturedImage(currentSheet.capturedImages?.[0] || null);
 
-        const hasStagingData = currentSheet.stagingItems.some(i => i.ttlCases > 0);
+            const initialPickingCrosscheckedBy =
+                currentSheet.pickingCrosscheckedBy &&
+                currentSheet.pickingCrosscheckedBy.trim() !== ''
+                    ? currentSheet.pickingCrosscheckedBy
+                    : currentUserName;
+            setPickingCrosscheckedBy(initialPickingCrosscheckedBy);
+
+            setPickingCrosscheckedByEmpCode(currentSheet.pickingCrosscheckedByEmpCode || '');
+            setVehicleNo(currentSheet.vehicleNo || '');
+            setDriverName(currentSheet.driverName || '');
+            setSealNo(currentSheet.sealNo || '');
+            setRegSerialNo(currentSheet.regSerialNo || '');
+
+            setSupervisorName(
+                currentSheet.loadingSvName && currentSheet.loadingSvName.trim() !== ''
+                    ? currentSheet.loadingSvName
+                    : currentUserName
+            );
+            setSvName(
+                currentSheet.loadingSvName && currentSheet.loadingSvName.trim() !== ''
+                    ? currentSheet.loadingSvName
+                    : currentUserName
+            );
+            setSvSign(currentSheet.loadingSupervisorSign || '');
+            setSlSign(currentSheet.slSign || '');
+            setDeoSign(currentSheet.deoSign || '');
+            setCapturedImage(currentSheet.capturedImages?.[0] || null);
+        });
+
+        const hasStagingData = currentSheet.stagingItems.some((i) => i.ttlCases > 0);
         const hasLoadingData = currentSheet.loadingItems && currentSheet.loadingItems.length > 0;
-        const hasAdditionalData = currentSheet.additionalItems && currentSheet.additionalItems.length > 0;
+        const hasAdditionalData =
+            currentSheet.additionalItems && currentSheet.additionalItems.length > 0;
 
         if (hasStagingData && (!hasLoadingData || !hasAdditionalData)) {
-            generateLoadingItems(currentSheet);
+            queueMicrotask(() => generateLoadingItems(currentSheet));
         }
     }, [currentSheet, currentUser, users]);
 
@@ -151,7 +191,7 @@ export const useLoadingSheetLogic = () => {
     useEffect(() => {
         return () => {
             if (mediaStream) {
-                mediaStream.getTracks().forEach(track => track.stop());
+                mediaStream.getTracks().forEach((track) => track.stop());
             }
         };
     }, [mediaStream]);
@@ -162,50 +202,51 @@ export const useLoadingSheetLogic = () => {
         }
     }, [cameraActive, mediaStream]);
 
-    const generateLoadingItems = (sheet: SheetData) => {
-        let updatedLoadingItems = sheet.stagingItems
-            .filter(item => item.skuName && item.ttlCases > 0)
-            .map(item => ({
-                skuSrNo: item.srNo,
-                cells: [],
-                looseInput: undefined,
-                total: 0,
-                balance: item.ttlCases
-            }));
-
-        let updatedAdditionalItems = (sheet.additionalItems && sheet.additionalItems.length > 0)
-            ? sheet.additionalItems
-            : Array.from({ length: 5 }, (_, i) => ({
-                id: i + 1,
-                skuName: '',
-                counts: Array(10).fill(0),
-                total: 0
-            }));
-
-        setCurrentSheet(prev => prev ? ({
-            ...prev,
-            loadingItems: updatedLoadingItems,
-            additionalItems: updatedAdditionalItems
-        }) : null);
-    };
-
     const handleHeaderChange = (field: string, value: any) => {
-        setErrors(prev => prev.filter(e => e !== field));
+        setErrors((prev) => prev.filter((e) => e !== field));
         switch (field) {
-            case 'shift': setShift(value); break;
-            case 'transporter': setTransporter(value); break;
-            case 'destination': setDestination(value); break;
-            case 'loadingDockNo': setLoadingDock(value); break;
-            case 'supervisorName': setSupervisorName(value); break;
-            case 'pickingBy': setPickingBy(value); break;
-            case 'pickingCrosscheckedBy': setPickingCrosscheckedBy(value); break;
-            case 'vehicleNo': setVehicleNo(value); break;
-            case 'driverName': setDriverName(value); break;
-            case 'sealNo': setSealNo(value); break;
-            case 'regSerialNo': setRegSerialNo(value); break;
-            case 'empCode': setEmpCode(value); break;
-            case 'loadingStartTime': setStartTime(value); break;
-            case 'loadingEndTime': setEndTime(value); break;
+            case 'shift':
+                setShift(value);
+                break;
+            case 'transporter':
+                setTransporter(value);
+                break;
+            case 'destination':
+                setDestination(value);
+                break;
+            case 'loadingDockNo':
+                setLoadingDock(value);
+                break;
+            case 'supervisorName':
+                setSupervisorName(value);
+                break;
+            case 'pickingBy':
+                setPickingBy(value);
+                break;
+            case 'pickingCrosscheckedBy':
+                setPickingCrosscheckedBy(value);
+                break;
+            case 'vehicleNo':
+                setVehicleNo(value);
+                break;
+            case 'driverName':
+                setDriverName(value);
+                break;
+            case 'sealNo':
+                setSealNo(value);
+                break;
+            case 'regSerialNo':
+                setRegSerialNo(value);
+                break;
+            case 'empCode':
+                setEmpCode(value);
+                break;
+            case 'loadingStartTime':
+                setStartTime(value);
+                break;
+            case 'loadingEndTime':
+                setEndTime(value);
+                break;
         }
     };
 
@@ -213,30 +254,39 @@ export const useLoadingSheetLogic = () => {
         if (!currentSheet) return;
         const value = val === '' ? 0 : parseInt(val);
         if (isNaN(value)) return;
-        const stagingItem = currentSheet.stagingItems.find(s => s.srNo === skuSrNo);
+        const stagingItem = currentSheet.stagingItems.find((s) => s.srNo === skuSrNo);
         const safeLoadingItems = currentSheet.loadingItems || [];
 
-        const updatedLoadingItems = safeLoadingItems.map(li => {
+        const updatedLoadingItems = safeLoadingItems.map((li) => {
             if (li.skuSrNo !== skuSrNo) return li;
-            const existingCellIndex = li.cells.findIndex(c => c.row === row && c.col === col);
-            let newCells = [...li.cells];
-            if (existingCellIndex >= 0) { newCells[existingCellIndex] = { row, col, value }; }
-            else { newCells.push({ row, col, value }); }
+            const existingCellIndex = li.cells.findIndex((c) => c.row === row && c.col === col);
+            const newCells = [...li.cells];
+            if (existingCellIndex >= 0) {
+                newCells[existingCellIndex] = { row, col, value };
+            } else {
+                newCells.push({ row, col, value });
+            }
             const cellSum = newCells.reduce((acc, c) => acc + c.value, 0);
             const total = cellSum + (li.looseInput || 0);
             const totalCases = stagingItem?.ttlCases || 0;
             const balance = totalCases - total;
             return { ...li, cells: newCells, total, balance };
         });
-        setCurrentSheet(prev => prev ? ({ ...prev, loadingItems: updatedLoadingItems }) : null);
+        setCurrentSheet((prev) => (prev ? { ...prev, loadingItems: updatedLoadingItems } : null));
     };
 
     const handleCellBlur = (skuSrNo: number, row: number, col: number, val: string) => {
         if (!val || val === '') return;
         const value = parseInt(val);
-        const stagingItem = currentSheet?.stagingItems.find(s => s.srNo === skuSrNo);
-        if (stagingItem && Number(stagingItem.casesPerPlt) > 0 && value !== Number(stagingItem.casesPerPlt)) {
-            alert(`\u26A0\uFE0F INCORRECT QUANTITY!\n\nAllowed: ${stagingItem.casesPerPlt}\nEntered: ${value}\n\nThe value must match the standard Cases/Pallet.`);
+        const stagingItem = currentSheet?.stagingItems.find((s) => s.srNo === skuSrNo);
+        if (
+            stagingItem &&
+            Number(stagingItem.casesPerPlt) > 0 &&
+            value !== Number(stagingItem.casesPerPlt)
+        ) {
+            alert(
+                `\u26A0\uFE0F INCORRECT QUANTITY!\n\nAllowed: ${stagingItem.casesPerPlt}\nEntered: ${value}\n\nThe value must match the standard Cases/Pallet.`
+            );
             // Strictly clear the invalid value
             handleLoadingCellChange(skuSrNo, row, col, '');
             // Force refocus on the specific cell
@@ -254,9 +304,9 @@ export const useLoadingSheetLogic = () => {
         if (!currentSheet) return;
         const value = val === '' ? undefined : parseInt(val);
         if (value !== undefined && isNaN(value)) return;
-        const stagingItem = currentSheet.stagingItems.find(s => s.srNo === skuSrNo);
+        const stagingItem = currentSheet.stagingItems.find((s) => s.srNo === skuSrNo);
 
-        const updatedLoadingItems = (currentSheet.loadingItems || []).map(li => {
+        const updatedLoadingItems = (currentSheet.loadingItems || []).map((li) => {
             if (li.skuSrNo !== skuSrNo) return li;
             const cellSum = li.cells.reduce((acc, c) => acc + c.value, 0);
             const total = cellSum + (value || 0);
@@ -264,12 +314,12 @@ export const useLoadingSheetLogic = () => {
             const balance = totalCases - total;
             return { ...li, looseInput: value, total, balance };
         });
-        setCurrentSheet(prev => prev ? ({ ...prev, loadingItems: updatedLoadingItems }) : null);
+        setCurrentSheet((prev) => (prev ? { ...prev, loadingItems: updatedLoadingItems } : null));
     };
 
     const handleAdditionalChange = (id: number, field: string, value: any, colIndex?: number) => {
         if (!currentSheet) return;
-        const updatedAdditional = (currentSheet.additionalItems || []).map(item => {
+        const updatedAdditional = (currentSheet.additionalItems || []).map((item) => {
             if (item.id !== id) return item;
             if (field === 'skuName') {
                 return { ...item, skuName: value };
@@ -281,16 +331,20 @@ export const useLoadingSheetLogic = () => {
             }
             return item;
         });
-        setCurrentSheet(prev => prev ? ({ ...prev, additionalItems: updatedAdditional }) : null);
+        setCurrentSheet((prev) => (prev ? { ...prev, additionalItems: updatedAdditional } : null));
     };
 
     const handleToggleRejection = (skuSrNo: number, reason?: string) => {
         if (!currentSheet) return;
-        const updatedLoadingItems = (currentSheet.loadingItems || []).map(li => {
+        const updatedLoadingItems = (currentSheet.loadingItems || []).map((li) => {
             if (li.skuSrNo !== skuSrNo) return li;
-            return { ...li, isRejected: !li.isRejected, rejectionReason: !li.isRejected ? reason : undefined };
+            return {
+                ...li,
+                isRejected: !li.isRejected,
+                rejectionReason: !li.isRejected ? reason : undefined
+            };
         });
-        setCurrentSheet(prev => prev ? ({ ...prev, loadingItems: updatedLoadingItems }) : null);
+        setCurrentSheet((prev) => (prev ? { ...prev, loadingItems: updatedLoadingItems } : null));
     };
 
     const startCamera = async () => {
@@ -299,8 +353,8 @@ export const useLoadingSheetLogic = () => {
             const stream = await navigator.mediaDevices.getUserMedia({ video: true });
             setMediaStream(stream);
         } catch (err) {
-            console.error("Camera error:", err);
-            alert("Check permissions. Camera access is required.");
+            console.error('Camera error:', err);
+            alert('Check permissions. Camera access is required.');
             setCameraActive(false);
         }
     };
@@ -319,13 +373,13 @@ export const useLoadingSheetLogic = () => {
     };
 
     const stopCamera = () => {
-        if (mediaStream) mediaStream.getTracks().forEach(track => track.stop());
+        if (mediaStream) mediaStream.getTracks().forEach((track) => track.stop());
         setMediaStream(null);
         setCameraActive(false);
     };
 
     const buildSheetData = (status: SheetStatus): SheetData => {
-        if (!currentSheet) throw new Error("No sheet");
+        if (!currentSheet) throw new Error('No sheet');
         return {
             ...currentSheet,
             status,
@@ -353,8 +407,16 @@ export const useLoadingSheetLogic = () => {
             completedBy: status === SheetStatus.COMPLETED ? currentUser?.username : undefined,
             completedAt: status === SheetStatus.COMPLETED ? new Date().toISOString() : undefined,
             comments: remarks
-                ? [...(currentSheet.comments || []), { id: Date.now().toString(), author: currentUser?.username || 'User', text: remarks, timestamp: new Date().toISOString() }]
-                : (currentSheet.comments || [])
+                ? [
+                      ...(currentSheet.comments || []),
+                      {
+                          id: Date.now().toString(),
+                          author: currentUser?.username || 'User',
+                          text: remarks,
+                          timestamp: new Date().toISOString()
+                      }
+                  ]
+                : currentSheet.comments || []
         };
     };
 
@@ -362,28 +424,31 @@ export const useLoadingSheetLogic = () => {
         if (!currentSheet) return;
         try {
             const data = buildSheetData(currentSheet.status);
-            const hasStartedLog = currentSheet.history?.some(h => h.action === 'LOADING_STARTED');
+            const hasStartedLog = currentSheet.history?.some((h) => h.action === 'LOADING_STARTED');
             if (!hasStartedLog && data.loadingStartTime) {
-                data.history = [...(data.history || []), {
-                    id: Date.now().toString(),
-                    actor: currentUser?.username || 'Unknown',
-                    action: 'LOADING_STARTED',
-                    timestamp: new Date().toISOString(),
-                    details: 'Loading Process Started'
-                }];
+                data.history = [
+                    ...(data.history || []),
+                    {
+                        id: Date.now().toString(),
+                        actor: currentUser?.username || 'Unknown',
+                        action: 'LOADING_STARTED',
+                        timestamp: new Date().toISOString(),
+                        details: 'Loading Process Started'
+                    }
+                ];
             }
             await updateSheet(data);
-            alert("Progress Saved Successfully!");
+            alert('Progress Saved Successfully!');
         } catch (e) {
             console.error(e);
-            alert("Failed to save progress.");
+            alert('Failed to save progress.');
         }
     };
 
     const handleSubmit = async () => {
         if (!currentSheet) return;
         if (!svName || svName.trim() === '') {
-            alert("Supervisor Name is required to complete the sheet.");
+            alert('Supervisor Name is required to complete the sheet.');
             return;
         }
         const timeNow = new Date().toLocaleTimeString('en-US', { hour12: false });
@@ -393,45 +458,53 @@ export const useLoadingSheetLogic = () => {
             ...tempSheet,
             loadingEndTime: timeNow,
             rejectionReason: undefined,
-            history: [...(currentSheet.history || []), {
-                id: Date.now().toString(),
-                actor: currentUser?.username || 'Unknown',
-                action: 'LOADING_SUBMITTED',
-                timestamp: new Date().toISOString(),
-                details: 'Submitted for Final Verification'
-            }]
+            history: [
+                ...(currentSheet.history || []),
+                {
+                    id: Date.now().toString(),
+                    actor: currentUser?.username || 'Unknown',
+                    action: 'LOADING_SUBMITTED',
+                    timestamp: new Date().toISOString(),
+                    details: 'Submitted for Final Verification'
+                }
+            ]
         };
         try {
             await updateSheet(finalSheet);
             setCurrentSheet(finalSheet);
-            alert("Submitted for Shift Lead Verification!");
+            alert('Submitted for Shift Lead Verification!');
             navigate('/database');
         } catch (e) {
             console.error(e);
-            alert("Failed to submit.");
+            alert('Failed to submit.');
         }
     };
 
     const handleVerificationAction = async (approve: boolean, reason?: string) => {
         if (!currentSheet) return;
         if (approve) {
-            if (confirm("Confirm final approval? This sheet will be marked as COMPLETED.")) {
+            if (confirm('Confirm final approval? This sheet will be marked as COMPLETED.')) {
                 const finalSheet: SheetData = {
                     ...currentSheet,
                     status: SheetStatus.COMPLETED,
                     loadingApprovedBy: currentUser?.username,
                     loadingApprovedAt: new Date().toISOString(),
-                    loadingEndTime: currentSheet.loadingEndTime || new Date().toLocaleTimeString('en-US', { hour12: false }),
+                    loadingEndTime:
+                        currentSheet.loadingEndTime ||
+                        new Date().toLocaleTimeString('en-US', { hour12: false }),
                     slSign: currentUser?.fullName,
                     completedBy: currentUser?.username,
                     completedAt: new Date().toISOString(),
-                    history: [...(currentSheet.history || []), {
-                        id: Date.now().toString(),
-                        actor: currentUser?.username || 'Unknown',
-                        action: 'COMPLETED',
-                        timestamp: new Date().toISOString(),
-                        details: 'Final Approval Granted - Dispatched'
-                    }]
+                    history: [
+                        ...(currentSheet.history || []),
+                        {
+                            id: Date.now().toString(),
+                            actor: currentUser?.username || 'Unknown',
+                            action: 'COMPLETED',
+                            timestamp: new Date().toISOString(),
+                            details: 'Final Approval Granted - Dispatched'
+                        }
+                    ]
                 };
                 await updateSheet(finalSheet);
                 setCurrentSheet(finalSheet);
@@ -443,19 +516,25 @@ export const useLoadingSheetLogic = () => {
                     ...currentSheet,
                     status: SheetStatus.LOCKED,
                     rejectionReason: reason,
-                    comments: [...(currentSheet.comments || []), {
-                        id: Date.now().toString(),
-                        author: currentUser?.username || 'Shift Lead',
-                        text: `REJECTED: ${reason}`,
-                        timestamp: new Date().toISOString()
-                    }],
-                    history: [...(currentSheet.history || []), {
-                        id: Date.now().toString(),
-                        actor: currentUser?.username || 'Unknown',
-                        action: 'REJECTED_LOADING',
-                        timestamp: new Date().toISOString(),
-                        details: `Rejected: ${reason}`
-                    }]
+                    comments: [
+                        ...(currentSheet.comments || []),
+                        {
+                            id: Date.now().toString(),
+                            author: currentUser?.username || 'Shift Lead',
+                            text: `REJECTED: ${reason}`,
+                            timestamp: new Date().toISOString()
+                        }
+                    ],
+                    history: [
+                        ...(currentSheet.history || []),
+                        {
+                            id: Date.now().toString(),
+                            actor: currentUser?.username || 'Unknown',
+                            action: 'REJECTED_LOADING',
+                            timestamp: new Date().toISOString(),
+                            details: `Rejected: ${reason}`
+                        }
+                    ]
                 };
                 await updateSheet(rejectedSheet);
                 setCurrentSheet(rejectedSheet);
@@ -465,41 +544,98 @@ export const useLoadingSheetLogic = () => {
     };
 
     const totals = useMemo(() => {
-        if (!currentSheet) return { totalLoadedMain: 0, totalAdditional: 0, grandTotalLoaded: 0, totalStaging: 0, balance: 0 };
-        const totalLoadedMain = currentSheet.loadingItems?.reduce((acc, li) => acc + li.total, 0) || 0;
-        const totalAdditional = currentSheet.additionalItems?.reduce((acc, ai) => acc + ai.total, 0) || 0;
+        if (!currentSheet)
+            return {
+                totalLoadedMain: 0,
+                totalAdditional: 0,
+                grandTotalLoaded: 0,
+                totalStaging: 0,
+                balance: 0
+            };
+        const totalLoadedMain =
+            currentSheet.loadingItems?.reduce((acc, li) => acc + li.total, 0) || 0;
+        const totalAdditional =
+            currentSheet.additionalItems?.reduce((acc, ai) => acc + ai.total, 0) || 0;
         const grandTotalLoaded = totalLoadedMain + totalAdditional;
         const totalStaging = currentSheet.stagingItems.reduce((acc, si) => acc + si.ttlCases, 0);
-        const balance = currentSheet.loadingItems?.reduce((acc, li) => acc + Math.max(0, li.balance), 0) || 0;
+        const balance =
+            currentSheet.loadingItems?.reduce((acc, li) => acc + Math.max(0, li.balance), 0) || 0;
         return { totalLoadedMain, totalAdditional, grandTotalLoaded, totalStaging, balance };
     }, [currentSheet]);
 
     const lists = useMemo(() => {
-        if (!currentSheet) return { extraItemsWithQty: [], returnedItems: [], overLoadedItems: [], displayedStagingItems: [] };
-        const extraItemsWithQty = (currentSheet.additionalItems || []).filter(item => item.total > 0 && item.skuName);
-        const returnedItems = currentSheet.loadingItems?.filter(li => li.balance > 0) || [];
-        const overLoadedItems = currentSheet.loadingItems?.filter(li => li.balance < 0) || [];
-        const displayedStagingItems = currentSheet.stagingItems.filter(i => i.skuName && i.skuName.trim() !== '');
+        if (!currentSheet)
+            return {
+                extraItemsWithQty: [],
+                returnedItems: [],
+                overLoadedItems: [],
+                displayedStagingItems: []
+            };
+        const extraItemsWithQty = (currentSheet.additionalItems || []).filter(
+            (item) => item.total > 0 && item.skuName
+        );
+        const returnedItems = currentSheet.loadingItems?.filter((li) => li.balance > 0) || [];
+        const overLoadedItems = currentSheet.loadingItems?.filter((li) => li.balance < 0) || [];
+        const displayedStagingItems = currentSheet.stagingItems.filter(
+            (i) => i.skuName && i.skuName.trim() !== ''
+        );
         return { extraItemsWithQty, returnedItems, overLoadedItems, displayedStagingItems };
     }, [currentSheet]);
 
     const states = {
         isCompleted: currentSheet?.status === SheetStatus.COMPLETED,
         isPendingVerification: currentSheet?.status === SheetStatus.LOADING_VERIFICATION_PENDING,
-        isLocked: (currentSheet?.status === SheetStatus.COMPLETED) || (currentSheet?.status === SheetStatus.LOADING_VERIFICATION_PENDING && currentUser?.role !== Role.ADMIN && currentUser?.role !== Role.SHIFT_LEAD)
+        isLocked:
+            currentSheet?.status === SheetStatus.COMPLETED ||
+            (currentSheet?.status === SheetStatus.LOADING_VERIFICATION_PENDING &&
+                currentUser?.role !== Role.ADMIN &&
+                currentUser?.role !== Role.SHIFT_LEAD)
     };
 
     return {
-        id, currentSheet, loading, currentUser, states, errors,
+        id,
+        currentSheet,
+        loading,
+        currentUser,
+        states,
+        errors,
         header: {
-            shift, transporter, destination, loadingDock, supervisorName, empCode, startTime, endTime, pickingBy, pickingByEmpCode, pickingCrosscheckedBy, pickingCrosscheckedByEmpCode, vehicleNo, driverName, sealNo, regSerialNo
+            shift,
+            transporter,
+            destination,
+            loadingDock,
+            supervisorName,
+            empCode,
+            startTime,
+            endTime,
+            pickingBy,
+            pickingByEmpCode,
+            pickingCrosscheckedBy,
+            pickingCrosscheckedByEmpCode,
+            vehicleNo,
+            driverName,
+            sealNo,
+            regSerialNo
         },
         footer: { svName, svSign, slSign, deoSign, remarks, capturedImage },
         camera: { videoRef, canvasRef, cameraActive, startCamera, stopCamera, capturePhoto },
-        totals, lists,
+        totals,
+        lists,
         handlers: {
-            handleHeaderChange, handleLoadingCellChange, handleCellBlur, handleLooseChange, handleAdditionalChange,
-            handleSaveProgress, handleSubmit, handleVerificationAction, setRemarks, setSvName, setSvSign, setSlSign, setDeoSign, handleToggleRejection
+            handleHeaderChange,
+            handleLoadingCellChange,
+            handleCellBlur,
+            handleLooseChange,
+            handleAdditionalChange,
+            handleSaveProgress,
+            handleSubmit,
+            handleVerificationAction,
+            setRemarks,
+            setSvName,
+            setSvSign,
+            setSlSign,
+            setDeoSign,
+            handleToggleRejection
         }
     };
 };

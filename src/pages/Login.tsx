@@ -4,13 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Role } from '@/types';
 import { Loader2, AlertCircle, Eye, EyeOff, LogIn } from 'lucide-react';
 import { useData } from '@/contexts/DataContext';
+import { useAppState } from '@/contexts/AppStateContext';
 import { motion } from 'framer-motion';
 import RegisterModal from '@/components/auth/RegisterModal';
 
 export default function LoginPage() {
     const navigate = useNavigate();
-    const { setDevRole, users, setCurrentUser, logSecurityEvent, updateUser } = useData();
-
+    const { users, setCurrentUser, logSecurityEvent, updateUser } = useData();
+    const { setDevRole } = useAppState();
 
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
@@ -26,13 +27,18 @@ export default function LoginPage() {
     });
 
     const formatRole = (role: Role | '') => {
-        if (!role) return "";
+        if (!role) return '';
         switch (role) {
-            case Role.STAGING_SUPERVISOR: return "STAGING SUPERVISOR";
-            case Role.LOADING_SUPERVISOR: return "LOADING SUPERVISOR";
-            case Role.SHIFT_LEAD: return "SHIFT LEAD";
-            case Role.ADMIN: return "ADMIN";
-            default: return role;
+            case Role.STAGING_SUPERVISOR:
+                return 'STAGING SUPERVISOR';
+            case Role.LOADING_SUPERVISOR:
+                return 'LOADING SUPERVISOR';
+            case Role.SHIFT_LEAD:
+                return 'SHIFT LEAD';
+            case Role.ADMIN:
+                return 'ADMIN';
+            default:
+                return role;
         }
     };
 
@@ -51,20 +57,29 @@ export default function LoginPage() {
 
         // 2. Validate Role Selection
         if (!formData.role) {
-            setError("Please select a role.");
+            setError('Please select a role.');
             setLoading(false);
             return;
         }
 
         // 3. Find user
-        const foundUser = users.find(u => u.username.toLowerCase() === formData.username.toLowerCase());
+        const foundUser = users.find(
+            (u) => u.username.toLowerCase() === formData.username.toLowerCase()
+        );
 
         if (foundUser) {
             // 4. Check Persistent Lock
             if (foundUser.isLocked) {
-                setError("Account is permanently locked due to security risks. Contact Administrator.");
+                setError(
+                    'Account is permanently locked due to security risks. Contact Administrator.'
+                );
                 setLoading(false);
-                logSecurityEvent('LOGIN_ATTEMPT_LOCKED', `Locked user ${foundUser.username} tried to login`, foundUser.username, 'MEDIUM');
+                logSecurityEvent(
+                    'LOGIN_ATTEMPT_LOCKED',
+                    `Locked user ${foundUser.username} tried to login`,
+                    foundUser.username,
+                    'MEDIUM'
+                );
                 return;
             }
 
@@ -81,17 +96,32 @@ export default function LoginPage() {
                         // Admin gets a 60s timer lockout (Requested by User)
                         const lockUntil = Date.now() + 60000;
                         setLockoutTime(lockUntil);
-                        setError("Too many failed attempts. Admin security cooldown: 60 seconds.");
-                        logSecurityEvent('ADMIN_LOCKOUT_TIMER', `Admin ${formData.username} triggered 60s cooldown`, formData.username, 'HIGH');
+                        setError('Too many failed attempts. Admin security cooldown: 60 seconds.');
+                        logSecurityEvent(
+                            'ADMIN_LOCKOUT_TIMER',
+                            `Admin ${formData.username} triggered 60s cooldown`,
+                            formData.username,
+                            'HIGH'
+                        );
                     } else {
                         // Others get HARD LOCKED (Database update)
                         await updateUser({ ...foundUser, isLocked: true });
-                        setError("Too many failed attempts. Account has been SECURELY LOCKED.");
-                        logSecurityEvent('USER_HARD_LOCKED', `User ${formData.username} was hard-locked after 5 failures`, formData.username, 'CRITICAL');
+                        setError('Too many failed attempts. Account has been SECURELY LOCKED.');
+                        logSecurityEvent(
+                            'USER_HARD_LOCKED',
+                            `User ${formData.username} was hard-locked after 5 failures`,
+                            formData.username,
+                            'CRITICAL'
+                        );
                     }
                 } else {
                     setError(`Invalid password. ${maxAttempts - attempts} attempts remaining.`);
-                    logSecurityEvent('LOGIN_FAILED', `Failed login attempt for ${formData.username}`, formData.username, 'LOW');
+                    logSecurityEvent(
+                        'LOGIN_FAILED',
+                        `Failed login attempt for ${formData.username}`,
+                        formData.username,
+                        'LOW'
+                    );
                 }
                 setLoading(false);
                 return;
@@ -99,7 +129,7 @@ export default function LoginPage() {
 
             // 6. Strict Approval Check
             if (!foundUser.isApproved) {
-                setError("Account is pending Admin approval.");
+                setError('Account is pending Admin approval.');
                 setLoading(false);
                 return;
             }
@@ -121,16 +151,19 @@ export default function LoginPage() {
                 setCurrentUser(foundUser);
                 navigate('/');
             }, 500);
-
         } else {
-            setError("User not found.");
+            setError('User not found.');
             setLoading(false);
         }
     };
 
     return (
         <div className="relative w-full min-h-screen lg:h-screen lg:overflow-hidden bg-[#fce4ec] font-sans">
-            <RegisterModal isOpen={showRegister} onClose={() => setShowRegister(false)} initialRole={formData.role as Role} />
+            <RegisterModal
+                isOpen={showRegister}
+                onClose={() => setShowRegister(false)}
+                initialRole={formData.role as Role}
+            />
 
             {/* Premium Sricity Background */}
             <div className="fixed inset-0 z-0">
@@ -141,7 +174,10 @@ export default function LoginPage() {
                 <div className="absolute inset-0 bg-slate-900/10 backdrop-blur-[2px]" />
                 <div
                     className="absolute inset-0 pointer-events-none"
-                    style={{ background: 'radial-gradient(circle at 40% 50%, transparent 0%, rgba(2,6,23,0.15) 100%)' }}
+                    style={{
+                        background:
+                            'radial-gradient(circle at 40% 50%, transparent 0%, rgba(2,6,23,0.15) 100%)'
+                    }}
                 />
             </div>
 
@@ -152,7 +188,11 @@ export default function LoginPage() {
                 className="relative p-6 pb-0 lg:absolute lg:top-10 lg:left-12 lg:p-0 z-20 flex items-center gap-4 max-w-[80%]"
             >
                 <div className="relative group shrink-0">
-                    <img src="/unicharm-logo.png" alt="Unicharm" className="relative w-12 lg:w-16 h-auto drop-shadow-2xl brightness-110" />
+                    <img
+                        src="/unicharm-logo.png"
+                        alt="Unicharm"
+                        className="relative w-12 lg:w-16 h-auto drop-shadow-2xl brightness-110"
+                    />
                 </div>
                 <div className="flex flex-col">
                     <h1 className="text-xl lg:text-3xl font-serif font-black text-slate-800 tracking-tight leading-none">
@@ -167,12 +207,14 @@ export default function LoginPage() {
             {/* MAIN CONTENT - STRICT 50/50 GRID */}
             {/* Using h-full on the grid ensures it fills the viewport height exactly on Desktop */}
             <div className="relative z-10 w-full min-h-screen flex flex-col lg:grid lg:grid-cols-2 lg:h-full">
-
                 {/* LEFT COLUMN: Premium Products - POSITIONED BELOW HEADER */}
                 {/* top padding ensures it clears the absolute header; justify-start keeps it from floating up */}
                 <div className="flex flex-col justify-center lg:justify-start items-center p-8 lg:pt-32 lg:h-full order-2 lg:order-1">
                     <div className="flex flex-col items-center mb-4 lg:mt-12 lg:mb-4 opacity-90">
-                        <span className="text-xs lg:text-sm font-bold italic text-slate-700 tracking-[0.6em] uppercase text-center" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                        <span
+                            className="text-xs lg:text-sm font-bold italic text-slate-700 tracking-[0.6em] uppercase text-center"
+                            style={{ fontFamily: 'Outfit, sans-serif' }}
+                        >
                             Premium Products
                         </span>
                         <div className="h-[2px] w-32 bg-gradient-to-r from-transparent via-slate-600 to-transparent mt-3" />
@@ -186,10 +228,18 @@ export default function LoginPage() {
                             transition={{ delay: 0.4 }}
                             className="group relative shrink-0 transition-all duration-500 hover:-translate-y-4 hover:scale-140 z-10 hover:z-50"
                         >
-                            <img src="/brand-mamypoko.png" alt="MamyPoko" className="h-20 lg:h-40 w-auto drop-shadow-2xl filter brightness-105 relative z-10" />
+                            <img
+                                src="/brand-mamypoko.png"
+                                alt="MamyPoko"
+                                className="h-20 lg:h-40 w-auto drop-shadow-2xl filter brightness-105 relative z-10"
+                            />
                             {/* Water Reflection */}
                             <div className="absolute -bottom-10 lg:-bottom-20 left-0 right-0 h-10 lg:h-20 overflow-hidden pointer-events-none opacity-[0.25] transform scale-y-[-1] blur-[2px] transition-all duration-500 group-hover:opacity-40 group-hover:blur-[1px]">
-                                <img src="/brand-mamypoko.png" className="h-20 lg:h-40 w-auto mx-auto" alt="" />
+                                <img
+                                    src="/brand-mamypoko.png"
+                                    className="h-20 lg:h-40 w-auto mx-auto"
+                                    alt=""
+                                />
                             </div>
                         </motion.div>
 
@@ -200,10 +250,18 @@ export default function LoginPage() {
                             transition={{ delay: 0.5 }}
                             className="group relative shrink-0 transition-all duration-500 hover:-translate-y-4 hover:scale-140 z-10 hover:z-50"
                         >
-                            <img src="/brand-sofy.png" alt="SOFY" className="h-16 lg:h-32 w-auto drop-shadow-2xl filter brightness-105 relative z-10" />
+                            <img
+                                src="/brand-sofy.png"
+                                alt="SOFY"
+                                className="h-16 lg:h-32 w-auto drop-shadow-2xl filter brightness-105 relative z-10"
+                            />
                             {/* Water Reflection */}
                             <div className="absolute -bottom-8 lg:-bottom-16 left-0 right-0 h-8 lg:h-16 overflow-hidden pointer-events-none opacity-[0.25] transform scale-y-[-1] blur-[2px] transition-all duration-500 group-hover:opacity-40 group-hover:blur-[1px]">
-                                <img src="/brand-sofy.png" className="h-16 lg:h-32 w-auto mx-auto" alt="" />
+                                <img
+                                    src="/brand-sofy.png"
+                                    className="h-16 lg:h-32 w-auto mx-auto"
+                                    alt=""
+                                />
                             </div>
                         </motion.div>
 
@@ -214,10 +272,18 @@ export default function LoginPage() {
                             transition={{ delay: 0.6 }}
                             className="group relative shrink-0 transition-all duration-500 hover:-translate-y-4 hover:scale-140 z-10 hover:z-50"
                         >
-                            <img src="/brand-lifree.png" alt="Lifree" className="h-16 lg:h-32 w-auto drop-shadow-2xl filter brightness-105 relative z-10" />
+                            <img
+                                src="/brand-lifree.png"
+                                alt="Lifree"
+                                className="h-16 lg:h-32 w-auto drop-shadow-2xl filter brightness-105 relative z-10"
+                            />
                             {/* Water Reflection */}
                             <div className="absolute -bottom-8 lg:-bottom-16 left-0 right-0 h-8 lg:h-16 overflow-hidden pointer-events-none opacity-[0.25] transform scale-y-[-1] blur-[2px] transition-all duration-500 group-hover:opacity-40 group-hover:blur-[1px]">
-                                <img src="/brand-lifree.png" className="h-16 lg:h-32 w-auto mx-auto" alt="" />
+                                <img
+                                    src="/brand-lifree.png"
+                                    className="h-16 lg:h-32 w-auto mx-auto"
+                                    alt=""
+                                />
                             </div>
                         </motion.div>
                     </div>
@@ -233,8 +299,13 @@ export default function LoginPage() {
                             animate={{ opacity: 1, y: 0 }}
                             className="mb-6 lg:mb-8 text-center lg:text-right"
                         >
-                            <h1 className="text-3xl lg:text-5xl tracking-tight leading-none text-slate-900" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                                <span className="font-light block lg:inline mb-1 lg:mb-0 lg:mr-2">Welcome to</span>
+                            <h1
+                                className="text-3xl lg:text-5xl tracking-tight leading-none text-slate-900"
+                                style={{ fontFamily: 'Outfit, sans-serif' }}
+                            >
+                                <span className="font-light block lg:inline mb-1 lg:mb-0 lg:mr-2">
+                                    Welcome to
+                                </span>
                                 <span className="font-black text-[#003366]">Sricity</span>
                             </h1>
                         </motion.div>
@@ -243,7 +314,7 @@ export default function LoginPage() {
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
-                            transition={{ duration: 0.6, ease: "circOut" }}
+                            transition={{ duration: 0.6, ease: 'circOut' }}
                             className="w-full p-6 lg:p-8 rounded-[2rem] bg-black/40 backdrop-blur-xl border border-white/20 shadow-[0_20px_40px_-12px_rgba(0,0,0,0.5)] relative overflow-hidden"
                         >
                             <div className="relative z-10">
@@ -253,7 +324,9 @@ export default function LoginPage() {
                                             Secure Authentication
                                         </span>
                                     </div>
-                                    <h3 className="text-lg lg:text-xl font-bold text-white tracking-tight font-sans">Login Portal</h3>
+                                    <h3 className="text-lg lg:text-xl font-bold text-white tracking-tight font-sans">
+                                        Login Portal
+                                    </h3>
                                     <p className="text-[10px] lg:text-xs font-bold text-blue-400/50 tracking-[0.3em] uppercase mt-2">
                                         SCM-FG Operations
                                     </p>
@@ -266,7 +339,9 @@ export default function LoginPage() {
                                         className="mb-5 p-3 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center gap-3"
                                     >
                                         <AlertCircle size={14} className="text-red-400 shrink-0" />
-                                        <p className="text-[10px] lg:text-xs text-red-100 font-medium leading-tight">{error}</p>
+                                        <p className="text-[10px] lg:text-xs text-red-100 font-medium leading-tight">
+                                            {error}
+                                        </p>
                                     </motion.div>
                                 )}
 
@@ -277,17 +352,27 @@ export default function LoginPage() {
                                                 type="text"
                                                 placeholder="Username"
                                                 value={formData.username}
-                                                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                                                onChange={(e) =>
+                                                    setFormData({
+                                                        ...formData,
+                                                        username: e.target.value
+                                                    })
+                                                }
                                                 className="w-full h-10 lg:h-11 bg-white/5 border border-white/10 rounded-xl px-4 text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all text-xs lg:text-sm font-semibold"
                                                 required
                                             />
                                         </div>
                                         <div className="relative">
                                             <input
-                                                type={showPassword ? "text" : "password"}
+                                                type={showPassword ? 'text' : 'password'}
                                                 placeholder="Password"
                                                 value={formData.password}
-                                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                                onChange={(e) =>
+                                                    setFormData({
+                                                        ...formData,
+                                                        password: e.target.value
+                                                    })
+                                                }
                                                 className="w-full h-10 lg:h-11 bg-white/5 border border-white/10 rounded-xl px-4 pr-12 text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all text-xs lg:text-sm font-semibold"
                                                 required
                                             />
@@ -296,7 +381,11 @@ export default function LoginPage() {
                                                 onClick={() => setShowPassword(!showPassword)}
                                                 className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-lg text-white/20 hover:text-white transition-colors"
                                             >
-                                                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                                {showPassword ? (
+                                                    <EyeOff size={16} />
+                                                ) : (
+                                                    <Eye size={16} />
+                                                )}
                                             </button>
                                         </div>
                                         <div className="relative">
@@ -308,14 +397,22 @@ export default function LoginPage() {
                                                 `}
                                             >
                                                 <span className="text-white/70">
-                                                    {formatRole(formData.role) || "Select Role"}
+                                                    {formatRole(formData.role) || 'Select Role'}
                                                 </span>
-                                                <LogIn size={16} className={`transition-all ${isRoleOpen ? 'text-blue-400' : 'text-white/20'}`} />
+                                                <LogIn
+                                                    size={16}
+                                                    className={`transition-all ${isRoleOpen ? 'text-blue-400' : 'text-white/20'}`}
+                                                />
                                             </button>
 
                                             {isRoleOpen && (
                                                 <div className="absolute top-full left-0 right-0 bg-slate-800 border border-white/10 border-t-0 rounded-b-xl shadow-2xl overflow-hidden z-[50]">
-                                                    {[Role.STAGING_SUPERVISOR, Role.LOADING_SUPERVISOR, Role.SHIFT_LEAD, Role.ADMIN].map((role) => (
+                                                    {[
+                                                        Role.STAGING_SUPERVISOR,
+                                                        Role.LOADING_SUPERVISOR,
+                                                        Role.SHIFT_LEAD,
+                                                        Role.ADMIN
+                                                    ].map((role) => (
                                                         <button
                                                             key={role}
                                                             type="button"
@@ -338,7 +435,11 @@ export default function LoginPage() {
                                         disabled={loading}
                                         className="w-full h-11 lg:h-12 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white font-black rounded-xl shadow-lg hover:shadow-blue-500/25 transition-all transform active:scale-[0.98] flex items-center justify-center uppercase tracking-[0.2em] text-[10px] lg:text-xs mt-5"
                                     >
-                                        {loading ? <Loader2 className="animate-spin w-4 h-4 lg:w-5 lg:h-5" /> : "Sign In"}
+                                        {loading ? (
+                                            <Loader2 className="animate-spin w-4 h-4 lg:w-5 lg:h-5" />
+                                        ) : (
+                                            'Sign In'
+                                        )}
                                     </Button>
                                 </form>
 
@@ -347,7 +448,8 @@ export default function LoginPage() {
                                         onClick={() => setShowRegister(true)}
                                         className="text-[9px] lg:text-[10px] font-bold text-white/30 hover:text-blue-400 transition-all uppercase tracking-[0.2em]"
                                     >
-                                        New user? <span className="text-white/50 ml-1">Request Account</span>
+                                        New user?{' '}
+                                        <span className="text-white/50 ml-1">Request Account</span>
                                     </button>
                                 </div>
                             </div>
@@ -357,5 +459,4 @@ export default function LoginPage() {
             </div>
         </div>
     );
-
 }

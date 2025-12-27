@@ -17,4 +17,4 @@ export const WIDGET_METADATA: WidgetMeta[] = [
     }
 ];
 
-export const getWidgetMeta = (id: string) => WIDGET_METADATA.find(w => w.id === id);
+export const getWidgetMeta = (id: string) => WIDGET_METADATA.find((w) => w.id === id);
