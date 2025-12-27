@@ -66,9 +66,10 @@ export default function RegisterPage() {
 
             alert('Registration successful! Waiting for Admin Approval.');
             navigate('/login');
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error(error);
-            alert(error.message || 'Registration failed');
+            const message = error instanceof Error ? error.message : 'Registration failed';
+            alert(message);
         } finally {
             setLoading(false);
         }

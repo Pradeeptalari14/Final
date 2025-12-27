@@ -4,22 +4,17 @@ import {
     Download,
     Truck,
     Users,
-    FileText,
-    ChevronDown,
     Clock,
-    LayoutGrid,
-    Search,
     TrendingUp,
     MapPin,
     Package
 } from 'lucide-react';
 import { useData } from '@/contexts/DataContext';
-import { Role, SheetData, SheetStatus } from '@/types';
+import { SheetData, SheetStatus } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
     Table,
     TableBody,
@@ -28,7 +23,6 @@ import {
     TableHeader,
     TableRow
 } from '@/components/ui/table';
-import { Input } from '@/components/ui/input';
 import { exportToExcelGeneric } from '@/lib/excelExport';
 
 // --- Types ---
@@ -38,7 +32,6 @@ export default function ReportsPage() {
     const { sheets, users, syncStatus, refreshSheets } = useData();
     const [activeReport, setActiveReport] = useState<ReportType>('daily');
     const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
-    const [searchQuery, setSearchQuery] = useState('');
 
     // --- Helper for Date Comparison ---
     const isSameDay = (dateStr: string, targetStr: string) => {

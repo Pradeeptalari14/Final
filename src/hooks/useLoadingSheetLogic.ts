@@ -90,19 +90,19 @@ export const useLoadingSheetLogic = () => {
             sheet.additionalItems && sheet.additionalItems.length > 0
                 ? sheet.additionalItems
                 : Array.from({ length: 5 }, (_, i) => ({
-                      id: i + 1,
-                      skuName: '',
-                      counts: Array(10).fill(0),
-                      total: 0
-                  }));
+                    id: i + 1,
+                    skuName: '',
+                    counts: Array(10).fill(0),
+                    total: 0
+                }));
 
         setCurrentSheet((prev) =>
             prev
                 ? {
-                      ...prev,
-                      loadingItems: updatedLoadingItems,
-                      additionalItems: updatedAdditionalItems
-                  }
+                    ...prev,
+                    loadingItems: updatedLoadingItems,
+                    additionalItems: updatedAdditionalItems
+                }
                 : null
         );
     };
@@ -131,7 +131,7 @@ export const useLoadingSheetLogic = () => {
 
             setStartTime(
                 currentSheet.loadingStartTime ||
-                    new Date().toLocaleTimeString('en-US', { hour12: false })
+                new Date().toLocaleTimeString('en-US', { hour12: false })
             );
             setEndTime(currentSheet.loadingEndTime || '');
 
@@ -150,7 +150,7 @@ export const useLoadingSheetLogic = () => {
 
             const initialPickingCrosscheckedBy =
                 currentSheet.pickingCrosscheckedBy &&
-                currentSheet.pickingCrosscheckedBy.trim() !== ''
+                    currentSheet.pickingCrosscheckedBy.trim() !== ''
                     ? currentSheet.pickingCrosscheckedBy
                     : currentUserName;
             setPickingCrosscheckedBy(initialPickingCrosscheckedBy);
@@ -408,14 +408,14 @@ export const useLoadingSheetLogic = () => {
             completedAt: status === SheetStatus.COMPLETED ? new Date().toISOString() : undefined,
             comments: remarks
                 ? [
-                      ...(currentSheet.comments || []),
-                      {
-                          id: Date.now().toString(),
-                          author: currentUser?.username || 'User',
-                          text: remarks,
-                          timestamp: new Date().toISOString()
-                      }
-                  ]
+                    ...(currentSheet.comments || []),
+                    {
+                        id: Date.now().toString(),
+                        author: currentUser?.username || 'User',
+                        text: remarks,
+                        timestamp: new Date().toISOString()
+                    }
+                ]
                 : currentSheet.comments || []
         };
     };
@@ -574,7 +574,12 @@ export const useLoadingSheetLogic = () => {
         const extraItemsWithQty = (currentSheet.additionalItems || []).filter(
             (item) => item.total > 0 && item.skuName
         );
-        const returnedItems = currentSheet.loadingItems?.filter((li) => li.balance > 0) || [];
+        const returnedItems = (currentSheet.loadingItems || [])
+            .filter((li) => li.balance > 0)
+            .map(li => ({
+                ...li,
+                skuName: currentSheet.stagingItems.find(si => si.srNo === li.skuSrNo)?.skuName || 'Unknown SKU'
+            }));
         const overLoadedItems = currentSheet.loadingItems?.filter((li) => li.balance < 0) || [];
         const displayedStagingItems = currentSheet.stagingItems.filter(
             (i) => i.skuName && i.skuName.trim() !== ''

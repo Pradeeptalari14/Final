@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { useAppState } from '@/contexts/AppStateContext';
-import { Role } from '@/types';
+import { Role, User, AppSettings } from '@/types';
 import { t } from '@/lib/i18n';
 import { NotificationBell } from '@/components/ui/NotificationBell';
 
@@ -42,7 +42,7 @@ export default function RootLayout() {
     }, [location.pathname, mobileOpen]);
 
     const handleSignOut = () => {
-        setDevRole(null as any); // Force null to trigger redirect
+        setDevRole(null); // Force null to trigger redirect
     };
 
     // Determine Admin Label based on Role
@@ -151,10 +151,10 @@ export default function RootLayout() {
 interface SidebarContentProps {
     isMobile?: boolean;
     collapsed: boolean;
-    settings: any;
-    currentUser: any;
+    settings: AppSettings;
+    currentUser: User | null;
     adminLabel: string;
-    location: any;
+    location: { pathname: string; search: string };
     handleSignOut: () => void;
     setMobileOpen?: (open: boolean) => void;
 }

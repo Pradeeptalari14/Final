@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { SheetStatus, Role } from '@/types';
+import { SheetStatus, Role, LoadingItem } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { SheetHeader } from './shared/SheetHeader';
 import { VerificationFooter as SharedVerificationFooter } from './shared/VerificationFooter';
@@ -15,6 +15,10 @@ import { LoadingItemsTable } from './loading/LoadingItemsTable';
 import { RejectionSection } from './shared/RejectionSection';
 import { FileSpreadsheet } from 'lucide-react';
 import { exportLoadingToExcel } from '@/lib/excelExport';
+
+interface LoadingItemWithSku extends LoadingItem {
+    skuName: string;
+}
 
 const DismissibleAlert = ({ comments }: { comments: any[] }) => {
     const [isVisible, setIsVisible] = useState(true);
@@ -82,7 +86,11 @@ export default function LoadingSheet() {
             handleSaveProgress,
             handleSubmit,
             handleVerificationAction,
-            handleToggleRejection
+            handleToggleRejection,
+            setSvName,
+            setSvSign,
+            setSlSign,
+            setDeoSign
         }
     } = useLoadingSheetLogic();
 
@@ -668,7 +676,7 @@ export default function LoadingSheet() {
                                         Remarks (If any adjustment for shortage/excess, please mention details)
                                     </div>
                                     <div style={{ whiteSpace: 'pre-wrap' }}>
-                                        {lists.returnedItems.map((item, i) => (
+                                        {(lists.returnedItems as LoadingItemWithSku[]).map((item, i) => (
                                             <div key={i}>For {item.skuName} {item.balance} loose returned.</div>
                                         ))}
                                         {footer.remarks}
@@ -881,10 +889,10 @@ export default function LoadingSheet() {
                     deoSign={footer.deoSign}
                     isLocked={isLocked}
                     onChange={(field, value) => {
-                        if (field === 'svName') handlers.setSvName(value);
-                        if (field === 'svSign') handlers.setSvSign(value);
-                        if (field === 'slSign') handlers.setSlSign(value);
-                        if (field === 'deoSign') handlers.setDeoSign(value);
+                        if (field === 'svName') setSvName(value);
+                        if (field === 'svSign') setSvSign(value);
+                        if (field === 'slSign') setSlSign(value);
+                        if (field === 'deoSign') setDeoSign(value);
                     }}
                 />
 

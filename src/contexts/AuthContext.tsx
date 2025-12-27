@@ -18,8 +18,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             try {
                 return {
                     user: JSON.parse(localUser),
-                    access_token: 'local-session'
-                } as any;
+                    access_token: 'local-session',
+                    refresh_token: '',
+                    expires_in: 3600,
+                    token_type: 'bearer'
+                } as Session;
             } catch (e) {
                 console.error('Invalid local session', e);
             }
@@ -33,14 +36,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!session) {
             supabase.auth
                 .getSession()
-                .then(({ data, error }: { data: { session: Session | null }; error: any }) => {
+                .then(({ data, error }: { data: { session: Session | null }; error: { message: string } | null }) => {
                     if (error) {
                         console.error('AuthCheck Failed:', error.message);
                     }
                     setSession(data?.session ?? null);
                     setLoading(false);
                 })
-                .catch((err: any) => {
+                .catch((err: unknown) => {
                     console.error('Unexpected Auth Error:', err);
                     setLoading(false);
                 });
