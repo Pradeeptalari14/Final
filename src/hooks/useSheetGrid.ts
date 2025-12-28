@@ -44,48 +44,58 @@ export const useSheetGrid = (
     };
 
     const handleLoadingCellChange = (skuSrNo: number, row: number, col: number, val: string) => {
-        if (!currentSheet) return;
         const value = val === '' ? 0 : parseInt(val);
         if (isNaN(value)) return;
-        const stagingItem = currentSheet.stagingItems.find((s) => s.srNo === skuSrNo);
-        const safeLoadingItems = currentSheet.loadingItems || [];
 
-        const updatedLoadingItems = safeLoadingItems.map((li) => {
-            if (li.skuSrNo !== skuSrNo) return li;
-            const existingCellIndex = (li.cells || []).findIndex((c) => c.row === row && c.col === col);
-            const newCells = [...(li.cells || [])];
-            if (existingCellIndex >= 0) {
-                newCells[existingCellIndex] = { row, col, value };
-            } else {
-                newCells.push({ row, col, value });
-            }
-            const cellSum = newCells.reduce((acc, c) => acc + c.value, 0);
-            const total = cellSum + (li.looseInput || 0);
-            const totalCases = stagingItem?.ttlCases || 0;
-            const balance = totalCases - total;
-            return { ...li, cells: newCells, total, balance };
+        setCurrentSheet((prev) => {
+            if (!prev) return null;
+            const stagingItem = prev.stagingItems.find((s) => s.srNo === skuSrNo);
+            const safeLoadingItems = prev.loadingItems || [];
+
+            const updatedLoadingItems = safeLoadingItems.map((li) => {
+                if (li.skuSrNo !== skuSrNo) return li;
+
+                const existingCellIndex = (li.cells || []).findIndex((c) => c.row === row && c.col === col);
+                const newCells = [...(li.cells || [])];
+
+                if (existingCellIndex >= 0) {
+                    newCells[existingCellIndex] = { row, col, value };
+                } else {
+                    newCells.push({ row, col, value });
+                }
+
+                // Recalculate totals
+                const cellSum = newCells.reduce((acc, c) => acc + c.value, 0);
+                const total = cellSum + (li.looseInput || 0);
+                const totalCases = stagingItem?.ttlCases || 0;
+                const balance = totalCases - total;
+
+                return { ...li, cells: newCells, total, balance };
+            });
+
+            return { ...prev, loadingItems: updatedLoadingItems };
         });
-        setCurrentSheet((prev) => (prev ? { ...prev, loadingItems: updatedLoadingItems } : null));
     };
 
     const handleCellBlur = (skuSrNo: number, row: number, col: number, val: string) => {
         if (!val || val === '') return;
         const value = parseInt(val);
+        // We can use currentSheet here for validation check as it doesn't modify state directly
+        // but relies on stable prop if possible. However, strictly speaking, inside callbacks
+        // we might want latest. But for 'casesPerPlt' it's static.
         const stagingItem = currentSheet?.stagingItems.find((s) => s.srNo === skuSrNo);
+
         if (
             stagingItem &&
             Number(stagingItem.casesPerPlt) > 0 &&
             value !== Number(stagingItem.casesPerPlt)
         ) {
-            // Trigger custom modal instead of native alert
             setValidationError({
                 title: 'INCORRECT QUANTITY!',
                 message: `Allowed: ${stagingItem.casesPerPlt}\nEntered: ${value}\n\nThe value must match the standard Cases/Pallet.`,
                 onAck: () => {
-                    // Strictly clear the invalid value
                     handleLoadingCellChange(skuSrNo, row, col, '');
 
-                    // Force refocus on the specific cell to prevent leaving
                     setTimeout(() => {
                         const element = document.getElementById(`cell-${skuSrNo}-${row}-${col}`);
                         if (element) {
@@ -100,52 +110,61 @@ export const useSheetGrid = (
     };
 
     const handleLooseChange = (skuSrNo: number, val: string) => {
-        if (!currentSheet) return;
         const value = val === '' ? undefined : parseInt(val);
         if (value !== undefined && isNaN(value)) return;
-        const stagingItem = currentSheet.stagingItems.find((s) => s.srNo === skuSrNo);
 
-        const updatedLoadingItems = (currentSheet.loadingItems || []).map((li) => {
-            if (li.skuSrNo !== skuSrNo) return li;
-            const cellSum = (li.cells || []).reduce((acc, c) => acc + c.value, 0);
-            const total = cellSum + (value || 0);
-            const totalCases = stagingItem?.ttlCases || 0;
-            const balance = totalCases - total;
-            return { ...li, looseInput: value, total, balance };
+        setCurrentSheet((prev) => {
+            if (!prev) return null;
+            const stagingItem = prev.stagingItems.find((s) => s.srNo === skuSrNo);
+
+            const updatedLoadingItems = (prev.loadingItems || []).map((li) => {
+                if (li.skuSrNo !== skuSrNo) return li;
+
+                const cellSum = (li.cells || []).reduce((acc, c) => acc + c.value, 0);
+                const total = cellSum + (value || 0);
+                const totalCases = stagingItem?.ttlCases || 0;
+                const balance = totalCases - total;
+
+                return { ...li, looseInput: value, total, balance };
+            });
+
+            return { ...prev, loadingItems: updatedLoadingItems };
         });
-        setCurrentSheet((prev) => (prev ? { ...prev, loadingItems: updatedLoadingItems } : null));
     };
 
     const handleAdditionalChange = (id: number, field: string, value: string | number, colIndex?: number) => {
-        if (!currentSheet) return;
-        const updatedAdditional = (currentSheet.additionalItems || []).map((item) => {
-            if (item.id !== id) return item;
-            if (field === 'skuName') {
-                return { ...item, skuName: String(value) };
-            } else if (field === 'count' && colIndex !== undefined) {
-                const newCounts = [...item.counts];
-                newCounts[colIndex] = value === '' ? 0 : parseInt(String(value)) || 0;
-                const newTotal = newCounts.reduce((sum, v) => sum + v, 0);
-                return { ...item, counts: newCounts, total: newTotal };
-            }
-            return item;
+        setCurrentSheet((prev) => {
+            if (!prev) return null;
+            const updatedAdditional = (prev.additionalItems || []).map((item) => {
+                if (item.id !== id) return item;
+                if (field === 'skuName') {
+                    return { ...item, skuName: String(value) };
+                } else if (field === 'count' && colIndex !== undefined) {
+                    const newCounts = [...item.counts];
+                    newCounts[colIndex] = value === '' ? 0 : parseInt(String(value)) || 0;
+                    const newTotal = newCounts.reduce((sum, v) => sum + v, 0);
+                    return { ...item, counts: newCounts, total: newTotal };
+                }
+                return item;
+            });
+            return { ...prev, additionalItems: updatedAdditional };
         });
-        setCurrentSheet((prev) => (prev ? { ...prev, additionalItems: updatedAdditional } : null));
     };
 
     const handleToggleRejection = (skuSrNo: number, reason?: string) => {
-        if (!currentSheet) return;
-        const updatedLoadingItems = (currentSheet.loadingItems || []).map((li) => {
-            if (li.skuSrNo !== skuSrNo) return li;
-            return {
-                ...li,
-                isRejected: !li.isRejected,
-                rejectionReason: !li.isRejected ? reason : undefined
-            };
+        setCurrentSheet((prev) => {
+            if (!prev) return null;
+            const updatedLoadingItems = (prev.loadingItems || []).map((li) => {
+                if (li.skuSrNo !== skuSrNo) return li;
+                return {
+                    ...li,
+                    isRejected: !li.isRejected,
+                    rejectionReason: !li.isRejected ? reason : undefined
+                };
+            });
+            return { ...prev, loadingItems: updatedLoadingItems };
         });
-        setCurrentSheet((prev) => (prev ? { ...prev, loadingItems: updatedLoadingItems } : null));
     };
-
     return {
         validationError,
         dismissValidationError: () => {
