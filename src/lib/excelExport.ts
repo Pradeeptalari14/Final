@@ -1,8 +1,8 @@
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
-import { StagingItem, LoadingItem } from '@/types';
+import { StagingItem, LoadingItem, SheetData } from '@/types';
 
-export const exportStagingToExcel = async (header: any, items: StagingItem[]) => {
+export const exportStagingToExcel = async (header: Partial<SheetData>, items: StagingItem[]) => {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Staging Sheet');
 
@@ -56,8 +56,8 @@ export const exportStagingToExcel = async (header: any, items: StagingItem[]) =>
 };
 
 export const exportLoadingToExcel = async (
-    header: any,
-    items: LoadingItem[],
+    header: Partial<SheetData>,
+    loadingItems: LoadingItem[],
     stagingItems: StagingItem[]
 ) => {
     const workbook = new ExcelJS.Workbook();
@@ -107,7 +107,7 @@ export const exportLoadingToExcel = async (
         cell.alignment = { horizontal: 'center' };
     });
 
-    items.forEach((lItem) => {
+    loadingItems.forEach((lItem) => {
         const sItem = stagingItems.find((s) => s.srNo === lItem.skuSrNo);
         const rowData = [
             lItem.skuSrNo,
@@ -132,7 +132,11 @@ export const exportLoadingToExcel = async (
     saveAs(blob, `Loading_Sheet_${header.date || 'Export'}.xlsx`);
 };
 
-export const exportToExcelGeneric = async (data: any[], fileName: string, sheetName: string) => {
+export const exportToExcelGeneric = async (
+    data: Record<string, unknown>[],
+    fileName: string,
+    sheetName: string
+) => {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet(sheetName);
 

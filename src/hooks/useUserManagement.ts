@@ -28,7 +28,7 @@ export const useUserManagement = (
     useEffect(() => {
         const filterParam = searchParams.get('filter');
         if (filterParam) {
-            setUserFilter(filterParam as any);
+            setUserFilter(filterParam as 'ALL' | 'PENDING' | 'LOCKED' | Role);
         } else {
             setUserFilter('ALL');
         }
@@ -186,9 +186,10 @@ export const useUserManagement = (
             // Success feedback
             addToast('success', `${username} ${t('user_deleted', settings.language)}`);
             await refreshUsers();
-        } catch (error: any) {
+        } catch (error: unknown) {
             // Blocking Alert for Unexpected Error
-            alert(`SYSTEM ERROR\n\nFailed to delete user: ${error.message || 'Unknown error'}`);
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            alert(`SYSTEM ERROR\n\nFailed to delete user: ${message}`);
         }
     };
 
@@ -223,9 +224,10 @@ export const useUserManagement = (
                 `User ${user.username} is now ${updatedUser.isApproved ? t('active', settings.language) : t('inactive', settings.language)} `
             );
             await refreshUsers();
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : 'Unknown Error';
             alert(
-                `STATUS CHANGE FAILED\n\nReason: ${error.message || 'Unknown Error'} \n\nTroubleshooting: You might not have permission to modify this user.`
+                `STATUS CHANGE FAILED\n\nReason: ${message} \n\nTroubleshooting: You might not have permission to modify this user.`
             );
         }
     };
@@ -250,8 +252,9 @@ export const useUserManagement = (
                 'MEDIUM'
             );
             await refreshUsers();
-        } catch (error: any) {
-            alert(`UNLOCK FAILED\n\nReason: ${error.message}`);
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : String(error);
+            alert(`UNLOCK FAILED\n\nReason: ${message}`);
         }
     };
 

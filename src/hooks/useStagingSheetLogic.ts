@@ -22,6 +22,7 @@ export const useStagingSheetLogic = () => {
         deleteSheet,
         sheets,
         refreshSheets,
+        fetchSheetById,
         currentUser,
         loading: dataLoading
     } = useData();
@@ -46,32 +47,58 @@ export const useStagingSheetLogic = () => {
     const isDirty = useRef(false);
     const prevId = useRef(id);
 
+    // Reset dirty state if navigating to a different sheet
     useEffect(() => {
-        // Reset dirty state if navigating to a different sheet
         if (id !== prevId.current) {
             isDirty.current = false;
             prevId.current = id;
         }
+    }, [id]);
 
-        if (id && id !== 'new') {
-            const existing = sheets.find((s) => s.id === id);
-            if (existing && !isDirty.current) {
-                setFormData(existing);
-            } else if (!existing && !dataLoading) {
-                // If not found in current cache, try refreshing
-                refreshSheets();
+    // --- Initial Data Load ---
+    useEffect(() => {
+        if (!id) return;
+
+        const loadSheet = async () => {
+            // New sheet logic
+            if (id === 'new') {
+                if (currentUser && !isDirty.current) {
+                    setFormData((prev) => ({
+                        ...prev,
+                        supervisorName: prev.supervisorName || currentUser.fullName || currentUser.username || '',
+                        empCode: prev.empCode || currentUser.empCode || ''
+                    }));
+                }
+                setLoading(false);
+                return;
             }
-        } else if (id === 'new' && currentUser && !isDirty.current) {
-            setFormData((prev) => ({
-                ...prev,
-                supervisorName:
-                    prev.supervisorName || currentUser.fullName || currentUser.username || '',
-                empCode: prev.empCode || currentUser.empCode || ''
-            }));
-        }
-    }, [id, sheets, currentUser, dataLoading, refreshSheets]);
 
-    const handleHeaderChange = (field: string, value: any) => {
+            // Existing sheet logic
+            setLoading(true);
+
+            // 1. Try local cache first
+            const foundInCache = sheets.find((s) => s.id === id);
+            if (foundInCache && !isDirty.current) {
+                setFormData(foundInCache);
+                setLoading(false);
+                return;
+            }
+
+            // 2. Fallback to direct fetch
+            const fetched = await fetchSheetById(id);
+            if (fetched) {
+                setFormData(fetched);
+            } else if (!dataLoading) {
+                // 3. Last resort
+                await refreshSheets();
+            }
+            setLoading(false);
+        };
+
+        loadSheet();
+    }, [id, sheets, currentUser, dataLoading, refreshSheets, fetchSheetById]);
+
+    const handleHeaderChange = (field: string, value: string | number | boolean) => {
         setFormData((prev) => ({ ...prev, [field]: value }));
         isDirty.current = true;
     };
@@ -105,7 +132,7 @@ export const useStagingSheetLogic = () => {
                 const { error } = await updateSheet(sheetToSave);
                 if (error) throw error;
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error(err);
         } finally {
             setLoading(false);
@@ -233,10 +260,10 @@ export const useStagingSheetLogic = () => {
             const newItems = prev.stagingItems?.map((item) =>
                 item.srNo === srNo
                     ? {
-                          ...item,
-                          isRejected: !item.isRejected,
-                          rejectionReason: !item.isRejected ? reason : undefined
-                      }
+                        ...item,
+                        isRejected: !item.isRejected,
+                        rejectionReason: !item.isRejected ? reason : undefined
+                    }
                     : item
             );
             return { ...prev, stagingItems: newItems };

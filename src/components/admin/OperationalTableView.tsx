@@ -5,9 +5,9 @@ import { SheetData, SheetStatus, Role, User } from '@/types';
 import { useToast } from '@/contexts/ToastContext';
 import { useAppState } from '@/contexts/AppStateContext';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Search, Trash2, CheckCircle, XCircle, ArrowRight } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { t } from '@/lib/i18n';
+import { VirtualDatabaseTable } from '@/components/admin/VirtualDatabaseTable';
 
 interface OperationalTableViewProps {
     sheets: SheetData[];
@@ -36,17 +36,22 @@ export function OperationalTableView({
 
     // --- Filter Logic ---
 
+    // --- Filter Logic ---
+
+    // --- Filter Logic ---
+
     const filteredSheets = useMemo(() => {
-        let relevantSheets = sheets;
+        let relevantSheets = [...sheets];
 
         // 1. Context Filtering (Role/Tab specific)
         if (activeSection === 'loading_db') {
-            // Loading tab only shows things ready to load or further
             relevantSheets = relevantSheets.filter(
-                (s) =>
-                    s.status === SheetStatus.LOCKED ||
-                    s.status === SheetStatus.LOADING_VERIFICATION_PENDING ||
-                    s.status === SheetStatus.COMPLETED
+                (s) => {
+                    const status = (s.status || '').toUpperCase();
+                    return status === SheetStatus.LOCKED ||
+                        status === SheetStatus.LOADING_VERIFICATION_PENDING ||
+                        status === SheetStatus.COMPLETED;
+                }
             );
         }
 
@@ -65,104 +70,72 @@ export function OperationalTableView({
             return matchesSearch && matchesDate;
         });
 
-        // 3. Sub Status Filtering using FRESH VIEW MODES
+        // 3. Sub Status Filtering
         let result = relevantSheets;
 
         if (activeSection === 'staging_db') {
-            // VIEW_STAGING_DRAFT, VIEW_STAGING_VERIFY, VIEW_LOCKED, VIEW_COMPLETED, VIEW_STAGING_REJECTED
-            // Also checking "DRAFT" etc as fallback if URL was manually typed, but aim for Constants.
             if (activeViewMode === 'VIEW_STAGING_DRAFT' || activeViewMode === 'DRAFT')
-                result = relevantSheets.filter(
-                    (s) => s.status === SheetStatus.DRAFT && !isRejected(s)
-                );
+                result = relevantSheets.filter((s) => (s.status || '').toUpperCase() === 'DRAFT' && !isRejected(s));
             else if (activeViewMode === 'VIEW_STAGING_VERIFY' || activeViewMode === 'PENDING')
-                result = relevantSheets.filter(
-                    (s) => s.status === SheetStatus.STAGING_VERIFICATION_PENDING
-                );
+                result = relevantSheets.filter((s) => (s.status || '').toUpperCase() === 'STAGING_VERIFICATION_PENDING');
             else if (activeViewMode === 'VIEW_LOCKED' || activeViewMode === 'LOCKED')
-                result = relevantSheets.filter((s) => s.status === SheetStatus.LOCKED);
+                result = relevantSheets.filter((s) => (s.status || '').toUpperCase() === 'LOCKED');
             else if (activeViewMode === 'VIEW_COMPLETED' || activeViewMode === 'COMPLETED')
-                result = relevantSheets.filter((s) => s.status === SheetStatus.COMPLETED);
+                result = relevantSheets.filter((s) => (s.status || '').toUpperCase() === 'COMPLETED');
             else if (activeViewMode === 'VIEW_STAGING_REJECTED' || activeViewMode === 'REJECTED')
-                result = relevantSheets.filter(
-                    (s) => s.status === SheetStatus.DRAFT && isRejected(s)
-                );
+                result = relevantSheets.filter((s) => (s.status || '').toUpperCase() === 'DRAFT' && isRejected(s));
         } else if (activeSection === 'loading_db') {
-            if (activeViewMode === 'VIEW_LOADING_READY' || activeViewMode === 'READY')
-                result = relevantSheets.filter((s) => s.status === SheetStatus.LOCKED);
-            else if (activeViewMode === 'VIEW_LOADING_VERIFY' || activeViewMode === 'PENDING')
-                result = relevantSheets.filter(
-                    (s) => s.status === SheetStatus.LOADING_VERIFICATION_PENDING
-                );
-            else if (activeViewMode === 'VIEW_COMPLETED' || activeViewMode === 'COMPLETED')
-                result = relevantSheets.filter((s) => s.status === SheetStatus.COMPLETED);
-            else if (activeViewMode === 'VIEW_LOADING_REJECTED' || activeViewMode === 'REJECTED')
-                result = relevantSheets.filter(
-                    (s) =>
-                        (s.status === SheetStatus.LOCKED ||
-                            s.status === SheetStatus.LOADING_VERIFICATION_PENDING) &&
-                        isRejected(s)
-                );
+            const currentMode = activeViewMode.toUpperCase();
+            if (currentMode === 'VIEW_LOADING_READY' || currentMode === 'READY' || currentMode === 'LOCKED') {
+                result = relevantSheets.filter((s) => (s.status || '').toUpperCase() === 'LOCKED');
+            } else if (currentMode === 'VIEW_LOADING_VERIFY' || currentMode === 'PENDING') {
+                result = relevantSheets.filter((s) => (s.status || '').toUpperCase() === 'LOADING_VERIFICATION_PENDING');
+            } else if (currentMode === 'VIEW_COMPLETED' || currentMode === 'COMPLETED') {
+                result = relevantSheets.filter((s) => (s.status || '').toUpperCase() === 'COMPLETED');
+            } else if (currentMode === 'VIEW_LOADING_REJECTED' || currentMode === 'REJECTED') {
+                result = relevantSheets.filter((s) => ((s.status || '').toUpperCase() === 'LOCKED' || (s.status || '').toUpperCase() === 'LOADING_VERIFICATION_PENDING') && isRejected(s));
+            }
         } else if (activeSection === 'shift_lead_db') {
             if (activeViewMode === 'VIEW_STAGING_VERIFY')
-                result = relevantSheets.filter(
-                    (s) => s.status === SheetStatus.STAGING_VERIFICATION_PENDING
-                );
+                result = relevantSheets.filter((s) => (s.status || '').toUpperCase() === 'STAGING_VERIFICATION_PENDING');
             else if (activeViewMode === 'VIEW_LOADING_VERIFY')
-                result = relevantSheets.filter(
-                    (s) => s.status === SheetStatus.LOADING_VERIFICATION_PENDING
-                );
+                result = relevantSheets.filter((s) => (s.status || '').toUpperCase() === 'LOADING_VERIFICATION_PENDING');
             else if (activeViewMode === 'VIEW_COMPLETED' || activeViewMode === 'COMPLETED')
-                result = relevantSheets.filter((s) => s.status === SheetStatus.COMPLETED);
+                result = relevantSheets.filter((s) => (s.status || '').toUpperCase() === 'COMPLETED');
             else if (activeViewMode === 'VIEW_STAGING_REJECTED')
-                result = relevantSheets.filter(
-                    (s) => s.status === SheetStatus.DRAFT && isRejected(s)
-                );
+                result = relevantSheets.filter((s) => (s.status || '').toUpperCase() === 'DRAFT' && isRejected(s));
             else if (activeViewMode === 'VIEW_LOADING_REJECTED')
-                result = relevantSheets.filter(
-                    (s) =>
-                        (s.status === SheetStatus.LOCKED ||
-                            s.status === SheetStatus.LOADING_VERIFICATION_PENDING) &&
-                        isRejected(s)
-                );
-            else if (activeViewMode === 'ALL') {
-                // Show everything relevant
-            }
+                result = relevantSheets.filter((s) => ((s.status || '').toUpperCase() === 'LOCKED' || (s.status || '').toUpperCase() === 'LOADING_VERIFICATION_PENDING') && isRejected(s));
+        }
+
+        console.log('[OperationalTableView] Final Status Filter Result:', result.length);
+        if (result.length > 0) {
+            console.log('[OperationalTableView] Samples:', result.slice(0, 3).map(s => ({ id: s.id, status: s.status })));
         }
 
         // 4. Final Sort
-        return result.sort(
+        const sorted = [...result].sort(
             (a, b) =>
-                new Date(b.updatedAt || b.createdAt).getTime() -
-                new Date(a.updatedAt || a.createdAt).getTime()
+                new Date(b.updatedAt || b.createdAt || 0).getTime() -
+                new Date(a.updatedAt || a.createdAt || 0).getTime()
         );
+
+        return sorted;
     }, [sheets, activeSection, activeViewMode, searchQuery, dateFilter]);
-
-    // Helpers
-    const getDuration = (sheet: SheetData) => {
-        if (sheet.status !== SheetStatus.COMPLETED || !sheet.updatedAt) return '-';
-        const start = new Date(sheet.createdAt).getTime();
-        const end = new Date(sheet.updatedAt).getTime();
-        const diffMs = end - start;
-        if (diffMs < 0) return '-';
-
-        const hours = Math.floor(diffMs / (1000 * 60 * 60));
-        const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-        return `${hours}h ${minutes}m`;
-    };
-
     const handleDeleteSheet = async (sheetId: string) => {
         if (!confirm(t('delete_confirm', settings.language))) return;
 
         try {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const { error } = await supabase.from('sheets').delete().eq('id', sheetId);
             if (error) throw error;
             addToast('success', t('sheet_deleted_successfully', settings.language));
             await refreshSheets();
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const msg = error instanceof Error ? error.message : String(error);
             addToast(
                 'error',
-                t('failed_to_delete_sheet', settings.language) + ': ' + error.message
+                t('failed_to_delete_sheet', settings.language) + ': ' + msg
             );
         }
     };
@@ -184,6 +157,7 @@ export function OperationalTableView({
                 verifiedAt: new Date().toISOString()
             };
 
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const { error } = await supabase.from('sheets').update(payload).eq('id', sheet.id);
             if (error) throw error;
 
@@ -192,8 +166,9 @@ export function OperationalTableView({
                 `${t('sheet_approved', settings.language)}: ${nextStatus.replace(/_/g, ' ')}`
             );
             await refreshSheets();
-        } catch (err: any) {
-            addToast('error', err.message);
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            addToast('error', msg);
         } finally {
             setProcessingId(null);
         }
@@ -224,6 +199,7 @@ export function OperationalTableView({
                 ]
             };
 
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const { error } = await supabase.from('sheets').update(updates).eq('id', sheet.id);
             if (error) throw error;
 
@@ -232,15 +208,16 @@ export function OperationalTableView({
                 `${t('sheet_rejected_and_returned', settings.language)} ${nextStatus.replace(/_/g, ' ')}`
             );
             await refreshSheets();
-        } catch (err: any) {
-            addToast('error', err.message);
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            addToast('error', msg);
         } finally {
             setProcessingId(null);
         }
     };
 
     return (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
+        <div className="flex flex-col h-full space-y-6 animate-in fade-in slide-in-from-bottom-2">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                 <div className="flex flex-wrap gap-2">
                     <Button
@@ -435,243 +412,33 @@ export function OperationalTableView({
                 </div>
             </div>
 
-            <div className="rounded-xl border border-slate-200 dark:border-white/5 overflow-hidden bg-white dark:bg-slate-900/50 shadow-sm">
-                <table className="w-full text-left text-sm table-fixed">
-                    <thead>
-                        <tr className="bg-muted/50 text-muted-foreground border-b border-border sticky top-0 z-10 backdrop-blur-sm shadow-sm">
-                            <th
-                                className={`pl-4 font-medium w-[15%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}
-                            >
-                                {t('sheet_id', settings.language)}
-                            </th>
-                            <th
-                                className={`font-medium w-[20%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}
-                            >
-                                {t('supervisor', settings.language)}
-                            </th>
-                            <th
-                                className={`font-medium w-[26%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}
-                            >
-                                {t('shift_dest', settings.language)}
-                            </th>
-                            <th
-                                className={`font-medium w-[10%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}
-                            >
-                                {t('duration', settings.language)}
-                            </th>
-                            <th
-                                className={`font-medium w-[11%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}
-                            >
-                                {t('date', settings.language)}
-                            </th>
-                            <th
-                                className={`font-medium w-[12%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}
-                            >
-                                {t('status', settings.language)}
-                            </th>
-                            <th
-                                className={`pr-4 text-right w-[6%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}
-                            >
-                                {t('action', settings.language)}
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                        {filteredSheets.length === 0 ? (
-                            <tr>
-                                <td colSpan={7} className="py-16 text-center">
-                                    <div className="flex flex-col items-center justify-center text-slate-400 dark:text-slate-600">
-                                        <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-full mb-3">
-                                            <Search size={32} strokeWidth={1.5} />
-                                        </div>
-                                        <div className="text-lg font-medium text-slate-900 dark:text-slate-200">
-                                            {t('no_sheets_found', settings.language)}
-                                        </div>
-                                        <p className="text-sm mt-1 max-w-xs mx-auto">
-                                            {searchQuery
-                                                ? 'Try adjusting your search filters.'
-                                                : 'There are no active tasks in this view.'}
-                                        </p>
-                                    </div>
-                                </td>
-                            </tr>
-                        ) : (
-                            filteredSheets.map((sheet) => (
-                                <tr
-                                    key={sheet.id}
-                                    className="group hover:bg-muted/50 transition-colors cursor-pointer"
-                                    onClick={() => {
-                                        const isStagingUser =
-                                            currentUser?.role === Role.STAGING_SUPERVISOR;
-                                        let target = `/sheets/staging/${sheet.id}`;
+            <div className="flex-1 relative border border-red-500/20 rounded-xl overflow-hidden shadow-inner bg-slate-100/30 dark:bg-slate-900/10 min-h-[600px]">
+                <VirtualDatabaseTable
+                    data={filteredSheets}
+                    settings={settings}
+                    currentUser={currentUser}
+                    processingId={processingId}
+                    searchQuery={searchQuery}
+                    onDelete={handleDeleteSheet}
+                    onQuickApprove={handleQuickApprove}
+                    onQuickReject={handleQuickReject}
+                    onRowClick={(sheet) => {
+                        const isStagingUser = currentUser?.role === Role.STAGING_SUPERVISOR;
+                        let target = `/sheets/staging/${sheet.id}`;
 
-                                        if (sheet.status === SheetStatus.COMPLETED) {
-                                            target = `/sheets/loading/${sheet.id}`;
-                                        } else if (
-                                            (sheet.status ===
-                                                SheetStatus.LOADING_VERIFICATION_PENDING ||
-                                                sheet.status === SheetStatus.LOCKED) &&
-                                            !isStagingUser
-                                        ) {
-                                            target = `/sheets/loading/${sheet.id}`;
-                                        }
+                        if (sheet.status === SheetStatus.COMPLETED) {
+                            target = `/sheets/loading/${sheet.id}`;
+                        } else if (
+                            (sheet.status === SheetStatus.LOADING_VERIFICATION_PENDING ||
+                                sheet.status === SheetStatus.LOCKED) &&
+                            !isStagingUser
+                        ) {
+                            target = `/sheets/loading/${sheet.id}`;
+                        }
 
-                                        navigate(target);
-                                    }}
-                                >
-                                    <td
-                                        className={`pl-4 text-blue-600 dark:text-blue-400 font-mono text-[10px] truncate ${settings.density === 'compact' ? 'py-1' : 'py-3'}`}
-                                        title={sheet.id}
-                                    >
-                                        #{sheet.id.slice(-8)}
-                                    </td>
-                                    <td
-                                        className={`text-foreground truncate pr-2 ${settings.density === 'compact' ? 'py-1' : 'py-3'}`}
-                                    >
-                                        <div className="truncate font-medium">
-                                            {sheet.supervisorName}
-                                        </div>
-                                        <div className="text-[10px] text-muted-foreground truncate">
-                                            {sheet.empCode}
-                                        </div>
-                                    </td>
-                                    <td
-                                        className={`text-xs text-muted-foreground truncate pr-2 ${settings.density === 'compact' ? 'py-1' : 'py-3'}`}
-                                    >
-                                        <div className="text-foreground/80 font-medium truncate">
-                                            {sheet.shift}
-                                        </div>
-                                        <div className="text-[10px] text-muted-foreground truncate">
-                                            {sheet.destination || sheet.loadingDoc || '-'}
-                                        </div>
-                                    </td>
-                                    <td
-                                        className={`text-[10px] text-slate-600 dark:text-slate-400 font-mono truncate ${settings.density === 'compact' ? 'py-1' : 'py-3'}`}
-                                    >
-                                        {getDuration(sheet)}
-                                    </td>
-                                    <td
-                                        className={`text-xs text-slate-600 dark:text-slate-400 truncate ${settings.density === 'compact' ? 'py-1' : 'py-3'}`}
-                                    >
-                                        {new Date(sheet.date).toLocaleDateString()}
-                                    </td>
-                                    <td
-                                        className={`${settings.density === 'compact' ? 'py-1' : 'py-3'}`}
-                                    >
-                                        <Badge
-                                            variant="outline"
-                                            className={`
-                                        ${sheet.status === SheetStatus.COMPLETED
-                                                    ? 'text-emerald-600 dark:text-emerald-400 border-emerald-500/30 bg-emerald-500/10'
-                                                    : isRejected(sheet)
-                                                        ? 'text-red-600 dark:text-red-400 border-red-500/30 bg-red-500/10'
-                                                        : sheet.status.includes('PENDING') ||
-                                                            sheet.status === SheetStatus.LOCKED
-                                                            ? 'text-blue-600 dark:text-blue-400 border-blue-500/30 bg-blue-500/10'
-                                                            : 'text-muted-foreground border-border'
-                                                }
-`}
-                                        >
-                                            {(() => {
-                                                if (
-                                                    sheet.status === SheetStatus.LOCKED &&
-                                                    (currentUser?.role ===
-                                                        Role.LOADING_SUPERVISOR ||
-                                                        currentUser?.role === Role.ADMIN ||
-                                                        currentUser?.role === Role.SHIFT_LEAD)
-                                                ) {
-                                                    return t('ready_to_load', settings.language);
-                                                }
-                                                return t(
-                                                    sheet.status.toLowerCase() as any,
-                                                    settings.language
-                                                ).replace(/_/g, ' ');
-                                            })()}
-                                        </Badge>
-                                    </td>
-                                    <td
-                                        className={`pr-4 text-right flex justify-end gap-2 ${settings.density === 'compact' ? 'py-1' : 'py-3'}`}
-                                    >
-                                        {currentUser?.role === Role.SHIFT_LEAD &&
-                                            sheet.status.includes('PENDING') && (
-                                                <div className="flex gap-2">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        disabled={processingId === sheet.id}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleQuickReject(sheet);
-                                                        }}
-                                                        className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
-                                                        title={t('quick_reject', settings.language)}
-                                                    >
-                                                        <XCircle size={18} />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        disabled={processingId === sheet.id}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleQuickApprove(sheet);
-                                                        }}
-                                                        className="h-8 w-8 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-full transition-colors"
-                                                        title={t(
-                                                            'quick_approve',
-                                                            settings.language
-                                                        )}
-                                                    >
-                                                        <CheckCircle size={18} />
-                                                    </Button>
-                                                </div>
-                                            )}
-
-                                        {currentUser?.role === Role.ADMIN && (
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleDeleteSheet(sheet.id);
-                                                }}
-                                                className="h-8 w-8 p-0 text-red-500 hover:text-red-400 hover:bg-red-500/10 opacity-60 group-hover:opacity-100"
-                                                title={t('delete_sheet', settings.language)}
-                                            >
-                                                <Trash2 size={16} />
-                                            </Button>
-                                        )}
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-8 w-8 p-0 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                const isStagingUser =
-                                                    currentUser?.role === Role.STAGING_SUPERVISOR;
-                                                let target = `/sheets/staging/${sheet.id}`;
-                                                if (sheet.status === SheetStatus.COMPLETED) {
-                                                    target = `/sheets/loading/${sheet.id}`;
-                                                } else if (
-                                                    (sheet.status ===
-                                                        SheetStatus.LOADING_VERIFICATION_PENDING ||
-                                                        sheet.status === SheetStatus.LOCKED) &&
-                                                    !isStagingUser
-                                                ) {
-                                                    target = `/sheets/loading/${sheet.id}`;
-                                                }
-                                                navigate(target);
-                                            }}
-                                            title={t('view_details', settings.language)}
-                                        >
-                                            <ArrowRight size={16} />
-                                        </Button>
-                                    </td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
+                        navigate(target);
+                    }}
+                />
             </div>
         </div>
     );

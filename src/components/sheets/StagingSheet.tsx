@@ -11,7 +11,7 @@ import {
     X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { SheetStatus, Role } from '@/types';
+import { SheetStatus, Role, Comment, SheetData } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { PrintableStagingSheet } from '@/components/print/PrintableStagingSheet';
 import { SheetHeader } from './shared/SheetHeader';
@@ -23,7 +23,7 @@ import { RejectionSection } from './shared/RejectionSection';
 import { FileSpreadsheet } from 'lucide-react';
 import { exportStagingToExcel } from '@/lib/excelExport';
 
-const DismissibleAlert = ({ comments }: { comments: any[] }) => {
+const DismissibleAlert = ({ comments }: { comments: Comment[] }) => {
     const [isVisible, setIsVisible] = React.useState(true);
     if (!isVisible) return null;
     return (
@@ -136,11 +136,12 @@ export default function StagingSheet() {
     }
 
     return (
-        <div className="bg-white min-h-screen text-slate-800 print:pb-0 print:min-h-0 print:h-auto print:overflow-visible font-sans max-w-[1024px] print:max-w-none mx-auto shadow-2xl shadow-slate-200/50 print:shadow-none my-2 print:my-0 rounded-xl print:rounded-none overflow-hidden print:overflow-visible border border-slate-100 print:border-none relative">
+        <div className="bg-white min-h-screen text-slate-800 print:pb-0 print:min-h-0 print:h-auto print:overflow-visible font-sans w-full print:max-w-none shadow-2xl shadow-slate-200/50 print:shadow-none my-2 print:my-0 rounded-xl print:rounded-none overflow-hidden print:overflow-visible border border-slate-100 print:border-none relative">
             {/* HIDDEN PRINTABLE VIEW (For actual printing) */}
             <div className="hidden print:block">
-                <PrintableStagingSheet data={formData as any} />
+                <PrintableStagingSheet data={formData as SheetData} />
             </div>
+
 
             {/* Top Bar */}
             <div className="print:hidden border-b border-slate-200/80 p-4 md:px-8 flex justify-between items-center sticky top-0 z-30 shadow-sm backdrop-blur-xl bg-white/80">
@@ -158,15 +159,14 @@ export default function StagingSheet() {
                         </h1>
                         <Badge
                             variant="secondary"
-                            className={`text-xs px-2.5 py-0.5 font-bold uppercase shadow-none ${
-                                formData.status === SheetStatus.LOCKED
-                                    ? 'bg-purple-100 text-purple-700 border border-purple-200'
-                                    : formData.status === SheetStatus.COMPLETED
-                                      ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
-                                      : formData.status?.includes('PENDING')
+                            className={`text-xs px-2.5 py-0.5 font-bold uppercase shadow-none ${formData.status === SheetStatus.LOCKED
+                                ? 'bg-purple-100 text-purple-700 border border-purple-200'
+                                : formData.status === SheetStatus.COMPLETED
+                                    ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                                    : formData.status?.includes('PENDING')
                                         ? 'bg-orange-100 text-orange-700 border border-orange-200'
                                         : 'bg-slate-100 text-slate-600 border border-slate-200'
-                            }`}
+                                }`}
                         >
                             {formData.status?.replace(/_/g, ' ')}
                         </Badge>
@@ -212,7 +212,7 @@ export default function StagingSheet() {
                 />
 
                 <SheetHeader
-                    data={formData as any}
+                    data={formData as SheetData}
                     onChange={handleHeaderChange}
                     isLocked={
                         formData.status === SheetStatus.LOCKED ||

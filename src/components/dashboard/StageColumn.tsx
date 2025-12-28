@@ -6,7 +6,7 @@ interface StageColumnProps {
     color: string;
     items: SheetData[];
     linkTo?: string;
-    filters?: any[];
+    filters?: { label: string; count: number | string; link: string; color: string }[];
     density?: 'compact' | 'comfortable';
     fullWidth?: boolean;
     hideItems?: boolean;
@@ -30,10 +30,10 @@ export function StageColumn({
         ? filters && filters.length === 4
             ? 'grid-cols-2 md:grid-cols-4'
             : filters && filters.length === 6
-              ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-6'
-              : filters && filters.length === 5
-                ? 'grid-cols-2 md:grid-cols-5' // Fallback for 5 items
-                : 'grid-cols-2 md:grid-cols-4 lg:grid-cols-5' // Default
+                ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-6'
+                : filters && filters.length === 5
+                    ? 'grid-cols-2 md:grid-cols-5' // Fallback for 5 items
+                    : 'grid-cols-2 md:grid-cols-4 lg:grid-cols-5' // Default
         : 'grid-cols-2';
 
     return (

@@ -71,7 +71,9 @@ export function SecurityScanner() {
 
         // 3. Debug Mode / Hardcoded Secrets check (Simulated via string scanning in build)
         // In a real environment, we'd check process.env or specific global variables
-        if ((window as any).webpackHotUpdate || (window as any).VITE_DEV_SERVER) {
+        // In a real environment, we'd check process.env or specific global variables
+        const win = window as unknown as { webpackHotUpdate?: unknown; VITE_DEV_SERVER?: unknown };
+        if (win.webpackHotUpdate || win.VITE_DEV_SERVER) {
             findings.push({
                 id: 'ENV-DEV-003',
                 severity: 'MEDIUM',
@@ -172,7 +174,7 @@ export function SecurityScanner() {
         }, 600);
 
         return () => clearInterval(interval);
-    }, [scanning]);
+    }, [scanning, currentUser?.username, logSecurityEvent]);
 
     const getSeverityColor = (severity: string) => {
         switch (severity) {

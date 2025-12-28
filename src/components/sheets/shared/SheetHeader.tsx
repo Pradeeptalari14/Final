@@ -13,14 +13,21 @@ import { SheetData } from '@/types';
 
 interface SheetHeaderProps {
     data: Partial<SheetData>;
-    onChange: (field: string, value: any) => void;
+    onChange: (field: string, value: string | number) => void;
     isLocked: boolean;
     isCompleted?: boolean;
     errors?: string[];
     type: 'staging' | 'loading';
 }
 
-const FieldWrapper = ({ label, icon: Icon, hasError, children }: any) => (
+interface FieldWrapperProps {
+    label: string;
+    icon?: React.ElementType;
+    hasError?: boolean;
+    children: React.ReactNode;
+}
+
+const FieldWrapper = ({ label, icon: Icon, hasError, children }: FieldWrapperProps) => (
     <div className="flex flex-col gap-1 group">
         <label
             className={`text-[10px] uppercase tracking-wider font-bold flex items-center gap-1.5 transition-colors ${hasError ? 'text-red-600' : 'text-slate-500 group-focus-within:text-blue-600'}`}

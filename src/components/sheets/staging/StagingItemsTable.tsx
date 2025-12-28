@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 interface StagingItemsTableProps {
     items: StagingItem[];
     status: SheetStatus;
-    onUpdateItem: (index: number, field: keyof StagingItem, value: any) => void;
+    onUpdateItem: (index: number, field: keyof StagingItem, value: string | number) => void;
     currentRole?: Role;
     onToggleRejection?: (srNo: number, reason?: string) => void;
 }

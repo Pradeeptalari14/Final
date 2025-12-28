@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Role, User, SheetData } from '@/types';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,6 +10,7 @@ import {
     Star,
     Clock,
     LayoutGrid,
+    PanelLeft,
     Filter,
     ArrowUpDown,
     Download,
@@ -23,6 +24,7 @@ import { UserTable } from './users/UserTable';
 import { AddUserModal } from './users/AddUserModal';
 import { EditUserModal } from './users/EditUserModal';
 import { PasswordResetModal } from './users/PasswordResetModal';
+import { UserDetailsSlideOver } from './users/UserDetailsSlideOver';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { saveAs } from 'file-saver';
@@ -67,12 +69,15 @@ export function UserManagement({ users, refreshUsers, sheets }: UserManagementPr
         handleUnlockUser
     } = useUserManagement(users, refreshUsers, sheets);
 
+    const [selectedUser, setSelectedUser] = useState<User | null>(null);
+
     // --- NEW: Local Sort & Filter State ---
     const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'LOCKED'>('ALL');
     const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection }>({
         key: 'lastActive',
         direction: 'desc'
     });
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
     // --- Compute Final List ---
     const processedUsers = useMemo(() => {
@@ -203,234 +208,233 @@ export function UserManagement({ users, refreshUsers, sheets }: UserManagementPr
         }
     ];
 
+    const [isOverview, setIsOverview] = useState(userFilter === 'ALL');
+
+    // Auto-switch to list view if a filter is active (e.g. from Dashboard)
+    useEffect(() => {
+        if (userFilter !== 'ALL') {
+            setIsOverview(false);
+        }
+    }, [userFilter]);
+
+    // Filter Navigation Handler
+    const handleCategoryClick = (categoryId: string) => {
+        setFilter(categoryId as Role | 'ALL' | 'PENDING' | 'LOCKED');
+        setIsOverview(false);
+    };
+
     return (
-        <div className="flex flex-col lg:flex-row h-[calc(100vh-100px)] gap-4 lg:gap-6 animate-in fade-in zoom-in-95 duration-300">
-            {/* LEFT SIDEBAR - DIRECTORY TREE (Mobile: Top horizontal scroll, Desktop: Left vertical sidebar) */}
-            <div className="w-full lg:w-64 shrink-0 flex flex-row lg:flex-col gap-2 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0 scrollbar-hide">
-                <div className="px-4 py-2 lg:w-full min-w-[200px]">
-                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 hidden lg:block">
-                        Directory
-                    </h3>
-                    <div className="flex lg:flex-col gap-1 lg:space-y-1">
-                        {navItems.map((item) => (
-                            <button
-                                key={item.id}
-                                onClick={() => setFilter(item.id as any)}
-                                className={cn(
-                                    'flex-shrink-0 lg:w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 border lg:border-none border-slate-100 dark:border-slate-800 lg:bg-transparent bg-white dark:bg-slate-900',
-                                    userFilter === item.id
-                                        ? 'bg-white dark:bg-slate-800 text-indigo-600 shadow-lg shadow-indigo-500/10 lg:scale-105 border-indigo-200 dark:border-indigo-900'
-                                        : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-700 lg:hover:pl-4'
-                                )}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <item.icon size={16} className={item.color} />
-                                    <span className="whitespace-nowrap">{item.label}</span>
+        <div className="h-[calc(100vh-100px)] animate-in fade-in zoom-in-95 duration-300">
+            {isOverview ? (
+                // --- OVERVIEW MODE: Directory Cards ---
+                <div className="h-full overflow-y-auto p-4 lg:p-8">
+                    <div className="max-w-5xl mx-auto space-y-8">
+                        <div>
+                            <h2 className="text-3xl font-black text-slate-800 dark:text-slate-100 mb-2">User Directory</h2>
+                            <p className="text-slate-500 dark:text-slate-400">Select a category to manage users and permissions.</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {navItems.map((item) => (
+                                <button
+                                    key={item.id}
+                                    onClick={() => handleCategoryClick(item.id)}
+                                    className="group relative flex flex-col items-start p-6 h-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl hover:shadow-xl hover:shadow-indigo-500/10 hover:border-indigo-200 dark:hover:border-indigo-900 transition-all duration-300 text-left"
+                                >
+                                    <div className={cn("p-3 rounded-2xl mb-4 transition-colors", item.id === 'ALL' ? "bg-slate-100 dark:bg-slate-800" : "bg-indigo-50 dark:bg-indigo-900/20")}>
+                                        <item.icon className={cn("h-8 w-8", item.color)} />
+                                    </div>
+                                    <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-1 group-hover:text-indigo-600 transition-colors">
+                                        {item.label}
+                                    </h3>
+                                    <p className="text-sm font-medium text-slate-400 mb-6">
+                                        Manage {item.label.toLowerCase()} settings and access.
+                                    </p>
+                                    <div className="mt-auto flex items-center justify-between w-full">
+                                        <Badge variant="secondary" className="bg-slate-100 dark:bg-slate-800 text-slate-600 px-3 py-1 text-sm font-bold rounded-lg border-0 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/50 group-hover:text-indigo-600 transition-colors">
+                                            {item.count} Users
+                                        </Badge>
+                                        <div className="h-8 w-8 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center opacity-0 group-hover:opacity-100 transform translate-x-[-10px] group-hover:translate-x-0 transition-all duration-300">
+                                            <ChevronDown className="h-4 w-4 -rotate-90 text-indigo-600" />
+                                        </div>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                // --- LIST MODE: Split View (Sidebar + Table) ---
+                <div className="flex flex-col lg:flex-row h-full gap-4 lg:gap-6">
+                    {/* LEFT SIDEBAR - DIRECTORY TREE */}
+                    {isSidebarOpen && (
+                        <div className="w-full lg:w-64 shrink-0 flex flex-row lg:flex-col gap-2 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0 scrollbar-hide bg-white/50 lg:bg-transparent p-2 lg:p-0 rounded-2xl lg:rounded-none border lg:border-none border-slate-100 dark:border-slate-800">
+                            <div className="px-2 lg:px-4 py-2 lg:w-full min-w-[200px]">
+                                <button
+                                    onClick={() => setIsOverview(true)}
+                                    className="flex items-center gap-2 text-xs font-black text-indigo-600 uppercase tracking-widest mb-4 hover:underline"
+                                >
+                                    <div className="bg-indigo-100 rounded-md p-1">
+                                        <LayoutGrid className="h-3 w-3" />
+                                    </div>
+                                    Back to Directory
+                                </button>
+
+                                <div className="flex lg:flex-col gap-1 lg:space-y-1">
+                                    {navItems.map((item) => (
+                                        <button
+                                            key={item.id}
+                                            onClick={() => setFilter(item.id as Role | 'ALL' | 'PENDING' | 'LOCKED')}
+                                            className={cn(
+                                                'flex-shrink-0 lg:w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 border lg:border-none border-slate-100 dark:border-slate-800 lg:bg-transparent bg-white dark:bg-slate-900',
+                                                userFilter === item.id
+                                                    ? 'bg-white dark:bg-slate-800 text-indigo-600 shadow-lg shadow-indigo-500/10 lg:scale-105 border-indigo-200 dark:border-indigo-900'
+                                                    : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-700 lg:hover:pl-4'
+                                            )}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <item.icon size={16} className={item.color} />
+                                                <span className="whitespace-nowrap">{item.label}</span>
+                                            </div>
+                                            {item.count > 0 && (
+                                                <Badge
+                                                    variant="secondary"
+                                                    className="ml-2 bg-slate-100 dark:bg-slate-800 text-slate-500 text-[10px] px-1.5 h-5 min-w-[20px] justify-center"
+                                                >
+                                                    {item.count}
+                                                </Badge>
+                                            )}
+                                        </button>
+                                    ))}
                                 </div>
-                                {item.count > 0 && (
-                                    <Badge
-                                        variant="secondary"
-                                        className="ml-2 bg-slate-100 dark:bg-slate-800 text-slate-500 text-[10px] px-1.5 h-5 min-w-[20px] justify-center"
-                                    >
-                                        {item.count}
-                                    </Badge>
-                                )}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="mt-auto px-4 py-6 hidden lg:block">
-                    <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-xl shadow-indigo-500/20">
-                        <p className="text-xs font-bold opacity-80 mb-1 uppercase tracking-widest">
-                            Total Users
-                        </p>
-                        <p className="text-3xl font-black tracking-tight">{users.length}</p>
-                        <div className="mt-3 flex items-center gap-2 text-[10px] font-medium bg-white/10 w-fit px-2 py-1 rounded-lg backdrop-blur-sm">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                            {users.filter((u) => u.isApproved).length} Active Identities
+                            </div>
                         </div>
-                    </div>
-                </div>
-            </div>
+                    )}
 
-            {/* MAIN CONTENT - DATA GRID */}
-            <div className="flex-1 flex flex-col bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden min-w-0">
-                {/* TOOLBAR */}
-                <div className="p-4 lg:p-5 border-b border-slate-100 dark:border-slate-800 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 bg-white/50 backdrop-blur-sm sticky top-0 z-20">
-                    <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-4 flex-1">
-                        <div className="relative w-full max-w-md group">
-                            <Search
-                                size={16}
-                                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors"
-                            />
-                            <input
-                                value={userSearchQuery}
-                                onChange={(e) => setUserSearchQuery(e.target.value)}
-                                className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl pl-10 pr-4 py-2.5 text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 transition-all placeholder:text-slate-400"
-                                placeholder="Search..."
-                            />
-                        </div>
-                        <div className="hidden lg:block h-6 w-px bg-slate-200 dark:bg-slate-700" />
-                        <div className="flex items-center gap-2 overflow-x-auto pb-1 lg:pb-0">
-                            {/* FILTER */}
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button
-                                        variant={statusFilter !== 'ALL' ? 'secondary' : 'ghost'}
-                                        size="sm"
-                                        className={cn(
-                                            'text-slate-500 hover:text-indigo-600 gap-2 shrink-0',
-                                            statusFilter !== 'ALL' && 'text-indigo-600'
-                                        )}
-                                    >
-                                        <Filter size={16} />
-                                        <span className="hidden sm:inline">
-                                            {statusFilter === 'ALL'
-                                                ? 'Filter'
-                                                : statusFilter === 'ACTIVE'
-                                                  ? 'Active'
-                                                  : 'Locked'}
-                                        </span>
-                                        <ChevronDown size={12} className="opacity-50" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="start" className="w-48">
-                                    <DropdownMenuLabel>Account Status</DropdownMenuLabel>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuRadioGroup
-                                        value={statusFilter}
-                                        onValueChange={(v) => setStatusFilter(v as any)}
-                                    >
-                                        <DropdownMenuRadioItem value="ALL">
-                                            Show All Objects
-                                        </DropdownMenuRadioItem>
-                                        <DropdownMenuRadioItem value="ACTIVE">
-                                            Active Accounts
-                                        </DropdownMenuRadioItem>
-                                        <DropdownMenuRadioItem value="LOCKED">
-                                            Locked Accounts
-                                        </DropdownMenuRadioItem>
-                                    </DropdownMenuRadioGroup>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-
-                            {/* SORT */}
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
+                    {/* MAIN CONTENT - DATA GRID */}
+                    <div className="flex-1 flex flex-col bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden min-w-0">
+                        {/* TOOLBAR */}
+                        <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl sticky top-0 z-30 transition-all">
+                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                                <div className="flex items-center gap-3 w-full flex-1">
                                     <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="text-slate-500 hover:text-indigo-600 gap-2 shrink-0"
+                                        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                                        title={isSidebarOpen ? "Collapse Sidebar" : "Expand Sidebar"}
+                                        className="h-10 w-10 p-0 shrink-0 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-slate-100 transition-colors"
                                     >
-                                        <ArrowUpDown size={16} />{' '}
-                                        <span className="hidden sm:inline">Sort</span>
-                                        <ChevronDown size={12} className="opacity-50" />
+                                        <PanelLeft className={cn("h-5 w-5 transition-transform", !isSidebarOpen && "rotate-180")} />
                                     </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="start" className="w-48">
-                                    <DropdownMenuLabel>Sort Directory By</DropdownMenuLabel>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuRadioGroup
-                                        value={sortConfig.key}
-                                        onValueChange={(v) =>
-                                            setSortConfig({
-                                                key: v as SortKey,
-                                                direction: sortConfig.direction
-                                            })
-                                        }
-                                    >
-                                        <DropdownMenuRadioItem value="name">
-                                            Full Name
-                                        </DropdownMenuRadioItem>
-                                        <DropdownMenuRadioItem value="role">
-                                            Role / Permission
-                                        </DropdownMenuRadioItem>
-                                        <DropdownMenuRadioItem value="lastActive">
-                                            Last Activity
-                                        </DropdownMenuRadioItem>
-                                        <DropdownMenuRadioItem value="status">
-                                            Account Status
-                                        </DropdownMenuRadioItem>
-                                    </DropdownMenuRadioGroup>
-                                    <DropdownMenuSeparator />
-                                    <div className="p-2">
-                                        <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
-                                            <button
-                                                onClick={() =>
-                                                    setSortConfig((p) => ({
-                                                        ...p,
-                                                        direction: 'asc'
-                                                    }))
-                                                }
-                                                className={cn(
-                                                    'flex-1 text-xs font-bold py-1.5 rounded-md text-center transition-all',
-                                                    sortConfig.direction === 'asc'
-                                                        ? 'bg-white shadow-sm text-indigo-600'
-                                                        : 'text-slate-500'
-                                                )}
-                                            >
-                                                Asc
-                                            </button>
-                                            <button
-                                                onClick={() =>
-                                                    setSortConfig((p) => ({
-                                                        ...p,
-                                                        direction: 'desc'
-                                                    }))
-                                                }
-                                                className={cn(
-                                                    'flex-1 text-xs font-bold py-1.5 rounded-md text-center transition-all',
-                                                    sortConfig.direction === 'desc'
-                                                        ? 'bg-white shadow-sm text-indigo-600'
-                                                        : 'text-slate-500'
-                                                )}
-                                            >
-                                                Desc
-                                            </button>
+
+                                    {/* Search Field */}
+                                    <div className="relative w-full group">
+                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <Search className="h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
                                         </div>
+                                        <input
+                                            type="text"
+                                            value={userSearchQuery}
+                                            onChange={(e) => setUserSearchQuery(e.target.value)}
+                                            className="block w-full pl-10 pr-3 py-2.5 border-none rounded-xl bg-slate-100 dark:bg-slate-800 text-sm font-medium text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500/20 placeholder:text-slate-500 transition-all hover:bg-slate-200/50 dark:hover:bg-slate-800"
+                                            placeholder="Search directory..."
+                                        />
                                     </div>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
+                                </div>
+
+                                {/* Actions Group */}
+                                <div className="flex items-center gap-3 w-full sm:w-auto justify-end flex-wrap sm:flex-nowrap">
+                                    {/* Filter Dropdown */}
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className={cn(
+                                                    "h-10 border-dashed border-slate-300 dark:border-slate-700 hover:border-indigo-400 hover:bg-indigo-50/50 hover:text-indigo-600 transition-all rounded-lg px-4",
+                                                    statusFilter !== 'ALL' && "bg-indigo-50 border-indigo-200 text-indigo-600"
+                                                )}
+                                            >
+                                                <Filter className="mr-2 h-4 w-4" />
+                                                <span>Filter</span>
+                                                {statusFilter !== 'ALL' && (
+                                                    <span className="ml-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-bold text-indigo-600">
+                                                        1
+                                                    </span>
+                                                )}
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" className="w-56">
+                                            <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuRadioGroup value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+                                                <DropdownMenuRadioItem value="ALL">All Users</DropdownMenuRadioItem>
+                                                <DropdownMenuRadioItem value="ACTIVE">Active Only</DropdownMenuRadioItem>
+                                                <DropdownMenuRadioItem value="LOCKED">Locked Accounts</DropdownMenuRadioItem>
+                                            </DropdownMenuRadioGroup>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+
+                                    {/* Sort Dropdown */}
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="outline" size="sm" className="h-10 border-slate-200 dark:border-slate-800 hover:bg-slate-50 text-slate-600 rounded-lg px-4">
+                                                <ArrowUpDown className="mr-2 h-4 w-4" />
+                                                Sort
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" className="w-48">
+                                            <DropdownMenuLabel>Sort Order</DropdownMenuLabel>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuRadioGroup value={sortConfig.key} onValueChange={(v) => setSortConfig(prev => ({ ...prev, key: v as any }))}>
+                                                <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem>
+                                                <DropdownMenuRadioItem value="role">Role</DropdownMenuRadioItem>
+                                                <DropdownMenuRadioItem value="lastActive">Last Active</DropdownMenuRadioItem>
+                                            </DropdownMenuRadioGroup>
+                                            <DropdownMenuSeparator />
+                                            <div className="p-2 gap-2 flex">
+                                                <Button variant={sortConfig.direction === 'asc' ? 'secondary' : 'ghost'} size="sm" className="flex-1 h-8 text-xs" onClick={() => setSortConfig(p => ({ ...p, direction: 'asc' }))}>Asc</Button>
+                                                <Button variant={sortConfig.direction === 'desc' ? 'secondary' : 'ghost'} size="sm" className="flex-1 h-8 text-xs" onClick={() => setSortConfig(p => ({ ...p, direction: 'desc' }))}>Desc</Button>
+                                            </div>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+
+                                    <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 mx-1 hidden sm:block" />
+
+                                    <Button variant="outline" size="sm" onClick={handleExport} className="h-10 hover:bg-slate-50 text-slate-600 hidden sm:flex rounded-lg px-4">
+                                        <Download className="mr-2 h-4 w-4" />
+                                        Export
+                                    </Button>
+
+                                    <Button onClick={() => setIsAddingUser(true)} size="sm" className="h-10 bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/30 border-0 rounded-lg px-5 font-semibold tracking-wide">
+                                        <UserPlus className="mr-2 h-4 w-4" />
+                                        Add User
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* TABLE AREA */}
+                        <div className="flex-1 overflow-auto bg-slate-50/50 dark:bg-slate-900/50 relative">
+                            <UserTable
+                                users={processedUsers}
+                                lastActiveMap={lastActiveMap}
+                                onToggleStatus={toggleUserStatus}
+                                onUnlock={handleUnlockUser}
+                                onEdit={setEditingUser}
+                                onDelete={handleDeleteUser}
+                                onResetPassword={setPasswordResetUser}
+                                onRowClick={(user) => setSelectedUser(user)}
+                            />
+                        </div>
+
+                        <div className="p-3 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-[10px] text-slate-400 flex justify-between items-center font-medium">
+                            <span>{processedUsers.length} users</span>
+                            <span className="hidden sm:inline">SCM-FG Directory Service v1.2</span>
                         </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleExport}
-                            className="hidden lg:flex border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50"
-                        >
-                            <Download size={16} className="mr-2" /> Export
-                        </Button>
-                        <Button
-                            onClick={() => setIsAddingUser(true)}
-                            className="flex-1 lg:flex-none bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-lg shadow-indigo-500/20 transition-all active:scale-95 justify-center"
-                        >
-                            <UserPlus size={18} className="mr-2" />{' '}
-                            <span className="sm:inline">Add User</span>
-                        </Button>
-                    </div>
                 </div>
-
-                {/* TABLE AREA */}
-                <div className="flex-1 overflow-auto bg-slate-50/50 dark:bg-slate-900/50 relative">
-                    <UserTable
-                        users={processedUsers}
-                        lastActiveMap={lastActiveMap}
-                        onToggleStatus={toggleUserStatus}
-                        onUnlock={handleUnlockUser}
-                        onEdit={setEditingUser}
-                        onDelete={handleDeleteUser}
-                        onResetPassword={setPasswordResetUser}
-                    />
-                </div>
-
-                <div className="p-3 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-[10px] text-slate-400 flex justify-between items-center font-medium">
-                    <span>{processedUsers.length} users</span>
-                    <span className="hidden sm:inline">SCM-FG Directory Service v1.2</span>
-                </div>
-            </div>
+            )}
 
             {/* MODALS */}
             <AddUserModal
@@ -452,6 +456,18 @@ export function UserManagement({ users, refreshUsers, sheets }: UserManagementPr
                 onClose={() => setPasswordResetUser(null)}
                 onSuccess={refreshUsers}
                 settings={settings}
+            />
+
+            <UserDetailsSlideOver
+                user={selectedUser}
+                isOpen={!!selectedUser}
+                onClose={() => setSelectedUser(null)}
+                lastActive={selectedUser ? lastActiveMap.get(selectedUser.username) : undefined}
+                onEdit={setEditingUser}
+                onToggleStatus={toggleUserStatus}
+                onUnlock={handleUnlockUser}
+                onResetPassword={setPasswordResetUser}
+                onDelete={handleDeleteUser}
             />
         </div>
     );

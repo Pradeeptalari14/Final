@@ -152,7 +152,7 @@ export default function ReportsPage() {
 
     // --- Export Handler ---
     const handleExport = () => {
-        let exportData: any[] = [];
+        let exportData: Record<string, unknown>[] = [];
         let filename = 'Report';
 
         if (activeReport === 'daily') {

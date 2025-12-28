@@ -1,418 +1,136 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
 import { SheetData, SheetStatus, Role } from '@/types';
+import { useSheetHeader } from './useSheetHeader';
+import { useSheetGrid } from './useSheetGrid';
+import { useSheetSignatures } from './useSheetSignatures';
 
 export const useLoadingSheetLogic = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { updateSheet, sheets, refreshSheets, currentUser, users } = useData();
-
+    const {
+        sheets,
+        refreshSheets,
+        fetchSheetById,
+        updateSheet,
+        currentUser,
+        users,
+        loading: dataLoading
+    } = useData();
     const [currentSheet, setCurrentSheet] = useState<SheetData | null>(null);
     const [loading, setLoading] = useState(true);
+    const [errors] = useState<string[]>([]);
 
-    // Header inputs
-    const [transporter, setTransporter] = useState('');
-    const [loadingDock, setLoadingDock] = useState('');
-    const [shift, setShift] = useState('');
-    const [destination, setDestination] = useState('');
-    const [supervisorName, setSupervisorName] = useState('');
-    const [empCode, setEmpCode] = useState('');
-    const [startTime, setStartTime] = useState('');
-    const [endTime, setEndTime] = useState('');
+    // --- Sub-Hooks ---
+    const { headerState, handleHeaderChange } = useSheetHeader(currentSheet, currentUser, users);
+    const {
+        validationError,
+        dismissValidationError,
+        handlers: gridHandlers
+    } = useSheetGrid(currentSheet, setCurrentSheet);
+    const { signatureState, camera } = useSheetSignatures(currentSheet, currentUser);
 
-    // Loading Specific Extra Fields
-    const [pickingBy, setPickingBy] = useState('');
-    const [pickingByEmpCode, setPickingByEmpCode] = useState('');
-    const [pickingCrosscheckedBy, setPickingCrosscheckedBy] = useState('');
-    const [pickingCrosscheckedByEmpCode, setPickingCrosscheckedByEmpCode] = useState('');
-    const [vehicleNo, setVehicleNo] = useState('');
-    const [driverName, setDriverName] = useState('');
-    const [sealNo, setSealNo] = useState('');
-    const [regSerialNo, setRegSerialNo] = useState('');
+    const { setEndTime } = headerState; // Exposed setter for submit logic
 
-    // Signatures & Remarks
-    const [svName, setSvName] = useState('');
-    const [svSign, setSvSign] = useState('');
-    const [slSign, setSlSign] = useState('');
-    const [deoSign, setDeoSign] = useState('');
-    const [remarks, setRemarks] = useState('');
-
-    // Validation State
-    const [errors, setErrors] = useState<string[]>([]);
-
-    // Camera State
-    const videoRef = useRef<HTMLVideoElement>(null);
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [cameraActive, setCameraActive] = useState(false);
-    const [capturedImage, setCapturedImage] = useState<string | null>(null);
-    const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
-
-    // Initial Data Load
+    // --- Initial Data Load ---
     useEffect(() => {
         if (!id) return;
-        const found = sheets.find((s) => s.id === id);
-        if (found) {
-            queueMicrotask(() => {
-                setCurrentSheet(found);
-                setLoading(false);
-            });
-        } else {
-            refreshSheets();
-        }
-    }, [id, sheets, refreshSheets]);
 
-    // Role-based redirect
+        const loadSheet = async () => {
+            // 1. Try local cache first
+            if (currentSheet && currentSheet.id === id) return; // Don't overwrite local unsaved changes
+
+            setLoading(true);
+
+            const foundInCache = sheets.find((s) => s.id === id);
+
+            if (foundInCache) {
+                setCurrentSheet(foundInCache);
+                setLoading(false);
+                return;
+            }
+
+            // 2. Fallback to direct fetch
+            const fetched = await fetchSheetById(id);
+            if (fetched) {
+                setCurrentSheet(fetched);
+            } else {
+                // 3. Fallback to refreshing all if direct fetch failed
+                if (!dataLoading) {
+                    await refreshSheets();
+                }
+            }
+            setLoading(false); // End loading even if not found to show "Sheet Not Found"
+        };
+
+        loadSheet();
+    }, [id, sheets, dataLoading, refreshSheets, fetchSheetById]);
+
+    // --- Role-based Redirect ---
     useEffect(() => {
         if (!currentSheet || !currentUser) return;
         const isStagingUser = currentUser.role === Role.STAGING_SUPERVISOR;
         if (
             isStagingUser &&
-            (currentSheet.status === SheetStatus.LOCKED ||
-                currentSheet.status === SheetStatus.LOADING_VERIFICATION_PENDING)
+            (currentSheet.status === SheetStatus.DRAFT ||
+                currentSheet.status === SheetStatus.STAGING_VERIFICATION_PENDING)
         ) {
             navigate(`/sheets/staging/${currentSheet.id}`, { replace: true });
         }
     }, [currentSheet, currentUser, navigate]);
 
-    const generateLoadingItems = (sheet: SheetData) => {
-        const updatedLoadingItems = sheet.stagingItems
-            .filter((item) => item.skuName && item.ttlCases > 0)
-            .map((item) => ({
-                skuSrNo: item.srNo,
-                cells: [],
-                looseInput: undefined,
-                total: 0,
-                balance: item.ttlCases
-            }));
-
-        const updatedAdditionalItems =
-            sheet.additionalItems && sheet.additionalItems.length > 0
-                ? sheet.additionalItems
-                : Array.from({ length: 5 }, (_, i) => ({
-                    id: i + 1,
-                    skuName: '',
-                    counts: Array(10).fill(0),
-                    total: 0
-                }));
-
-        setCurrentSheet((prev) =>
-            prev
-                ? {
-                    ...prev,
-                    loadingItems: updatedLoadingItems,
-                    additionalItems: updatedAdditionalItems
-                }
-                : null
-        );
-    };
-
-    // Sync Local State
+    // Initial Grid Generation if needed
     useEffect(() => {
         if (!currentSheet) return;
-
-        queueMicrotask(() => {
-            setTransporter(currentSheet.transporter || '');
-            setLoadingDock(currentSheet.loadingDockNo || '');
-            setShift(currentSheet.shift || '');
-            setDestination(currentSheet.destination || '');
-
-            const currentUserCode = currentUser?.empCode || '';
-
-            if (currentSheet.status === SheetStatus.LOCKED) {
-                setEmpCode(currentUserCode);
-            } else {
-                setEmpCode(
-                    currentSheet.empCode && currentSheet.empCode.trim() !== ''
-                        ? currentSheet.empCode
-                        : currentUserCode
-                );
-            }
-
-            setStartTime(
-                currentSheet.loadingStartTime ||
-                new Date().toLocaleTimeString('en-US', { hour12: false })
-            );
-            setEndTime(currentSheet.loadingEndTime || '');
-
-            const currentUserName = currentUser?.fullName || currentUser?.username || '';
-            const initialPickingBy =
-                currentSheet.pickingBy && currentSheet.pickingBy.trim() !== ''
-                    ? currentSheet.pickingBy
-                    : currentSheet.supervisorName || currentSheet.createdBy || currentUserName;
-            setPickingBy(initialPickingBy);
-
-            setPickingByEmpCode(
-                currentSheet.status === SheetStatus.LOCKED
-                    ? currentSheet.empCode || ''
-                    : currentSheet.pickingByEmpCode || ''
-            );
-
-            const initialPickingCrosscheckedBy =
-                currentSheet.pickingCrosscheckedBy &&
-                    currentSheet.pickingCrosscheckedBy.trim() !== ''
-                    ? currentSheet.pickingCrosscheckedBy
-                    : currentUserName;
-            setPickingCrosscheckedBy(initialPickingCrosscheckedBy);
-
-            setPickingCrosscheckedByEmpCode(currentSheet.pickingCrosscheckedByEmpCode || '');
-            setVehicleNo(currentSheet.vehicleNo || '');
-            setDriverName(currentSheet.driverName || '');
-            setSealNo(currentSheet.sealNo || '');
-            setRegSerialNo(currentSheet.regSerialNo || '');
-
-            setSupervisorName(
-                currentSheet.loadingSvName && currentSheet.loadingSvName.trim() !== ''
-                    ? currentSheet.loadingSvName
-                    : currentUserName
-            );
-            setSvName(
-                currentSheet.loadingSvName && currentSheet.loadingSvName.trim() !== ''
-                    ? currentSheet.loadingSvName
-                    : currentUserName
-            );
-            setSvSign(currentSheet.loadingSupervisorSign || '');
-            setSlSign(currentSheet.slSign || '');
-            setDeoSign(currentSheet.deoSign || '');
-            setCapturedImage(currentSheet.capturedImages?.[0] || null);
-        });
-
         const hasStagingData = currentSheet.stagingItems.some((i) => i.ttlCases > 0);
         const hasLoadingData = currentSheet.loadingItems && currentSheet.loadingItems.length > 0;
         const hasAdditionalData =
             currentSheet.additionalItems && currentSheet.additionalItems.length > 0;
 
         if (hasStagingData && (!hasLoadingData || !hasAdditionalData)) {
-            queueMicrotask(() => generateLoadingItems(currentSheet));
+            queueMicrotask(() => gridHandlers.generateLoadingItems(currentSheet));
         }
-    }, [currentSheet, currentUser, users]);
+    }, [currentSheet, gridHandlers]);
 
-    // Camera Lifecycle
-    useEffect(() => {
-        return () => {
-            if (mediaStream) {
-                mediaStream.getTracks().forEach((track) => track.stop());
-            }
-        };
-    }, [mediaStream]);
+    // --- High-Level Actions (Save, Submit, Verify) ---
 
-    useEffect(() => {
-        if (cameraActive && mediaStream && videoRef.current) {
-            videoRef.current.srcObject = mediaStream;
-        }
-    }, [cameraActive, mediaStream]);
-
-    const handleHeaderChange = (field: string, value: any) => {
-        setErrors((prev) => prev.filter((e) => e !== field));
-        switch (field) {
-            case 'shift':
-                setShift(value);
-                break;
-            case 'transporter':
-                setTransporter(value);
-                break;
-            case 'destination':
-                setDestination(value);
-                break;
-            case 'loadingDockNo':
-                setLoadingDock(value);
-                break;
-            case 'supervisorName':
-                setSupervisorName(value);
-                break;
-            case 'pickingBy':
-                setPickingBy(value);
-                break;
-            case 'pickingCrosscheckedBy':
-                setPickingCrosscheckedBy(value);
-                break;
-            case 'vehicleNo':
-                setVehicleNo(value);
-                break;
-            case 'driverName':
-                setDriverName(value);
-                break;
-            case 'sealNo':
-                setSealNo(value);
-                break;
-            case 'regSerialNo':
-                setRegSerialNo(value);
-                break;
-            case 'empCode':
-                setEmpCode(value);
-                break;
-            case 'loadingStartTime':
-                setStartTime(value);
-                break;
-            case 'loadingEndTime':
-                setEndTime(value);
-                break;
-        }
-    };
-
-    const handleLoadingCellChange = (skuSrNo: number, row: number, col: number, val: string) => {
-        if (!currentSheet) return;
-        const value = val === '' ? 0 : parseInt(val);
-        if (isNaN(value)) return;
-        const stagingItem = currentSheet.stagingItems.find((s) => s.srNo === skuSrNo);
-        const safeLoadingItems = currentSheet.loadingItems || [];
-
-        const updatedLoadingItems = safeLoadingItems.map((li) => {
-            if (li.skuSrNo !== skuSrNo) return li;
-            const existingCellIndex = li.cells.findIndex((c) => c.row === row && c.col === col);
-            const newCells = [...li.cells];
-            if (existingCellIndex >= 0) {
-                newCells[existingCellIndex] = { row, col, value };
-            } else {
-                newCells.push({ row, col, value });
-            }
-            const cellSum = newCells.reduce((acc, c) => acc + c.value, 0);
-            const total = cellSum + (li.looseInput || 0);
-            const totalCases = stagingItem?.ttlCases || 0;
-            const balance = totalCases - total;
-            return { ...li, cells: newCells, total, balance };
-        });
-        setCurrentSheet((prev) => (prev ? { ...prev, loadingItems: updatedLoadingItems } : null));
-    };
-
-    const handleCellBlur = (skuSrNo: number, row: number, col: number, val: string) => {
-        if (!val || val === '') return;
-        const value = parseInt(val);
-        const stagingItem = currentSheet?.stagingItems.find((s) => s.srNo === skuSrNo);
-        if (
-            stagingItem &&
-            Number(stagingItem.casesPerPlt) > 0 &&
-            value !== Number(stagingItem.casesPerPlt)
-        ) {
-            alert(
-                `\u26A0\uFE0F INCORRECT QUANTITY!\n\nAllowed: ${stagingItem.casesPerPlt}\nEntered: ${value}\n\nThe value must match the standard Cases/Pallet.`
-            );
-            // Strictly clear the invalid value
-            handleLoadingCellChange(skuSrNo, row, col, '');
-            // Force refocus on the specific cell
-            setTimeout(() => {
-                const element = document.getElementById(`cell-${skuSrNo}-${row}-${col}`);
-                if (element) {
-                    element.focus();
-                    (element as HTMLInputElement).select?.();
-                }
-            }, 0);
-        }
-    };
-
-    const handleLooseChange = (skuSrNo: number, val: string) => {
-        if (!currentSheet) return;
-        const value = val === '' ? undefined : parseInt(val);
-        if (value !== undefined && isNaN(value)) return;
-        const stagingItem = currentSheet.stagingItems.find((s) => s.srNo === skuSrNo);
-
-        const updatedLoadingItems = (currentSheet.loadingItems || []).map((li) => {
-            if (li.skuSrNo !== skuSrNo) return li;
-            const cellSum = li.cells.reduce((acc, c) => acc + c.value, 0);
-            const total = cellSum + (value || 0);
-            const totalCases = stagingItem?.ttlCases || 0;
-            const balance = totalCases - total;
-            return { ...li, looseInput: value, total, balance };
-        });
-        setCurrentSheet((prev) => (prev ? { ...prev, loadingItems: updatedLoadingItems } : null));
-    };
-
-    const handleAdditionalChange = (id: number, field: string, value: any, colIndex?: number) => {
-        if (!currentSheet) return;
-        const updatedAdditional = (currentSheet.additionalItems || []).map((item) => {
-            if (item.id !== id) return item;
-            if (field === 'skuName') {
-                return { ...item, skuName: value };
-            } else if (field === 'count' && colIndex !== undefined) {
-                const newCounts = [...item.counts];
-                newCounts[colIndex] = value === '' ? 0 : parseInt(value) || 0;
-                const newTotal = newCounts.reduce((sum, v) => sum + v, 0);
-                return { ...item, counts: newCounts, total: newTotal };
-            }
-            return item;
-        });
-        setCurrentSheet((prev) => (prev ? { ...prev, additionalItems: updatedAdditional } : null));
-    };
-
-    const handleToggleRejection = (skuSrNo: number, reason?: string) => {
-        if (!currentSheet) return;
-        const updatedLoadingItems = (currentSheet.loadingItems || []).map((li) => {
-            if (li.skuSrNo !== skuSrNo) return li;
-            return {
-                ...li,
-                isRejected: !li.isRejected,
-                rejectionReason: !li.isRejected ? reason : undefined
-            };
-        });
-        setCurrentSheet((prev) => (prev ? { ...prev, loadingItems: updatedLoadingItems } : null));
-    };
-
-    const startCamera = async () => {
-        try {
-            setCameraActive(true);
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            setMediaStream(stream);
-        } catch (err) {
-            console.error('Camera error:', err);
-            alert('Check permissions. Camera access is required.');
-            setCameraActive(false);
-        }
-    };
-
-    const capturePhoto = () => {
-        if (videoRef.current && canvasRef.current) {
-            const context = canvasRef.current.getContext('2d');
-            if (context) {
-                canvasRef.current.width = videoRef.current.videoWidth;
-                canvasRef.current.height = videoRef.current.videoHeight;
-                context.drawImage(videoRef.current, 0, 0);
-                setCapturedImage(canvasRef.current.toDataURL('image/png'));
-                stopCamera();
-            }
-        }
-    };
-
-    const stopCamera = () => {
-        if (mediaStream) mediaStream.getTracks().forEach((track) => track.stop());
-        setMediaStream(null);
-        setCameraActive(false);
-    };
-
+    // Derived Helper: Build Sheet Object from State
     const buildSheetData = (status: SheetStatus): SheetData => {
         if (!currentSheet) throw new Error('No sheet');
         return {
             ...currentSheet,
             status,
-            shift,
-            destination,
-            supervisorName,
-            empCode,
-            transporter,
-            loadingDockNo: loadingDock,
-            loadingStartTime: startTime,
-            loadingEndTime: endTime,
-            pickingBy,
-            pickingByEmpCode,
-            pickingCrosscheckedByEmpCode,
-            pickingCrosscheckedBy,
-            vehicleNo,
-            driverName,
-            sealNo,
-            regSerialNo,
-            loadingSvName: svName,
-            loadingSupervisorSign: svSign,
-            slSign,
-            deoSign,
-            capturedImages: capturedImage ? [capturedImage] : [],
+            shift: headerState.shift,
+            destination: headerState.destination,
+            supervisorName: headerState.supervisorName,
+            empCode: headerState.empCode,
+            transporter: headerState.transporter,
+            loadingDockNo: headerState.loadingDock,
+            loadingStartTime: headerState.startTime,
+            loadingEndTime: headerState.endTime,
+            pickingBy: headerState.pickingBy,
+            pickingByEmpCode: headerState.pickingByEmpCode,
+            pickingCrosscheckedBy: headerState.pickingCrosscheckedBy,
+            pickingCrosscheckedByEmpCode: headerState.pickingCrosscheckedByEmpCode,
+            vehicleNo: headerState.vehicleNo,
+            driverName: headerState.driverName,
+            sealNo: headerState.sealNo,
+            regSerialNo: headerState.regSerialNo,
+            loadingSvName: signatureState.svName,
+            loadingSupervisorSign: signatureState.svSign,
+            slSign: signatureState.slSign,
+            deoSign: signatureState.deoSign,
+            capturedImages: signatureState.capturedImage ? [signatureState.capturedImage] : [],
             completedBy: status === SheetStatus.COMPLETED ? currentUser?.username : undefined,
             completedAt: status === SheetStatus.COMPLETED ? new Date().toISOString() : undefined,
-            comments: remarks
+            comments: signatureState.remarks
                 ? [
                     ...(currentSheet.comments || []),
                     {
                         id: Date.now().toString(),
                         author: currentUser?.username || 'User',
-                        text: remarks,
+                        text: signatureState.remarks,
                         timestamp: new Date().toISOString()
                     }
                 ]
@@ -447,13 +165,15 @@ export const useLoadingSheetLogic = () => {
 
     const handleSubmit = async () => {
         if (!currentSheet) return;
-        if (!svName || svName.trim() === '') {
+        if (!signatureState.svName || signatureState.svName.trim() === '') {
             alert('Supervisor Name is required to complete the sheet.');
             return;
         }
-        const timeNow = new Date().toLocaleTimeString('en-US', { hour12: false });
-        setEndTime(timeNow);
+        const timeNow = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        setEndTime(timeNow); // Update local hook state
         const tempSheet = buildSheetData(SheetStatus.LOADING_VERIFICATION_PENDING);
+
+        // Override buildSheetData result with definitive submission time
         const finalSheet = {
             ...tempSheet,
             loadingEndTime: timeNow,
@@ -491,7 +211,7 @@ export const useLoadingSheetLogic = () => {
                     loadingApprovedAt: new Date().toISOString(),
                     loadingEndTime:
                         currentSheet.loadingEndTime ||
-                        new Date().toLocaleTimeString('en-US', { hour12: false }),
+                        new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }),
                     slSign: currentUser?.fullName,
                     completedBy: currentUser?.username,
                     completedAt: new Date().toISOString(),
@@ -543,6 +263,7 @@ export const useLoadingSheetLogic = () => {
         }
     };
 
+    // --- Computed States (Totals, Lists, Access) ---
     const totals = useMemo(() => {
         if (!currentSheet)
             return {
@@ -604,43 +325,24 @@ export const useLoadingSheetLogic = () => {
         currentUser,
         states,
         errors,
-        header: {
-            shift,
-            transporter,
-            destination,
-            loadingDock,
-            supervisorName,
-            empCode,
-            startTime,
-            endTime,
-            pickingBy,
-            pickingByEmpCode,
-            pickingCrosscheckedBy,
-            pickingCrosscheckedByEmpCode,
-            vehicleNo,
-            driverName,
-            sealNo,
-            regSerialNo
-        },
-        footer: { svName, svSign, slSign, deoSign, remarks, capturedImage },
-        camera: { videoRef, canvasRef, cameraActive, startCamera, stopCamera, capturePhoto },
+        validationError,
+        dismissValidationError,
+        header: headerState,
+        footer: signatureState,
+        camera,
         totals,
         lists,
         handlers: {
             handleHeaderChange,
-            handleLoadingCellChange,
-            handleCellBlur,
-            handleLooseChange,
-            handleAdditionalChange,
+            ...gridHandlers,
             handleSaveProgress,
             handleSubmit,
             handleVerificationAction,
-            setRemarks,
-            setSvName,
-            setSvSign,
-            setSlSign,
-            setDeoSign,
-            handleToggleRejection
+            setRemarks: signatureState.setRemarks,
+            setSvName: signatureState.setSvName,
+            setSvSign: signatureState.setSvSign,
+            setSlSign: signatureState.setSlSign,
+            setDeoSign: signatureState.setDeoSign
         }
     };
 };

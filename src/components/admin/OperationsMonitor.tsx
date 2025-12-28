@@ -281,10 +281,10 @@ export function OperationsMonitor({ sheets, onRefresh }: OperationsMonitorProps)
                             {range === 'ALL'
                                 ? 'All Time'
                                 : range === '30D'
-                                  ? '30 Days'
-                                  : range === '90D'
-                                    ? '3 Months'
-                                    : 'Custom'}
+                                    ? '30 Days'
+                                    : range === '90D'
+                                        ? '3 Months'
+                                        : 'Custom'}
                         </button>
                     ))}
                 </div>
@@ -328,22 +328,22 @@ export function OperationsMonitor({ sheets, onRefresh }: OperationsMonitorProps)
                     supervisorFilter !== 'ALL' ||
                     shiftFilter !== 'ALL' ||
                     timeFilter !== 'ALL') && (
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                            setSearchQuery('');
-                            setSupervisorFilter('ALL');
-                            setShiftFilter('ALL');
-                            setTimeFilter('ALL');
-                            setStartDate('');
-                            setEndDate('');
-                        }}
-                        className="text-muted-foreground hover:text-foreground h-9"
-                    >
-                        <X size={16} className="mr-2" /> {t('clear_filters', settings.language)}
-                    </Button>
-                )}
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                                setSearchQuery('');
+                                setSupervisorFilter('ALL');
+                                setShiftFilter('ALL');
+                                setTimeFilter('ALL');
+                                setStartDate('');
+                                setEndDate('');
+                            }}
+                            className="text-muted-foreground hover:text-foreground h-9"
+                        >
+                            <X size={16} className="mr-2" /> {t('clear_filters', settings.language)}
+                        </Button>
+                    )}
             </div>
 
             {/* Main Content: List of Sheets */}
@@ -389,16 +389,15 @@ export function OperationsMonitor({ sheets, onRefresh }: OperationsMonitorProps)
                                         <div className="flex flex-col lg:flex-row items-stretch min-h-[100px]">
                                             {/* Status Pillar */}
                                             <div
-                                                className={`w-2 ${
-                                                    sheet.status === SheetStatus.COMPLETED
-                                                        ? 'bg-emerald-500'
-                                                        : sheet.status === SheetStatus.LOCKED
-                                                          ? 'bg-orange-500'
-                                                          : sheet.status ===
-                                                              SheetStatus.LOADING_VERIFICATION_PENDING
+                                                className={`w-2 ${sheet.status === SheetStatus.COMPLETED
+                                                    ? 'bg-emerald-500'
+                                                    : sheet.status === SheetStatus.LOCKED
+                                                        ? 'bg-orange-500'
+                                                        : sheet.status ===
+                                                            SheetStatus.LOADING_VERIFICATION_PENDING
                                                             ? 'bg-purple-500'
                                                             : 'bg-blue-500'
-                                                }`}
+                                                    }`}
                                             />
 
                                             {/* Core Info */}
@@ -488,18 +487,17 @@ export function OperationsMonitor({ sheets, onRefresh }: OperationsMonitorProps)
                                                         </span>
                                                         <Badge
                                                             variant="outline"
-                                                            className={`text-[10px] font-bold uppercase ${
-                                                                sheet.status ===
+                                                            className={`text-[10px] font-bold uppercase ${sheet.status ===
                                                                 SheetStatus.COMPLETED
-                                                                    ? 'border-emerald-500/30 text-emerald-500'
-                                                                    : sheet.status ===
-                                                                        SheetStatus.LOCKED
-                                                                      ? 'border-orange-500/30 text-orange-500'
-                                                                      : 'border-primary/30 text-primary'
-                                                            }`}
+                                                                ? 'border-emerald-500/30 text-emerald-500'
+                                                                : sheet.status ===
+                                                                    SheetStatus.LOCKED
+                                                                    ? 'border-orange-500/30 text-orange-500'
+                                                                    : 'border-primary/30 text-primary'
+                                                                }`}
                                                         >
                                                             {t(
-                                                                sheet.status.toLowerCase() as any,
+                                                                sheet.status.toLowerCase() as string,
                                                                 settings.language
                                                             ).replace(/_/g, ' ')}
                                                         </Badge>

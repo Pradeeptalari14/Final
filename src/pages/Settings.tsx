@@ -1,6 +1,6 @@
 import { useData } from '@/contexts/DataContext';
 import { useAppState } from '@/contexts/AppStateContext';
-import { Role } from '@/types';
+import { Role, AppSettings } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { t } from '@/lib/i18n';
@@ -81,7 +81,7 @@ export default function SettingsPage() {
                                             key={color}
                                             type="button"
                                             onClick={() =>
-                                                updateSettings({ accentColor: color as any })
+                                                updateSettings({ accentColor: color as AppSettings['accentColor'] })
                                             }
                                             className={`w-8 h-8 rounded-full border-2 transition-all ${settings?.accentColor === color ? 'border-primary scale-110' : 'border-transparent hover:scale-105'}`}
                                             style={{
@@ -89,8 +89,8 @@ export default function SettingsPage() {
                                                     color === 'blue'
                                                         ? '#3b82f6'
                                                         : color === 'emerald'
-                                                          ? '#10b981'
-                                                          : '#a855f7'
+                                                            ? '#10b981'
+                                                            : '#a855f7'
                                             }}
                                         />
                                     ))}
@@ -277,10 +277,9 @@ export default function SettingsPage() {
                                     onClick={() => setDevRole(role)}
                                     className={`
                                         p-3 rounded-lg border text-left transition-all text-xs
-                                        ${
-                                            devRole === role
-                                                ? 'bg-primary/20 border-primary text-primary shadow-sm'
-                                                : 'bg-background border-border text-muted-foreground hover:bg-muted hover:border-border'
+                                        ${devRole === role
+                                            ? 'bg-primary/20 border-primary text-primary shadow-sm'
+                                            : 'bg-background border-border text-muted-foreground hover:bg-muted hover:border-border'
                                         }
                                     `}
                                 >

@@ -146,7 +146,7 @@ export const LoadingItemsTable: React.FC<LoadingItemsTableProps> = ({
                                 className="p-2 text-center border-r border-slate-200 border-l-4 border-l-slate-800"
                                 colSpan={10}
                             >
-                                Cells (1-10) - Enter Pallet #
+                                Cells (1-10) - Enter Case Qty
                             </th>
                             <th className="p-2 text-center w-16 border-r border-slate-200 text-[10px] uppercase">
                                 Loose
@@ -256,7 +256,7 @@ export const LoadingItemsTable: React.FC<LoadingItemsTableProps> = ({
                                         {Array.from({ length: 10 }).map((_, cIndex) => {
                                             const cellNum = rIndex * 10 + cIndex + 1;
                                             const isValid = cellNum <= sItem.fullPlt;
-                                            const cell = lItem.cells.find(
+                                            const cell = (lItem.cells || []).find(
                                                 (c) => c.row === rIndex && c.col === cIndex
                                             );
                                             return (
@@ -267,11 +267,12 @@ export const LoadingItemsTable: React.FC<LoadingItemsTableProps> = ({
                                                     {isValid && (
                                                         <input
                                                             id={`cell-${lItem.skuSrNo}-${rIndex}-${cIndex}`}
-                                                            type="number"
+                                                            type="text"
+                                                            inputMode="numeric"
                                                             className="w-full h-full text-center outline-none bg-transparent focus:bg-blue-50 text-slate-900 font-bold disabled:bg-slate-50 disabled:text-slate-500"
                                                             value={
                                                                 cell?.value !== undefined &&
-                                                                cell.value !== 0
+                                                                    cell.value !== 0
                                                                     ? cell.value
                                                                     : ''
                                                             }
@@ -389,7 +390,7 @@ export const LoadingItemsTable: React.FC<LoadingItemsTableProps> = ({
 
                             <div className="grid grid-cols-5 gap-1 mb-3">
                                 {Array.from({ length: 10 }).map((_, cIdx) => {
-                                    const cell = lItem.cells.find(
+                                    const cell = (lItem.cells || []).find(
                                         (c) => c.row === rIndex && c.col === cIdx
                                     );
                                     return (

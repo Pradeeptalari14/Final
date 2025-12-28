@@ -1,15 +1,24 @@
 import { createBrowserRouter } from 'react-router-dom';
+import { Suspense, lazy } from 'react';
 import RootLayout from './layouts/RootLayout';
 import DashboardOverview from './pages/Dashboard';
 import LoginPage from './pages/Login';
 import RegisterPage from './pages/Register';
 
+// Eager load critical components
 import StagingSheet from './components/sheets/StagingSheet';
 import LoadingSheet from './components/sheets/LoadingSheet';
 import SettingsPage from './pages/Settings';
+
+// Lazy load heavy admin & data tables
 import DatabasePage from './pages/Database';
-import AdminDashboard from './pages/AdminDashboard';
-import ReportsPage from './pages/Reports';
+
+// Lazy load heavy admin & data tables
+import { LoadingFallback } from './components/ui/LoadingFallback';
+
+// const DatabasePage = lazy(() => import('./pages/Database'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const ReportsPage = lazy(() => import('./pages/Reports'));
 
 export const router = createBrowserRouter([
     {
@@ -34,7 +43,11 @@ export const router = createBrowserRouter([
             },
             {
                 path: 'reports',
-                element: <ReportsPage />
+                element: (
+                    <Suspense fallback={<LoadingFallback />}>
+                        <ReportsPage />
+                    </Suspense>
+                )
             },
 
             // ...
@@ -53,7 +66,11 @@ export const router = createBrowserRouter([
             },
             {
                 path: 'admin',
-                element: <AdminDashboard />
+                element: (
+                    <Suspense fallback={<LoadingFallback />}>
+                        <AdminDashboard />
+                    </Suspense>
+                )
             }
         ]
     }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { SheetData, SheetStatus } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -28,11 +28,11 @@ export function LiveOperationsMonitor({ sheets, onRefresh }: LiveOperationsMonit
 
     const [isTVMode, setIsTVMode] = useState(false);
 
-    const handleRefresh = async () => {
+    const handleRefresh = useCallback(async () => {
         setIsRefreshing(true);
         await onRefresh();
         setIsRefreshing(false);
-    };
+    }, [onRefresh]);
 
     // Auto-Refresh every 30 seconds
     useEffect(() => {
@@ -40,13 +40,13 @@ export function LiveOperationsMonitor({ sheets, onRefresh }: LiveOperationsMonit
             handleRefresh();
         }, 30000);
         return () => clearInterval(interval);
-    }, []);
+    }, [handleRefresh]);
 
     const toggleTVMode = () => {
         if (!isTVMode) {
-            document.documentElement.requestFullscreen().catch(() => {});
+            document.documentElement.requestFullscreen().catch(() => { });
         } else {
-            if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+            if (document.fullscreenElement) document.exitFullscreen().catch(() => { });
         }
         setIsTVMode(!isTVMode);
     };
@@ -175,7 +175,7 @@ export function LiveOperationsMonitor({ sheets, onRefresh }: LiveOperationsMonit
                                                 className={`${isTVMode ? 'text-sm py-1 px-3' : 'text-[10px]'} uppercase font-bold border-emerald-500/30 text-emerald-500 bg-emerald-500/5`}
                                             >
                                                 {t(
-                                                    op.status.toLowerCase() as any,
+                                                    op.status.toLowerCase() as string,
                                                     settings.language
                                                 )}
                                             </Badge>
@@ -202,7 +202,7 @@ export function LiveOperationsMonitor({ sheets, onRefresh }: LiveOperationsMonit
                                         className={`mb-0 sm:mb-1 ${isTVMode ? 'text-lg py-2 px-6' : ''} ${op.type === 'Staging' ? 'bg-blue-500 hover:bg-blue-600' : 'bg-orange-500 hover:bg-orange-600'}`}
                                     >
                                         {t(
-                                            op.status.toLowerCase() as any,
+                                            op.status.toLowerCase() as string,
                                             settings.language
                                         ).replace(/_/g, ' ')}
                                     </Badge>

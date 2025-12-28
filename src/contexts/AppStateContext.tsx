@@ -46,7 +46,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         if (settings.theme === 'dark') document.documentElement.classList.add('dark');
         else document.documentElement.classList.remove('dark');
-    }, []);
+    }, [settings.theme]);
 
     // 2. Shift State
     const [shift, setShiftState] = useState<string>(() => {

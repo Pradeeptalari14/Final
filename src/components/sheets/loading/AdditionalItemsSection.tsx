@@ -8,7 +8,7 @@ interface AdditionalItemsSectionProps {
     isLocked: boolean;
     status: SheetStatus;
     totalAdditional: number;
-    onItemChange: (id: number, field: string, value: any, index?: number) => void;
+    onItemChange: (id: number, field: string, value: string | number, index?: number) => void;
 }
 
 export const AdditionalItemsSection: React.FC<AdditionalItemsSectionProps> = ({
@@ -22,8 +22,8 @@ export const AdditionalItemsSection: React.FC<AdditionalItemsSectionProps> = ({
         status === SheetStatus.COMPLETED || status === SheetStatus.LOADING_VERIFICATION_PENDING;
     const itemsToDisplay = isReadOnly
         ? (additionalItems || []).filter(
-              (item) => (item.skuName && item.skuName.trim() !== '') || item.total > 0
-          )
+            (item) => (item.skuName && item.skuName.trim() !== '') || item.total > 0
+        )
         : additionalItems || [];
 
     return (

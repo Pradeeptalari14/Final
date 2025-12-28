@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { FileText, X } from 'lucide-react';
-import { Role, User } from '@/types';
-import { supabase } from '@/lib/supabase';
+import { Role, User, AppSettings } from '@/types';
 import { useToast } from '@/contexts/ToastContext';
+import { useData } from '@/contexts/DataContext';
 import { t } from '@/lib/i18n';
 
 interface EditUserModalProps {
     user: User | null;
     onClose: () => void;
     onSuccess: () => Promise<void>;
-    settings: any;
+    settings: AppSettings;
 }
 
 export const EditUserModal: React.FC<EditUserModalProps> = ({
@@ -26,24 +26,23 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
         setEditingUser(user);
     }, [user]);
 
+    const { updateUser } = useData();
+
     if (!user || !editingUser) return null;
 
     const handleUpdateUser = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const { error } = await supabase
-                .from('users')
-                .update({ data: editingUser })
-                .eq('id', editingUser.id);
-            if (error) throw error;
+            await updateUser(editingUser);
             addToast(
                 'success',
                 `${editingUser.username} ${t('user_updated_successfully', settings.language)} `
             );
             await onSuccess();
             onClose();
-        } catch (error: any) {
-            addToast('error', t('failed_to_update_user', settings.language) + ': ' + error.message);
+        } catch (error: unknown) {
+            const msg = error instanceof Error ? error.message : 'Unknown error';
+            addToast('error', t('failed_to_update_user', settings.language) + ': ' + msg);
         }
     };
 

@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useState, useEffect, useCallback } from 'react';
+import { useQuery, useMutation, QueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { SheetData, User } from '@/types';
+import { SheetData, User, SecurityLog, ActivityLog, Role } from '@/types';
 import { DataContext, useData } from './DataContextCore';
 import { useAppState } from './AppStateContext';
+import { useOfflineMutation } from '@/hooks/useOfflineMutation';
 export { useData };
 
 export function DataProvider({
@@ -12,7 +13,7 @@ export function DataProvider({
     queryClient
 }: {
     children: React.ReactNode;
-    queryClient: any;
+    queryClient: QueryClient;
 }) {
     const [isOnline, setIsOnline] = useState(navigator.onLine);
     const [currentUser, setCurrentUser] = useState<User | null>(() => {
@@ -43,7 +44,7 @@ export function DataProvider({
         queryFn: async () => {
             interface SupabaseRow {
                 id: string;
-                data: any;
+                data: SheetData;
             }
             const [activeRes, archivedRes] = await Promise.all([
                 supabase
@@ -60,11 +61,11 @@ export function DataProvider({
 
             const { data: activeData, error: activeError } = activeRes as {
                 data: SupabaseRow[] | null;
-                error: any;
+                error: unknown;
             };
             const { data: archivedData, error: archivedError } = archivedRes as {
                 data: SupabaseRow[] | null;
-                error: any;
+                error: unknown;
             };
 
             if (activeError || archivedError) throw activeError || archivedError;
@@ -92,11 +93,11 @@ export function DataProvider({
         queryFn: async () => {
             interface SupabaseUserRow {
                 id: string;
-                data: any;
+                data: User;
             }
             const { data, error } = (await supabase.from('users').select('*')) as {
                 data: SupabaseUserRow[] | null;
-                error: any;
+                error: unknown;
             };
             if (error) throw error;
             return (data || [])
@@ -106,7 +107,7 @@ export function DataProvider({
     });
 
     // Users Mutation
-    const updateUserMutation = useMutation({
+    const updateUserMutation = useOfflineMutation('updateUser', {
         mutationFn: async (user: User) => {
             const { error } = await supabase.from('users').update({ data: user }).eq('id', user.id);
             if (error) throw error;
@@ -116,7 +117,7 @@ export function DataProvider({
     });
 
     // 3. Security Logs Query
-    const { data: securityLogs = [] } = useQuery<any[]>({
+    const { data: securityLogs = [] } = useQuery<SecurityLog[]>({
         queryKey: ['security_logs'],
         queryFn: async () => {
             const { data, error } = await supabase
@@ -132,14 +133,14 @@ export function DataProvider({
             }
             interface SecurityLogRow {
                 id: string;
-                data: any;
+                data: SecurityLog;
                 created_at: string;
             }
             return (data || []).map((d: SecurityLogRow) => ({
                 ...d.data,
                 id: d.id,
                 timestamp: d.created_at || d.data.timestamp
-            }));
+            })) as SecurityLog[];
         }
     });
 
@@ -173,17 +174,17 @@ export function DataProvider({
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['security_logs'] })
     });
 
-    const logSecurityEvent = async (
+    const logSecurityEvent = useCallback(async (
         action: string,
         details: string,
         actor?: string,
         severity?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
     ) => {
         logSecurityEventMutation.mutate({ action, details, actor, severity });
-    };
+    }, [logSecurityEventMutation]);
 
     // 4. Activity Logs (Click Tracking)
-    const { data: activityLogs = [] } = useQuery<any[]>({
+    const { data: activityLogs = [] } = useQuery<ActivityLog[]>({
         queryKey: ['activity_logs'],
         queryFn: async () => {
             const { data, error } = await supabase
@@ -192,7 +193,7 @@ export function DataProvider({
                 .order('created_at', { ascending: false })
                 .limit(200);
             if (error) return [];
-            return (data || []).map((d: any) => ({ ...d.data, id: d.id, timestamp: d.created_at }));
+            return (data || []).map((d: { data: ActivityLog, id: string, created_at: string }) => ({ ...d.data, id: d.id, timestamp: d.created_at })) as ActivityLog[];
         }
     });
 
@@ -212,10 +213,10 @@ export function DataProvider({
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['activity_logs'] })
     });
 
-    const logActivity = async (action: string, details: string) => {
+    const logActivity = useCallback(async (action: string, details: string) => {
         const actor = currentUser?.username || 'GUEST';
         logActivityMutation.mutate({ action, details, actor });
-    };
+    }, [currentUser, logActivityMutation]);
 
     // Global Click Listener for "Every Click" info
     useEffect(() => {
@@ -237,10 +238,10 @@ export function DataProvider({
 
         window.addEventListener('click', handleClick);
         return () => window.removeEventListener('click', handleClick);
-    }, [currentUser]);
+    }, [currentUser, logActivity]);
 
     // 5. Mutations for Sheets
-    const addSheetMutation = useMutation({
+    const addSheetMutation = useOfflineMutation('addSheet', {
         mutationFn: async (sheet: SheetData) => {
             const { error } = await supabase.from('sheets').insert({ id: sheet.id, data: sheet });
             if (error) throw error;
@@ -249,7 +250,7 @@ export function DataProvider({
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['sheets'] })
     });
 
-    const updateSheetMutation = useMutation({
+    const updateSheetMutation = useOfflineMutation('updateSheet', {
         mutationFn: async (sheet: SheetData) => {
             const { error } = await supabase
                 .from('sheets')
@@ -261,6 +262,8 @@ export function DataProvider({
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['sheets'] })
     });
 
+    // Delete is dangerous to queue blindly, keep standard for now or queue with caution.
+    // Standard mutation for delete to ensure confirmation? Let's use standard for safety.
     const deleteSheetMutation = useMutation({
         mutationFn: async (id: string) => {
             const { error } = await supabase.from('sheets').delete().eq('id', id);
@@ -323,7 +326,7 @@ export function DataProvider({
                 const devUser = {
                     id: 'dev-switch-' + Date.now(),
                     username: 'Simulated ' + devRole,
-                    role: devRole as any,
+                    role: devRole as Role,
                     isApproved: true,
                     fullName: 'Simulated User',
                     email: 'dev@unicharm.com',
@@ -336,7 +339,7 @@ export function DataProvider({
                 });
             }
         }
-    }, [devRole]);
+    }, [devRole, currentUser]);
 
     // Save User to SessionStorage on Change
     useEffect(() => {
@@ -353,6 +356,28 @@ export function DataProvider({
     const refreshUsers = async () => {
         queryClient.invalidateQueries({ queryKey: ['users'] });
     };
+
+    const fetchSheetById = async (id: string): Promise<SheetData | null> => {
+        try {
+            const { data, error } = await supabase
+                .from('sheets')
+                .select('*')
+                .eq('id', id)
+                .single();
+
+            if (error || !data) return null;
+
+            return {
+                ...(data.data as SheetData),
+                id: data.id,
+                status: (data.data as SheetData).status || 'DRAFT'
+            };
+        } catch (err) {
+            console.error('Error fetching sheet by id:', err);
+            return null;
+        }
+    };
+
     const updateUser = async (user: User) => updateUserMutation.mutateAsync(user);
     const loadMoreArchived = async () => {
         /* Server-side pagination handled by Query in Phase 3 */
@@ -369,6 +394,7 @@ export function DataProvider({
                 notifications: [],
                 loading,
                 refreshSheets,
+                fetchSheetById,
                 loadMoreArchived,
                 refreshUsers,
                 updateUser,

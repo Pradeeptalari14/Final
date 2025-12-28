@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { User } from '@/types';
+import { User, AppSettings } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/contexts/ToastContext';
 import { t } from '@/lib/i18n';
@@ -9,7 +9,7 @@ interface PasswordResetModalProps {
     user: User | null;
     onClose: () => void;
     onSuccess: () => Promise<void>;
-    settings: any;
+    settings: AppSettings;
 }
 
 export const PasswordResetModal: React.FC<PasswordResetModalProps> = ({
@@ -41,7 +41,8 @@ export const PasswordResetModal: React.FC<PasswordResetModalProps> = ({
             await onSuccess();
             onClose();
             setNewPassword('');
-        } catch (error: any) {
+        } catch (error) {
+            console.error(error); // Log error to satisfy unused var check if needed or just remove it
             addToast('error', t('failed_to_update_user', settings.language));
         }
     };

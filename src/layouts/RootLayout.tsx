@@ -278,15 +278,59 @@ function SidebarContent({
             </nav>
 
             <div className="p-4 mt-auto">
-                <button
-                    onClick={handleSignOut}
-                    className="flex items-center gap-3 w-full p-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/10 transition-all"
-                >
-                    <LogOut size={20} />
+                <div className={cn(
+                    "flex items-center gap-0 p-1.5 rounded-full transition-all duration-500 group relative bg-white dark:bg-slate-900 border border-transparent",
+                    collapsed && !isMobile ? "justify-center" : "hover:bg-slate-50 dark:hover:bg-slate-800/40 hover:border-slate-100 dark:hover:border-white/5 hover:shadow-sm hover:w-full w-12 overflow-hidden mx-auto lg:mx-0"
+                )}>
+                    {/* Circle Initials */}
+                    <div
+                        className="h-9 w-9 rounded-full bg-indigo-600 flex items-center justify-center text-white shrink-0 font-black text-xs shadow-lg shadow-indigo-500/20 z-10"
+                    >
+                        {currentUser?.fullName?.charAt(0) || currentUser?.username?.charAt(0) || 'U'}
+                    </div>
+
+                    {/* Revealable Info & Logout (Only in expanded sidebar) */}
                     {(!collapsed || isMobile) && (
-                        <span className="font-medium">{t('sign_out', settings.language)}</span>
+                        <div className="flex items-center justify-between min-w-0 opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none group-hover:pointer-events-auto ml-3 w-0 group-hover:w-full transform group-hover:translate-x-0 -translate-x-4">
+                            <div className="min-w-0 pr-2">
+                                <p className="text-[11px] font-black text-slate-900 dark:text-white truncate tracking-tight">
+                                    {currentUser?.fullName || currentUser?.username}
+                                </p>
+                                <p className="text-[8px] text-indigo-500 dark:text-indigo-400 font-black uppercase tracking-widest truncate">
+                                    {currentUser?.role?.replace('_', ' ') || 'User'}
+                                </p>
+                            </div>
+
+                            <button
+                                onClick={handleSignOut}
+                                className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all shrink-0 ml-auto"
+                                title={t('sign_out', settings.language)}
+                            >
+                                <LogOut size={14} />
+                            </button>
+                        </div>
                     )}
-                </button>
+
+                    {/* Floating Tooltip Only for Collapsed Sidebar */}
+                    {collapsed && !isMobile && (
+                        <div className="absolute left-full ml-4 px-3 py-2 bg-slate-900 text-white text-xs rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-[100] shadow-2xl border border-white/10 transition-all scale-95 group-hover:scale-100 origin-left flex items-center gap-3">
+                            <div>
+                                <p className="font-black text-[11px]">{currentUser?.fullName || currentUser?.username}</p>
+                                <p className="text-[8px] text-indigo-400 font-bold uppercase tracking-[0.2em]">{currentUser?.role?.replace('_', ' ')}</p>
+                            </div>
+                            <div className="h-4 w-[1px] bg-white/20" />
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSignOut();
+                                }}
+                                className="text-[9px] font-black uppercase text-rose-400 hover:text-rose-300 pointer-events-auto"
+                            >
+                                Sign Out
+                            </button>
+                        </div>
+                    )}
+                </div>
             </div>
         </>
     );
@@ -325,7 +369,7 @@ function NavItem({
                     collapsed ? 'mx-auto' : ''
                 )}
             />
-            {!collapsed && <span className="font-medium truncate">{label}</span>}
+            {!collapsed && <span className="font-medium truncate uppercase tracking-wider text-xs md:text-sm">{label}</span>}
             {collapsed && (
                 <div className="absolute left-full ml-2 px-2 py-1 bg-popover text-popover-foreground text-xs rounded shadow-md opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 border border-border">
                     {label}

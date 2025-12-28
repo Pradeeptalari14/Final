@@ -198,7 +198,7 @@ export default function LoginPage() {
                     <h1 className="text-xl lg:text-3xl font-serif font-black text-slate-800 tracking-tight leading-none">
                         Unicharm Operations
                     </h1>
-                    <p className="text-[10px] lg:text-xs uppercase tracking-[0.3em] font-bold text-slate-500 mt-1.5 opacity-80">
+                    <p className="text-[10px] lg:text-xs uppercase tracking-[0.3em] font-bold text-slate-700 mt-1.5">
                         Supply Chain Management
                     </p>
                 </div>
@@ -319,15 +319,15 @@ export default function LoginPage() {
                         >
                             <div className="relative z-10">
                                 <div className="text-center mb-5 lg:mb-6">
-                                    <div className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 mb-3">
-                                        <span className="text-[8px] lg:text-[9px] font-black uppercase tracking-[0.3em] text-blue-400">
+                                    <div className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-white/10 border border-white/20 mb-3">
+                                        <span className="text-[8px] lg:text-[9px] font-black uppercase tracking-[0.3em] text-white">
                                             Secure Authentication
                                         </span>
                                     </div>
                                     <h3 className="text-lg lg:text-xl font-bold text-white tracking-tight font-sans">
                                         Login Portal
                                     </h3>
-                                    <p className="text-[10px] lg:text-xs font-bold text-blue-400/50 tracking-[0.3em] uppercase mt-2">
+                                    <p className="text-[10px] lg:text-xs font-bold text-white/90 tracking-[0.3em] uppercase mt-2">
                                         SCM-FG Operations
                                     </p>
                                 </div>
@@ -444,13 +444,23 @@ export default function LoginPage() {
                                 </form>
 
                                 <div className="mt-6 lg:mt-8 text-center border-t border-white/5 pt-5 lg:pt-6">
-                                    <button
-                                        onClick={() => setShowRegister(true)}
-                                        className="text-[9px] lg:text-[10px] font-bold text-white/30 hover:text-blue-400 transition-all uppercase tracking-[0.2em]"
-                                    >
-                                        New user?{' '}
-                                        <span className="text-white/50 ml-1">Request Account</span>
-                                    </button>
+                                    <div className="flex items-center justify-center gap-2">
+                                        <span className="text-[9px] lg:text-[10px] font-bold text-white/40 uppercase tracking-[0.2em] cursor-default">
+                                            New user?
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                setShowRegister(true);
+                                            }}
+                                            className="group relative inline-flex items-center justify-center"
+                                        >
+                                            <span className="text-[9px] lg:text-[10px] font-black text-blue-400 group-hover:text-blue-300 transition-colors uppercase tracking-[0.2em]">
+                                                Request Account
+                                            </span>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </motion.div>

@@ -1,35 +1,31 @@
 import { RouterProvider } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { DataProvider } from '@/contexts/DataContext';
 import { AppStateProvider } from '@/contexts/AppStateContext';
 import { ToastProvider } from '@/contexts/ToastContext';
 import { Toaster } from 'sonner';
 import { router } from './router';
-
-const queryClient = new QueryClient({
-    defaultOptions: {
-        queries: {
-            staleTime: 1000 * 60 * 5, // 5 minutes
-            refetchOnWindowFocus: false
-        }
-    }
-});
+import { queryClient, persister, PersistQueryClientProvider } from '@/lib/queryClient';
+import { SyncManager } from '@/components/sync/SyncManager';
 
 function App() {
     return (
-        <QueryClientProvider client={queryClient}>
+        <PersistQueryClientProvider
+            client={queryClient}
+            persistOptions={{ persister, maxAge: 1000 * 60 * 60 * 24 * 7 }} // 7 days
+        >
             <AuthProvider>
                 <ToastProvider>
                     <AppStateProvider>
                         <DataProvider queryClient={queryClient}>
+                            <SyncManager />
                             <RouterProvider router={router} />
                             <Toaster position="top-center" richColors />
                         </DataProvider>
                     </AppStateProvider>
                 </ToastProvider>
             </AuthProvider>
-        </QueryClientProvider>
+        </PersistQueryClientProvider>
     );
 }
 

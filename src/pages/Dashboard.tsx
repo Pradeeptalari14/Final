@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useData } from '@/contexts/DataContext';
 import { useAppState } from '@/contexts/AppStateContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { SheetStatus, Role } from '@/types';
+import { SheetStatus, Role, SheetData } from '@/types';
 import { StageColumn } from '@/components/dashboard/StageColumn';
 import { WorkflowRailway } from '@/components/dashboard/WorkflowRailway';
 import { t } from '@/lib/i18n';
@@ -20,28 +20,28 @@ export default function DashboardOverview() {
         currentUser?.role === Role.ADMIN
             ? sheets
             : sheets.filter((sheet) => {
-                  // Staging Supervisor
-                  if (currentUser?.role === Role.STAGING_SUPERVISOR) {
-                      const name = sheet.supervisorName?.toLowerCase().trim();
-                      const username = currentUser.username?.toLowerCase().trim();
-                      const fullname = currentUser.fullName?.toLowerCase().trim();
-                      return name === username || name === fullname;
-                  }
-                  // Loading Supervisor
-                  if (currentUser?.role === Role.LOADING_SUPERVISOR) {
-                      // COMPLETED sheets included for historical view/stats
-                      return (
-                          sheet.status === SheetStatus.LOCKED ||
-                          sheet.status === SheetStatus.LOADING_VERIFICATION_PENDING ||
-                          sheet.status === SheetStatus.COMPLETED
-                      );
-                  }
-                  // Shift Lead
-                  if (currentUser?.role === Role.SHIFT_LEAD) {
-                      return sheet.status !== SheetStatus.DRAFT;
-                  }
-                  return false;
-              });
+                // Staging Supervisor
+                if (currentUser?.role === Role.STAGING_SUPERVISOR) {
+                    const name = sheet.supervisorName?.toLowerCase().trim();
+                    const username = currentUser.username?.toLowerCase().trim();
+                    const fullname = currentUser.fullName?.toLowerCase().trim();
+                    return name === username || name === fullname;
+                }
+                // Loading Supervisor
+                if (currentUser?.role === Role.LOADING_SUPERVISOR) {
+                    // COMPLETED sheets included for historical view/stats
+                    return (
+                        sheet.status === SheetStatus.LOCKED ||
+                        sheet.status === SheetStatus.LOADING_VERIFICATION_PENDING ||
+                        sheet.status === SheetStatus.COMPLETED
+                    );
+                }
+                // Shift Lead
+                if (currentUser?.role === Role.SHIFT_LEAD) {
+                    return sheet.status !== SheetStatus.DRAFT;
+                }
+                return false;
+            });
 
     // Helper for filter links
     const getFilterLinks = (stage: string) => {
@@ -54,7 +54,7 @@ export default function DashboardOverview() {
         )
             return [];
 
-        const isRejected = (s: any) => s.rejectionReason && s.rejectionReason.trim() !== '';
+        const isRejected = (s: SheetData) => s.rejectionReason && s.rejectionReason.trim() !== '';
 
         if (stage === 'STAGING') {
             // Stats for Staging Supervisor
@@ -332,11 +332,11 @@ export default function DashboardOverview() {
     // Calculate User Stats for Admin
     const userStats = isAdmin
         ? {
-              total: users.length,
-              staging: users.filter((u) => u.role === Role.STAGING_SUPERVISOR).length,
-              loading: users.filter((u) => u.role === Role.LOADING_SUPERVISOR).length,
-              shift: users.filter((u) => u.role === Role.SHIFT_LEAD).length
-          }
+            total: users.length,
+            staging: users.filter((u) => u.role === Role.STAGING_SUPERVISOR).length,
+            loading: users.filter((u) => u.role === Role.LOADING_SUPERVISOR).length,
+            shift: users.filter((u) => u.role === Role.SHIFT_LEAD).length
+        }
         : null;
 
     return (
@@ -523,65 +523,65 @@ export default function DashboardOverview() {
                     {/* 1. Staging Column (Consolidated) */}
                     {(currentUser?.role === Role.ADMIN ||
                         currentUser?.role === Role.STAGING_SUPERVISOR) && (
-                        <StageColumn
-                            title="Staging"
-                            color="border-slate-200 dark:border-white/10"
-                            items={relevantSheets.filter(
-                                (s) =>
-                                    s.status === SheetStatus.DRAFT ||
-                                    s.status === SheetStatus.STAGING_VERIFICATION_PENDING
-                            )}
-                            linkTo={
-                                currentUser?.role === Role.ADMIN ||
-                                currentUser?.role === Role.STAGING_SUPERVISOR
-                                    ? '/admin?section=staging_db'
-                                    : undefined
-                            }
-                            filters={getFilterLinks('STAGING')}
-                            density={settings?.density}
-                            fullWidth={isStagingSupervisor}
-                        />
-                    )}
+                            <StageColumn
+                                title="Staging"
+                                color="border-slate-200 dark:border-white/10"
+                                items={relevantSheets.filter(
+                                    (s) =>
+                                        s.status === SheetStatus.DRAFT ||
+                                        s.status === SheetStatus.STAGING_VERIFICATION_PENDING
+                                )}
+                                linkTo={
+                                    currentUser?.role === Role.ADMIN ||
+                                        currentUser?.role === Role.STAGING_SUPERVISOR
+                                        ? '/admin?section=staging_db'
+                                        : undefined
+                                }
+                                filters={getFilterLinks('STAGING')}
+                                density={settings?.density}
+                                fullWidth={isStagingSupervisor}
+                            />
+                        )}
 
                     {/* 2. Loading Column (Admin/Loading SV) */}
                     {(currentUser?.role === Role.ADMIN ||
                         currentUser?.role === Role.LOADING_SUPERVISOR) && (
-                        <StageColumn
-                            title="Loading"
-                            color="border-blue-500/20"
-                            items={relevantSheets.filter(
-                                (s) =>
-                                    s.status === SheetStatus.LOCKED ||
-                                    s.status === SheetStatus.LOADING_VERIFICATION_PENDING
-                            )}
-                            linkTo={
-                                currentUser?.role === Role.ADMIN
-                                    ? '/admin?section=loading_db'
-                                    : currentUser?.role === Role.LOADING_SUPERVISOR
-                                      ? '/admin?section=loading_db'
-                                      : '/admin?section=shift_lead_db&view_mode=VIEW_LOADING_VERIFY'
-                            }
-                            filters={getFilterLinks('LOADING')}
-                            density={settings?.density}
-                            fullWidth={isLoadingSupervisor}
-                        />
-                    )}
+                            <StageColumn
+                                title="Loading"
+                                color="border-blue-500/20"
+                                items={relevantSheets.filter(
+                                    (s) =>
+                                        s.status === SheetStatus.LOCKED ||
+                                        s.status === SheetStatus.LOADING_VERIFICATION_PENDING
+                                )}
+                                linkTo={
+                                    currentUser?.role === Role.ADMIN
+                                        ? '/admin?section=loading_db'
+                                        : currentUser?.role === Role.LOADING_SUPERVISOR
+                                            ? '/admin?section=loading_db'
+                                            : '/admin?section=shift_lead_db&view_mode=VIEW_LOADING_VERIFY'
+                                }
+                                filters={getFilterLinks('LOADING')}
+                                density={settings?.density}
+                                fullWidth={isLoadingSupervisor}
+                            />
+                        )}
 
                     {/* 3. Shift Lead Column */}
                     {(currentUser?.role === Role.ADMIN ||
                         currentUser?.role === Role.SHIFT_LEAD) && (
-                        <StageColumn
-                            title="Shift Lead"
-                            color="border-purple-500/20"
-                            items={relevantSheets.filter(
-                                (s) => s.status === SheetStatus.STAGING_VERIFICATION_PENDING
-                            )}
-                            linkTo="/admin?section=shift_lead_db"
-                            filters={getFilterLinks('SHIFT_LEAD')}
-                            density={settings?.density}
-                            fullWidth={isShiftLead}
-                        />
-                    )}
+                            <StageColumn
+                                title="Shift Lead"
+                                color="border-purple-500/20"
+                                items={relevantSheets.filter(
+                                    (s) => s.status === SheetStatus.STAGING_VERIFICATION_PENDING
+                                )}
+                                linkTo="/admin?section=shift_lead_db"
+                                filters={getFilterLinks('SHIFT_LEAD')}
+                                density={settings?.density}
+                                fullWidth={isShiftLead}
+                            />
+                        )}
 
                     {/* 4. Completed (Supervisors ONLY - Admin uses Total Sheets layout above) */}
                     {!isAdmin && currentUser?.role === Role.SHIFT_LEAD && (
@@ -655,7 +655,7 @@ export default function DashboardOverview() {
                                                 return (
                                                     s.status === SheetStatus.DRAFT ||
                                                     s.status ===
-                                                        SheetStatus.STAGING_VERIFICATION_PENDING
+                                                    SheetStatus.STAGING_VERIFICATION_PENDING
                                                 );
                                             }
                                             return true;
@@ -669,7 +669,7 @@ export default function DashboardOverview() {
                                                     const isStaging =
                                                         sheet.status === SheetStatus.DRAFT ||
                                                         sheet.status ===
-                                                            SheetStatus.STAGING_VERIFICATION_PENDING;
+                                                        SheetStatus.STAGING_VERIFICATION_PENDING;
                                                     navigate(
                                                         isStaging
                                                             ? `/sheets/staging/${sheet.id}`
@@ -694,16 +694,15 @@ export default function DashboardOverview() {
                                                 >
                                                     <span
                                                         className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider
-                                                    ${
-                                                        sheet.status === SheetStatus.DRAFT
-                                                            ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                                                            : sheet.status === SheetStatus.LOCKED
-                                                              ? 'bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400'
-                                                              : sheet.status ===
-                                                                  SheetStatus.COMPLETED
-                                                                ? 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
-                                                                : 'bg-yellow-100 dark:bg-yellow-500/10 text-yellow-700 dark:text-yellow-400'
-                                                    }`}
+                                                    ${sheet.status === SheetStatus.DRAFT
+                                                                ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                                                                : sheet.status === SheetStatus.LOCKED
+                                                                    ? 'bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400'
+                                                                    : sheet.status ===
+                                                                        SheetStatus.COMPLETED
+                                                                        ? 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                                                                        : 'bg-yellow-100 dark:bg-yellow-500/10 text-yellow-700 dark:text-yellow-400'
+                                                            }`}
                                                     >
                                                         {sheet.status.replace(/_/g, ' ')}
                                                     </span>
@@ -724,9 +723,9 @@ export default function DashboardOverview() {
                                                             e.stopPropagation();
                                                             const isStaging =
                                                                 sheet.status ===
-                                                                    SheetStatus.DRAFT ||
+                                                                SheetStatus.DRAFT ||
                                                                 sheet.status ===
-                                                                    SheetStatus.STAGING_VERIFICATION_PENDING;
+                                                                SheetStatus.STAGING_VERIFICATION_PENDING;
                                                             navigate(
                                                                 isStaging
                                                                     ? `/sheets/staging/${sheet.id}`

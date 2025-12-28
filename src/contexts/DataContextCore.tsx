@@ -1,21 +1,22 @@
 import { createContext, useContext } from 'react';
-import { SheetData, User, Notification } from '@/types';
+import { SheetData, User, Notification, SecurityLog, ActivityLog } from '@/types';
 
 export interface DataContextType {
     sheets: SheetData[];
     users: User[];
     getAllUsers: () => User[];
     notifications: Notification[];
-    securityLogs: any[];
-    activityLogs: any[];
+    securityLogs: SecurityLog[];
+    activityLogs: ActivityLog[];
     loading: boolean;
     refreshSheets: () => Promise<void>;
+    fetchSheetById: (id: string) => Promise<SheetData | null>;
     loadMoreArchived: () => Promise<void>;
     refreshUsers: () => Promise<void>;
-    updateUser: (user: User) => Promise<{ error: any }>;
-    addSheet: (sheet: SheetData) => Promise<{ error: any }>;
-    updateSheet: (sheet: SheetData) => Promise<{ error: any }>;
-    deleteSheet: (id: string) => Promise<{ error: any }>;
+    updateUser: (user: User) => Promise<{ error: unknown }>;
+    addSheet: (sheet: SheetData) => Promise<{ error: unknown }>;
+    updateSheet: (sheet: SheetData) => Promise<{ error: unknown }>;
+    deleteSheet: (id: string) => Promise<{ error: unknown }>;
     logSecurityEvent: (
         action: string,
         details: string,

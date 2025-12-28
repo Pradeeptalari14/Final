@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2, X } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { Role } from '@/types';
+import { Role, AppSettings } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/contexts/ToastContext';
 import { t } from '@/lib/i18n';
@@ -11,7 +11,7 @@ interface AddUserModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => Promise<void>;
-    settings: any;
+    settings: AppSettings;
 }
 
 export const AddUserModal: React.FC<AddUserModalProps> = ({
@@ -68,8 +68,9 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({
                 password: '',
                 role: '' as Role
             });
-        } catch (error: any) {
-            addToast('error', error.message || 'Failed to create user');
+        } catch (error: unknown) {
+            const msg = error instanceof Error ? error.message : 'Failed to create user';
+            addToast('error', msg);
         } finally {
             setLoading(false);
         }

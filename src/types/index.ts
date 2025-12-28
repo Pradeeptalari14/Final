@@ -68,6 +68,23 @@ export interface HistoryLog {
     details: string;
 }
 
+export interface SecurityLog {
+    id: string;
+    action: string;
+    details: string;
+    actor: string;
+    severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+    timestamp: string;
+}
+
+export interface ActivityLog {
+    id: string;
+    action: string;
+    details: string;
+    actor: string;
+    timestamp: string;
+}
+
 export interface SheetData {
     id: string;
     status: SheetStatus;
