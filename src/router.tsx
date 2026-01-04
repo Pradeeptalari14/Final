@@ -1,24 +1,42 @@
 import { createBrowserRouter } from 'react-router-dom';
 import { Suspense, lazy } from 'react';
-import RootLayout from './layouts/RootLayout';
-import DashboardOverview from './pages/Dashboard';
 import LoginPage from './pages/Login';
 import RegisterPage from './pages/Register';
 
-// Eager load critical components
-import StagingSheet from './components/sheets/StagingSheet';
-import LoadingSheet from './components/sheets/LoadingSheet';
-import SettingsPage from './pages/Settings';
-
-// Lazy load heavy admin & data tables
-import DatabasePage from './pages/Database';
-
-// Lazy load heavy admin & data tables
+// Lazy load all page components
 import { LoadingFallback } from './components/ui/LoadingFallback';
+import { LazyErrorBoundary } from './components/ui/LazyErrorBoundary';
+import RootLayout from './layouts/RootLayout';
 
-// const DatabasePage = lazy(() => import('./pages/Database'));
-const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
-const ReportsPage = lazy(() => import('./pages/Reports'));
+// Helper to retry lazy imports or force refresh on failure (common during deployments)
+const lazyWithRetry = (componentImport: () => Promise<any>) =>
+    lazy(async () => {
+        const pageHasAlreadyBeenForceRefreshed = JSON.parse(
+            window.sessionStorage.getItem('page-has-been-force-refreshed') || 'false'
+        );
+
+        try {
+            return await componentImport();
+        } catch (error) {
+            if (!pageHasAlreadyBeenForceRefreshed) {
+                // First failure: set flag and refresh once
+                window.sessionStorage.setItem('page-has-been-force-refreshed', 'true');
+                window.location.reload();
+                return { default: () => null }; // Placeholder while reloading
+            }
+
+            // Second failure or already refreshed: bubble up to ErrorBoundary
+            throw error;
+        }
+    });
+
+const AdminDashboard = lazyWithRetry(() => import('./pages/AdminDashboard'));
+const ReportsPage = lazyWithRetry(() => import('./pages/Reports'));
+const DatabasePage = lazyWithRetry(() => import('./pages/Database'));
+const DashboardOverview = lazyWithRetry(() => import('./pages/Dashboard'));
+const SettingsPage = lazyWithRetry(() => import('./pages/Settings'));
+const StagingSheet = lazyWithRetry(() => import('./components/sheets/StagingSheet'));
+const LoadingSheet = lazyWithRetry(() => import('./components/sheets/LoadingSheet'));
 
 export const router = createBrowserRouter([
     {
@@ -35,18 +53,32 @@ export const router = createBrowserRouter([
         children: [
             {
                 index: true,
-                element: <DashboardOverview />
+                element: (
+                    <LazyErrorBoundary>
+                        <Suspense fallback={<LoadingFallback />}>
+                            <DashboardOverview />
+                        </Suspense>
+                    </LazyErrorBoundary>
+                )
             },
             {
                 path: 'database',
-                element: <DatabasePage />
+                element: (
+                    <LazyErrorBoundary>
+                        <Suspense fallback={<LoadingFallback />}>
+                            <DatabasePage />
+                        </Suspense>
+                    </LazyErrorBoundary>
+                )
             },
             {
                 path: 'reports',
                 element: (
-                    <Suspense fallback={<LoadingFallback />}>
-                        <ReportsPage />
-                    </Suspense>
+                    <LazyErrorBoundary>
+                        <Suspense fallback={<LoadingFallback />}>
+                            <ReportsPage />
+                        </Suspense>
+                    </LazyErrorBoundary>
                 )
             },
 
@@ -54,22 +86,42 @@ export const router = createBrowserRouter([
 
             {
                 path: 'sheets/staging/:id',
-                element: <StagingSheet />
+                element: (
+                    <LazyErrorBoundary>
+                        <Suspense fallback={<LoadingFallback />}>
+                            <StagingSheet />
+                        </Suspense>
+                    </LazyErrorBoundary>
+                )
             },
             {
                 path: 'sheets/loading/:id',
-                element: <LoadingSheet />
+                element: (
+                    <LazyErrorBoundary>
+                        <Suspense fallback={<LoadingFallback />}>
+                            <LoadingSheet />
+                        </Suspense>
+                    </LazyErrorBoundary>
+                )
             },
             {
                 path: 'settings',
-                element: <SettingsPage />
+                element: (
+                    <LazyErrorBoundary>
+                        <Suspense fallback={<LoadingFallback />}>
+                            <SettingsPage />
+                        </Suspense>
+                    </LazyErrorBoundary>
+                )
             },
             {
                 path: 'admin',
                 element: (
-                    <Suspense fallback={<LoadingFallback />}>
-                        <AdminDashboard />
-                    </Suspense>
+                    <LazyErrorBoundary>
+                        <Suspense fallback={<LoadingFallback />}>
+                            <AdminDashboard />
+                        </Suspense>
+                    </LazyErrorBoundary>
                 )
             }
         ]
