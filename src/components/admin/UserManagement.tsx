@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { Role, User, SheetData } from '@/types';
 import { Button } from '@/components/ui/button';
 import {
@@ -78,6 +78,10 @@ export function UserManagement({ users, refreshUsers, sheets }: UserManagementPr
         direction: 'desc'
     });
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+    const [isOverview, setIsOverview] = useState(userFilter === 'ALL');
+
+
 
     // --- Compute Final List ---
     const processedUsers = useMemo(() => {
@@ -208,15 +212,6 @@ export function UserManagement({ users, refreshUsers, sheets }: UserManagementPr
         }
     ];
 
-    const [isOverview, setIsOverview] = useState(userFilter === 'ALL');
-
-    // Auto-switch to list view if a filter is active (e.g. from Dashboard)
-    useEffect(() => {
-        if (userFilter !== 'ALL') {
-            setIsOverview(false);
-        }
-    }, [userFilter]);
-
     // Filter Navigation Handler
     const handleCategoryClick = (categoryId: string) => {
         setFilter(categoryId as Role | 'ALL' | 'PENDING' | 'LOCKED');
@@ -224,38 +219,38 @@ export function UserManagement({ users, refreshUsers, sheets }: UserManagementPr
     };
 
     return (
-        <div className="h-[calc(100vh-100px)] animate-in fade-in zoom-in-95 duration-300">
+        <div className="h-full animate-in fade-in zoom-in-95 duration-300">
             {isOverview ? (
                 // --- OVERVIEW MODE: Directory Cards ---
-                <div className="h-full overflow-y-auto p-4 lg:p-8">
-                    <div className="max-w-5xl mx-auto space-y-8">
+                <div className="h-full overflow-y-auto px-4 pt-1 lg:p-6">
+                    <div className="max-w-7xl mx-auto space-y-6">
                         <div>
-                            <h2 className="text-3xl font-black text-slate-800 dark:text-slate-100 mb-2">User Directory</h2>
-                            <p className="text-slate-500 dark:text-slate-400">Select a category to manage users and permissions.</p>
+                            <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 mb-1">User Directory</h2>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">Select a category to manage users and permissions.</p>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                             {navItems.map((item) => (
                                 <button
                                     key={item.id}
                                     onClick={() => handleCategoryClick(item.id)}
-                                    className="group relative flex flex-col items-start p-6 h-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl hover:shadow-xl hover:shadow-indigo-500/10 hover:border-indigo-200 dark:hover:border-indigo-900 transition-all duration-300 text-left"
+                                    className="group relative flex flex-col items-start p-4 h-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl hover:shadow-lg hover:shadow-indigo-500/10 hover:border-indigo-200 dark:hover:border-indigo-900 transition-all duration-300 text-left"
                                 >
-                                    <div className={cn("p-3 rounded-2xl mb-4 transition-colors", item.id === 'ALL' ? "bg-slate-100 dark:bg-slate-800" : "bg-indigo-50 dark:bg-indigo-900/20")}>
-                                        <item.icon className={cn("h-8 w-8", item.color)} />
+                                    <div className={cn("p-2 rounded-xl mb-3 transition-colors", item.id === 'ALL' ? "bg-slate-100 dark:bg-slate-800" : "bg-indigo-50 dark:bg-indigo-900/20")}>
+                                        <item.icon className={cn("h-6 w-6", item.color)} />
                                     </div>
-                                    <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-1 group-hover:text-indigo-600 transition-colors">
+                                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-1 group-hover:text-indigo-600 transition-colors">
                                         {item.label}
                                     </h3>
-                                    <p className="text-sm font-medium text-slate-400 mb-6">
+                                    <p className="text-xs font-medium text-slate-400 mb-4 line-clamp-2">
                                         Manage {item.label.toLowerCase()} settings and access.
                                     </p>
                                     <div className="mt-auto flex items-center justify-between w-full">
-                                        <Badge variant="secondary" className="bg-slate-100 dark:bg-slate-800 text-slate-600 px-3 py-1 text-sm font-bold rounded-lg border-0 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/50 group-hover:text-indigo-600 transition-colors">
+                                        <Badge variant="secondary" className="bg-slate-100 dark:bg-slate-800 text-slate-600 px-2 py-0.5 text-xs font-bold rounded-md border-0 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/50 group-hover:text-indigo-600 transition-colors">
                                             {item.count} Users
                                         </Badge>
-                                        <div className="h-8 w-8 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center opacity-0 group-hover:opacity-100 transform translate-x-[-10px] group-hover:translate-x-0 transition-all duration-300">
-                                            <ChevronDown className="h-4 w-4 -rotate-90 text-indigo-600" />
+                                        <div className="h-6 w-6 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center opacity-0 group-hover:opacity-100 transform translate-x-[-10px] group-hover:translate-x-0 transition-all duration-300">
+                                            <ChevronDown className="h-3 w-3 -rotate-90 text-indigo-600" />
                                         </div>
                                     </div>
                                 </button>

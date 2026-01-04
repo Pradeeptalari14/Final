@@ -6,10 +6,32 @@ interface LoadingItemWithSku extends LoadingItem {
 
 interface PrintableLoadingSheetProps {
     currentSheet: SheetData;
-    header: any;
-    totals: any;
-    lists: any;
-    footer: any;
+    header: {
+        shift: string;
+        pickingBy: string;
+        empCode: string;
+        transporter: string;
+        driverName: string;
+        pickingCrosscheckedBy: string;
+        pickingCrosscheckedByEmpCode: string;
+        destination: string;
+        vehicleNo: string;
+        loadingDock: string;
+        sealNo: string;
+        supervisorName: string;
+    };
+    totals: {
+        totalStaging: number;
+        grandTotalLoaded: number;
+        balance: number;
+    };
+    lists: {
+        returnedItems: LoadingItemWithSku[];
+    };
+    footer: {
+        remarks: string;
+        deoSign: string;
+    };
 }
 
 export function PrintableLoadingSheet({

@@ -4,9 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
     Shield,
-    Calendar,
     Mail,
-    UserCheck,
     Clock,
     Hash,
     ShieldAlert,
@@ -14,8 +12,7 @@ import {
     XCircle,
     KeyRound,
     FileText,
-    Trash2,
-    History
+    Trash2
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { DeleteUserAlert } from './DeleteUserAlert';

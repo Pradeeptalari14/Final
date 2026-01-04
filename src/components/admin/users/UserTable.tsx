@@ -1,7 +1,6 @@
 import React from 'react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { User, Role } from '@/types';
+import { User } from '@/types';
 import { MoreHorizontal } from 'lucide-react';
 
 interface UserTableProps {
@@ -17,11 +16,8 @@ interface UserTableProps {
 
 export const UserTable: React.FC<UserTableProps> = ({
     users,
-    lastActiveMap,
     onRowClick
 }) => {
-    const [now] = React.useState(() => Date.now());
-
     return (
         <div className="w-full">
             <table className="w-full text-left text-sm border-collapse">
@@ -53,9 +49,6 @@ export const UserTable: React.FC<UserTableProps> = ({
                         </tr>
                     ) : (
                         users.map((user) => {
-                            const lastActive = lastActiveMap.get(user.username);
-                            const isOnline = lastActive && now - lastActive < 5 * 60 * 1000;
-
                             return (
                                 <tr
                                     key={user.id}

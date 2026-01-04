@@ -340,7 +340,7 @@ export default function DashboardOverview() {
         : null;
 
     return (
-        <div className="space-y-3">
+        <div className="space-y-3 px-4 pb-4 pt-1">
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}

@@ -1,4 +1,5 @@
 import React from 'react';
+import { cn } from '@/lib/utils';
 import {
     Plus,
     Printer,
@@ -8,7 +9,8 @@ import {
     ArrowLeft,
     Loader2,
     AlertTriangle,
-    X
+    X,
+    RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SheetStatus, Role, Comment, SheetData } from '@/types';
@@ -173,6 +175,14 @@ export default function StagingSheet() {
                     </div>
                 </div>
                 <div className="flex gap-2">
+                    <Button
+                        variant="outline"
+                        onClick={() => refreshSheets()}
+                        title="Refresh Data"
+                        className="p-2 h-10 w-10 text-slate-500 border-slate-200 hover:bg-slate-50 shadow-sm rounded-lg"
+                    >
+                        <RefreshCw size={18} className={cn(dataLoading && "animate-spin")} />
+                    </Button>
                     <Button
                         variant="outline"
                         onClick={() => exportStagingToExcel(formData, formData.stagingItems || [])}

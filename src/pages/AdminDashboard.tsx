@@ -18,7 +18,6 @@ import { UserManagement } from '@/components/admin/UserManagement';
 import { AuditLogView } from '@/components/admin/AuditLogView';
 import { LiveOperationsMonitor } from '@/components/admin/LiveOperationsMonitor';
 import { SecurityScanner } from '@/components/admin/SecurityScanner';
-import { AnalyticsCharts } from '@/components/admin/AnalyticsCharts';
 import { AnalyticsHub } from '@/components/admin/AnalyticsHub';
 import { t } from '@/lib/i18n';
 
@@ -133,7 +132,10 @@ export default function AdminDashboard() {
     return (
         <div className="h-full flex flex-col bg-slate-50/50 dark:bg-slate-950 overflow-hidden relative">
             {/* MAIN CONTENT AREA */}
-            <main className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
+            <main
+                className={`flex-1 overflow-y-auto space-y-6 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800 ${activeSection === 'users' ? 'p-0' : 'p-4 md:p-8'
+                    }`}
+            >
                 {/* HEADER & KEY METRICS (Only show on operational tabs to reduce clutter) */}
                 {activeSection !== 'users' &&
                     activeSection !== 'audit_logs' &&
@@ -166,47 +168,47 @@ export default function AdminDashboard() {
                                                 {currentUser?.role === Role.ADMIN
                                                     ? t('admin', settings.language)
                                                     : currentUser?.role === Role.SHIFT_LEAD
-                                                      ? t('shift_lead', settings.language)
-                                                      : currentUser?.role ===
-                                                          Role.STAGING_SUPERVISOR
-                                                        ? t('staging', settings.language)
+                                                        ? t('shift_lead', settings.language)
                                                         : currentUser?.role ===
-                                                            Role.LOADING_SUPERVISOR
-                                                          ? t('loading', settings.language)
-                                                          : t('users', settings.language)}
+                                                            Role.STAGING_SUPERVISOR
+                                                            ? t('staging', settings.language)
+                                                            : currentUser?.role ===
+                                                                Role.LOADING_SUPERVISOR
+                                                                ? t('loading', settings.language)
+                                                                : t('users', settings.language)}
                                             </span>
                                         </div>
                                         <div className="flex items-center gap-1 pl-2 border-l border-slate-200 dark:border-slate-700">
                                             {/* Reports Link (Admin/Shift Lead) - NEW: Power BI Integration */}
                                             {(currentUser?.role === Role.ADMIN ||
                                                 currentUser?.role === Role.SHIFT_LEAD) && (
-                                                <button
-                                                    onClick={() => handleNavigation('reports')}
-                                                    className={`p-1.5 rounded-full transition-colors ${activeSection === 'reports' ? 'text-indigo-600 bg-indigo-50' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-300'}`}
-                                                    title="Management Reports (Power BI)"
-                                                >
-                                                    <HistoryIcon
-                                                        size={14}
-                                                        className={
-                                                            activeSection === 'reports'
-                                                                ? 'animate-pulse'
-                                                                : ''
-                                                        }
-                                                    />
-                                                </button>
-                                            )}
+                                                    <button
+                                                        onClick={() => handleNavigation('reports')}
+                                                        className={`p-1.5 rounded-full transition-colors ${activeSection === 'reports' ? 'text-indigo-600 bg-indigo-50' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                                                        title="Management Reports (Power BI)"
+                                                    >
+                                                        <HistoryIcon
+                                                            size={14}
+                                                            className={
+                                                                activeSection === 'reports'
+                                                                    ? 'animate-pulse'
+                                                                    : ''
+                                                            }
+                                                        />
+                                                    </button>
+                                                )}
 
                                             {/* Audit Logs Link (Admin/Shift Lead) */}
                                             {(currentUser?.role === Role.ADMIN ||
                                                 currentUser?.role === Role.SHIFT_LEAD) && (
-                                                <button
-                                                    onClick={() => handleNavigation('audit_logs')}
-                                                    className={`p-1.5 rounded-full transition-colors ${activeSection === 'audit_logs' ? 'text-primary bg-primary/10' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-300'}`}
-                                                    title={t('audit_logs', settings.language)}
-                                                >
-                                                    <HistoryIcon size={14} />
-                                                </button>
-                                            )}
+                                                    <button
+                                                        onClick={() => handleNavigation('audit_logs')}
+                                                        className={`p-1.5 rounded-full transition-colors ${activeSection === 'audit_logs' ? 'text-primary bg-primary/10' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                                                        title={t('audit_logs', settings.language)}
+                                                    >
+                                                        <HistoryIcon size={14} />
+                                                    </button>
+                                                )}
 
                                             {/* Security Link (Admin Only) */}
                                             {currentUser?.role === Role.ADMIN && (
@@ -282,15 +284,15 @@ export default function AdminDashboard() {
                     activeSection === 'loading_db' ||
                     activeSection === 'shift_lead_db' ||
                     activeSection === 'admin_ops') && (
-                    <OperationalTableView
-                        sheets={relevantSheets}
-                        activeSection={activeSection === 'admin_ops' ? 'staging_db' : activeSection}
-                        activeViewMode={activeViewMode}
-                        onViewModeChange={handleViewModeChange}
-                        currentUser={currentUser}
-                        refreshSheets={refreshSheets}
-                    />
-                )}
+                        <OperationalTableView
+                            sheets={relevantSheets}
+                            activeSection={activeSection === 'admin_ops' ? 'staging_db' : activeSection}
+                            activeViewMode={activeViewMode}
+                            onViewModeChange={handleViewModeChange}
+                            currentUser={currentUser}
+                            refreshSheets={refreshSheets}
+                        />
+                    )}
 
                 {/* 4. AUDIT LOGS VIEW */}
                 {activeSection === 'audit_logs' && (
@@ -300,13 +302,13 @@ export default function AdminDashboard() {
                 {/* 5. DASHBOARD VIEW (Live Monitor) */}
                 {activeSection === 'dashboard' && (
                     <div className="space-y-6">
-                        <AnalyticsCharts sheets={relevantSheets} />
+                        {/* Analytics Charts moved to Report Center */}
                         <LiveOperationsMonitor sheets={relevantSheets} onRefresh={refreshSheets} />
                     </div>
                 )}
 
                 {/* 5a. CUSTOM ANALYTICS HUB (Power BI Alternative) */}
-                {activeSection === 'reports' && <AnalyticsHub sheets={relevantSheets} />}
+                {activeSection === 'reports' && <AnalyticsHub sheets={relevantSheets} currentUser={currentUser} />}
 
                 {/* 6. SECURITY SCANNER VIEW */}
                 {activeSection === 'security' && <SecurityScanner />}

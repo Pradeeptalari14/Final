@@ -208,7 +208,10 @@ type TranslationKey =
     | 'staging_active'
     | 'audit_pending'
     | 'loading_active'
-    | 'total_operational_active';
+    | 'total_operational_active'
+    | 'staff_performance'
+    | 'shift_roster'
+    | 'logistics';
 
 const translations: Record<Language, Record<TranslationKey, string>> = {
     en: {
@@ -419,7 +422,10 @@ const translations: Record<Language, Record<TranslationKey, string>> = {
         total_operational_active: 'Total Active Operational Sheets',
         all_supervisors: 'All Supervisors',
         all_shifts: 'All Shifts',
-        shift: 'Shift'
+        shift: 'Shift',
+        staff_performance: 'Staff Performance',
+        shift_roster: 'Shift Roster',
+        logistics: 'Logistics'
     },
     jp: {
         dashboard: 'ダッシュボード',
@@ -628,7 +634,10 @@ const translations: Record<Language, Record<TranslationKey, string>> = {
         total_operational_active: '稼働中の全シート',
         all_supervisors: '全担当者',
         all_shifts: '全シフト',
-        shift: 'シフト'
+        shift: 'シフト',
+        staff_performance: 'スタッフパフォーマンス',
+        shift_roster: 'シフト名簿',
+        logistics: 'ロジスティクス'
     }
 };
 

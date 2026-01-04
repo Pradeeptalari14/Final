@@ -62,7 +62,15 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     };
 
     // 3. Dev/Debug Role State
-    const [devRole, setDevRole] = useState<string | null>(null);
+    const [devRole, setDevRoleState] = useState<string | null>(() => {
+        return localStorage.getItem('app_dev_role');
+    });
+
+    const setDevRole = (role: string | null) => {
+        setDevRoleState(role);
+        if (role) localStorage.setItem('app_dev_role', role);
+        else localStorage.removeItem('app_dev_role');
+    };
 
     return (
         <AppStateContext.Provider

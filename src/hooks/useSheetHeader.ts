@@ -95,7 +95,7 @@ export const useSheetHeader = (
                     : currentUserName
             );
         });
-    }, [currentSheet, currentUser]);
+    }, [currentSheet, currentUser, users]);
 
     const handleHeaderChange = (field: string, value: string | number | boolean) => {
         const valStr = String(value);

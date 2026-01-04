@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import * as ReactWindow from 'react-window';
+const FixedSizeList = (ReactWindow as any).FixedSizeList || ReactWindow;
 import { AutoSizer } from 'react-virtualized-auto-sizer';
 import { SheetData, SheetStatus, Role, User, AppSettings } from '@/types';
 import { Badge } from '@/components/ui/badge';
@@ -12,9 +13,6 @@ import {
     XCircle
 } from 'lucide-react';
 import { t } from '@/lib/i18n';
-
-// Fix for Vite/Rollup 'react-window' export issue
-const FixedSizeList = (ReactWindow as any).FixedSizeList || ReactWindow;
 
 interface VirtualDatabaseTableProps {
     data: SheetData[];
@@ -39,6 +37,7 @@ export function VirtualDatabaseTable({
     onQuickReject,
     searchQuery
 }: VirtualDatabaseTableProps) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const listRef = useRef<any>(null);
     const rowHeight = settings.density === 'compact' ? 48 : 64;
 
@@ -77,6 +76,7 @@ export function VirtualDatabaseTable({
         ) {
             label = t('ready_to_load', settings.language);
         } else {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             label = t(sheet.status.toLowerCase() as any, settings.language).replace(/_/g, ' ');
         }
 
@@ -87,7 +87,7 @@ export function VirtualDatabaseTable({
         );
     };
 
-    const renderRow = (sheet: SheetData, index: number, style: any) => {
+    const renderRow = (sheet: SheetData, index: number, style: React.CSSProperties) => {
         if (!sheet) return null;
 
         return (
@@ -267,7 +267,7 @@ export function VirtualDatabaseTable({
                                     itemKey={(idx: number) => data[idx]?.id || idx}
                                     style={{ overflowX: 'hidden' }}
                                 >
-                                    {({ index, style }: any) => renderRow(data[index], index, style)}
+                                    {({ index, style }: { index: number; style: React.CSSProperties }) => renderRow(data[index], index, style)}
                                 </FixedSizeList>
                             );
                         }}

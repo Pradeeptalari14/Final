@@ -9,7 +9,8 @@ import {
     X,
     Users,
     FileText,
-    WifiOff
+    WifiOff,
+    BarChart3
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
@@ -60,7 +61,7 @@ export default function RootLayout() {
             {/* DESKTOP SIDEBAR (Hidden on mobile) */}
             <aside
                 className={cn(
-                    'hidden md:flex relative z-20 flex-col bg-white dark:bg-slate-900/80 backdrop-blur-xl transition-all duration-300 print:hidden border-r border-slate-200 dark:border-white/5',
+                    'hidden md:flex relative z-20 flex-col bg-white dark:bg-slate-900/80 backdrop-blur-xl transition-all duration-300 print:hidden border border-slate-200 dark:border-white/5 m-3 rounded-[32px] shadow-2xl',
                     collapsed ? 'w-20' : 'w-64'
                 )}
             >
@@ -110,7 +111,7 @@ export default function RootLayout() {
                     </div>
                 )}
                 {/* Header */}
-                <header className="h-16 bg-background/50 backdrop-blur flex items-center justify-between px-4 md:px-8 print:hidden shrink-0">
+                <header className="h-16 bg-background/50 backdrop-blur flex items-center justify-between px-4 print:hidden shrink-0">
                     {/* Mobile Menu Toggle */}
                     <button
                         onClick={() => setMobileOpen(true)}
@@ -181,7 +182,7 @@ function SidebarContent({
                         />
                     </div>
                     {(!collapsed || isMobile) && (
-                        <span className="font-bold text-lg tracking-tight text-slate-900 dark:text-white">
+                        <span className="font-bold text-lg tracking-tight text-slate-900 dark:text-white uppercase">
                             Unicharm
                         </span>
                     )}
@@ -196,7 +197,8 @@ function SidebarContent({
                 )}
             </div>
 
-            <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+            <nav className="flex-1 p-4 pt-1 space-y-2 overflow-y-auto overflow-x-hidden custom-scrollbar">
+
                 <NavItem
                     to="/"
                     icon={LayoutDashboard}
@@ -256,16 +258,13 @@ function SidebarContent({
                     />
                 )}
 
-                {/* REPORTS (Power BI) */}
-                {(currentUser?.role === Role.ADMIN || currentUser?.role === Role.SHIFT_LEAD) && (
-                    <NavItem
-                        to="/reports"
-                        icon={LayoutDashboard}
-                        label={t('reports', settings.language)}
-                        collapsed={collapsed && !isMobile}
-                        active={location.pathname === '/reports'}
-                    />
-                )}
+                <NavItem
+                    to="/reports"
+                    icon={BarChart3}
+                    label={t('reports', settings.language)}
+                    collapsed={collapsed && !isMobile}
+                    active={location.pathname === '/reports'}
+                />
 
                 {/* DATABASE (Moving to bottom as it was omitted from priority list but essential) */}
                 <NavItem
@@ -378,3 +377,5 @@ function NavItem({
         </NavLink>
     );
 }
+
+

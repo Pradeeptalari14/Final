@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { User } from '@/types';
-import { AlertTriangle, Trash2, XCircle, CheckCircle, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, Trash2, XCircle, ShieldAlert } from 'lucide-react';
 
 interface DeleteUserAlertProps {
     isOpen: boolean;

@@ -65,7 +65,7 @@ export const useLoadingSheetLogic = () => {
         };
 
         loadSheet();
-    }, [id, sheets, dataLoading, refreshSheets, fetchSheetById]);
+    }, [id, sheets, dataLoading, refreshSheets, fetchSheetById, currentSheet]);
 
     // --- Role-based Redirect ---
     useEffect(() => {
@@ -308,9 +308,23 @@ export const useLoadingSheetLogic = () => {
         return { extraItemsWithQty, returnedItems, overLoadedItems, displayedStagingItems };
     }, [currentSheet]);
 
+    const isDataComplete = useMemo(() => {
+        if (!currentSheet) return false;
+        const mainComplete = (currentSheet.loadingItems || []).every(
+            (li) => li.balance === 0 || li.isRejected
+        );
+        return mainComplete && (totals.grandTotalLoaded > 0 || currentSheet.stagingItems.length === 0);
+    }, [currentSheet, totals.grandTotalLoaded]);
+
+    const isPhotoComplete = useMemo(() => {
+        return !!signatureState.capturedImage || (currentSheet?.capturedImages && currentSheet.capturedImages.length > 0);
+    }, [signatureState.capturedImage, currentSheet?.capturedImages]);
+
     const states = {
         isCompleted: currentSheet?.status === SheetStatus.COMPLETED,
         isPendingVerification: currentSheet?.status === SheetStatus.LOADING_VERIFICATION_PENDING,
+        isDataComplete,
+        isPhotoComplete,
         isLocked:
             currentSheet?.status === SheetStatus.COMPLETED ||
             (currentSheet?.status === SheetStatus.LOADING_VERIFICATION_PENDING &&
@@ -338,6 +352,7 @@ export const useLoadingSheetLogic = () => {
             handleSaveProgress,
             handleSubmit,
             handleVerificationAction,
+            refreshSheets,
             setRemarks: signatureState.setRemarks,
             setSvName: signatureState.setSvName,
             setSvSign: signatureState.setSvSign,

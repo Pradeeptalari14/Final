@@ -1,20 +1,12 @@
-import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useMemo, useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { SheetData, SheetStatus } from '@/types';
 import {
     XAxis,
     YAxis,
-    CartesianGrid,
     Tooltip,
     ResponsiveContainer,
-    Radar,
-    RadarChart,
-    PolarGrid,
-    PolarAngleAxis,
-    PolarRadiusAxis,
-    Area,
-    AreaChart,
     BarChart,
     Bar
 } from 'recharts';
@@ -27,38 +19,63 @@ import {
     Download,
     Search,
     Zap,
-    Hexagon,
     Maximize2,
     X,
     Users,
     UserCheck,
     ArrowRight,
     BarChart3,
-    Clock3,
     CheckCircle2,
     AlertCircle,
     Layers,
     LayoutGrid,
     PanelLeft,
-    Info
+    Info,
+    Truck,
+    Clock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { useData } from '@/contexts/DataContext';
+import { StaffPerformanceDetail } from './analytics/components/StaffPerformanceDetail';
+import { AnalyticsCharts } from './AnalyticsCharts';
+import { RosterUploader, RosterEntry } from './analytics/RosterUploader';
+import { LogisticsTable } from './analytics/LogisticsTable';
+import { get, set } from 'idb-keyval';
+import { toast } from 'sonner';
+import { UserPerformanceSummary } from './analytics/components/UserPerformanceSummary';
+import { Role, User } from '@/types';
 
 interface AnalyticsHubProps {
     sheets: SheetData[];
+    currentUser?: User | null;
+    onRefresh?: () => Promise<void>;
 }
 
-export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
+export function AnalyticsHub({ sheets: allSheets, currentUser, onRefresh: _onRefresh }: AnalyticsHubProps) {
     const navigate = useNavigate();
     const { users } = useData();
     const [timeRange, setTimeRange] = useState<'7D' | '30D' | '90D'>('7D');
     const [searchId, setSearchId] = useState('');
     const [selectedSheet, setSelectedSheet] = useState<SheetData | null>(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [selectedUser, setSelectedUser] = useState<any | null>(null);
     const [showProjection, setShowProjection] = useState(false);
+    const [rosterData, setRosterData] = useState<RosterEntry[]>([]);
+
+    // Load Roster from IDB on mount
+    useState(() => {
+        get('shift_roster').then((val) => {
+            if (val) setRosterData(val);
+        });
+    });
+
+    const handleRosterUpload = (data: RosterEntry[]) => {
+        setRosterData(data);
+        set('shift_roster', data);
+        toast.success('Roster synced successfully!');
+    };
 
     // 1. Filtering Logic
     const filteredData = useMemo(() => {
@@ -70,10 +87,24 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
         const threshold = new Date(now.setDate(now.getDate() - days));
 
         return allSheets.filter((s) => {
+            // 1. Date Filter
             const dateMatch = new Date(s.date) >= threshold;
-            return dateMatch;
+            if (!dateMatch) return false;
+
+            // 2. User Specific Filter (Only for non-ADMIN/SHIFT_LEAD)
+            if (currentUser && currentUser.role !== Role.ADMIN && currentUser.role !== Role.SHIFT_LEAD) {
+                const uName = (currentUser.username || '').toLowerCase().trim();
+                const fName = (currentUser.fullName || '').toLowerCase().trim();
+                const sName = (s.supervisorName || '').toLowerCase().trim();
+                const lName = (s.loadingSvName || '').toLowerCase().trim();
+                const cName = (s.createdBy || '').toLowerCase().trim();
+
+                return sName === uName || sName === fName || lName === uName || lName === fName || cName === uName;
+            }
+
+            return true;
         });
-    }, [allSheets, timeRange]);
+    }, [allSheets, timeRange, currentUser]);
 
     // 2. Aggregate KPI Calculations
     const kpis = useMemo(() => {
@@ -143,109 +174,11 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
         ];
     }, [filteredData]);
 
-    // 3. Supervisor Radar Data (Aggregate Real Metrics)
-    const supervisorQuality = useMemo(() => {
-        const supMap: Record<
-            string,
-            {
-                rejections: number;
-                items: number;
-                target: number;
-                actual: number;
-                sheets: number;
-                comments: number;
-            }
-        > = {};
+    // 3. Supervisor Radar Data (Aggregate Real Metrics) - REMOVED UNUSED CALCULATION
+    // Future Note: Re-implement supervisorQuality here if radar charts are needed.
 
-        filteredData.forEach((s) => {
-            const name = s.supervisorName || 'Unknown';
-            if (!supMap[name])
-                supMap[name] = {
-                    rejections: 0,
-                    items: 0,
-                    target: 0,
-                    actual: 0,
-                    sheets: 0,
-                    comments: 0
-                };
-
-            supMap[name].rejections += s.stagingItems.filter((i) => i.isRejected).length;
-            supMap[name].items += s.stagingItems.length;
-            supMap[name].target += s.stagingItems.reduce((acc, i) => acc + (i.ttlCases || 0), 0);
-            supMap[name].actual +=
-                (s.loadingItems || []).reduce((acc, i) => acc + (i.total || 0), 0) +
-                (s.additionalItems || []).reduce((acc, i) => acc + (i.total || 0), 0);
-            supMap[name].sheets += 1;
-            supMap[name].comments += s.comments?.length || 0;
-        });
-
-        const averages = Object.values(supMap);
-        if (averages.length === 0)
-            return [
-                { subject: 'Accuracy', A: 0, fullMark: 100 },
-                { subject: 'Speed', A: 0, fullMark: 100 },
-                { subject: 'Adherence', A: 0, fullMark: 100 },
-                { subject: 'Activity', A: 0, fullMark: 100 },
-                { subject: 'Clarity', A: 0, fullMark: 100 }
-            ];
-
-        const avgAccuracy =
-            averages.reduce(
-                (acc, s) => acc + (s.items > 0 ? (1 - s.rejections / s.items) * 100 : 100),
-                0
-            ) / averages.length;
-        const avgAdherence =
-            averages.reduce((acc, s) => acc + (s.target > 0 ? (s.actual / s.target) * 100 : 0), 0) /
-            averages.length;
-        const avgActivity = (averages.reduce((acc, s) => acc + s.sheets, 0) / averages.length) * 10; // Scaled for radar
-        const avgClarity =
-            averages.reduce(
-                (acc, s) => acc + (s.sheets > 0 ? (s.comments / s.sheets) * 100 : 0),
-                0
-            ) / averages.length;
-
-        return [
-            { subject: 'Accuracy', A: Math.min(100, Math.round(avgAccuracy)), fullMark: 100 },
-            { subject: 'Speed', A: 85, fullMark: 100 }, // Time calculation requires more complex diffing, keeping static for now
-            { subject: 'Adherence', A: Math.min(100, Math.round(avgAdherence)), fullMark: 100 },
-            { subject: 'Activity', A: Math.min(100, Math.round(avgActivity)), fullMark: 100 },
-            { subject: 'Clarity', A: Math.min(100, Math.round(avgClarity)), fullMark: 100 }
-        ];
-    }, [filteredData]);
-
-    // 4. Performance Data (Daily)
-    const dailyPerformance = useMemo(() => {
-        const groups: Record<
-            string,
-            { date: string; target: number; actual: number; efficiency: number }
-        > = {};
-
-        filteredData.forEach((s) => {
-            if (!groups[s.date]) {
-                const d = new Date(s.date);
-                groups[s.date] = {
-                    date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-                    target: 0,
-                    actual: 0,
-                    efficiency: 0
-                };
-            }
-            const t = s.stagingItems.reduce((acc, item) => acc + (item.ttlCases || 0), 0);
-            const a =
-                (s.loadingItems || []).reduce((acc, item) => acc + (item.total || 0), 0) +
-                (s.additionalItems || []).reduce((acc, item) => acc + (item.total || 0), 0);
-            groups[s.date].target += t;
-            groups[s.date].actual += a;
-            groups[s.date].efficiency =
-                groups[s.date].target > 0
-                    ? (groups[s.date].actual / groups[s.date].target) * 100
-                    : 0;
-        });
-
-        return Object.values(groups).sort(
-            (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-        );
-    }, [filteredData]);
+    // 4. Performance Data (Daily) - REMOVED UNUSED CALCULATION
+    // Future Note: Re-implement dailyPerformance here if daily efficiency charts are needed.
 
     // 7. Velocity Forecast (Real Real-Time Data)
     const velocityMetrics = useMemo(() => {
@@ -391,37 +324,58 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
         }
     };
 
-    const [reportViewMode, setReportViewMode] = useState<'OVERVIEW' | 'DETAIL'>('OVERVIEW');
+    const [searchParams, setSearchParams] = useSearchParams();
+    const [reportViewMode, setReportViewMode] = useState<'OVERVIEW' | 'DETAIL'>(
+        searchParams.get('report') ? 'DETAIL' : 'OVERVIEW'
+    );
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-    const [activeReport, setActiveReport] = useState('DAILY');
+
+    // Derive activeReport from searchParams
+    const activeReport = searchParams.get('report')?.toUpperCase() || 'DAILY';
+
+
+    const setActiveReport = (report: string) => {
+        const newParams = new URLSearchParams(searchParams);
+        newParams.set('report', report);
+        setSearchParams(newParams);
+    };
 
     const reportTypes = [
         {
             id: 'DAILY',
-            label: 'Daily Operations',
-            icon: Calendar,
+            label: 'Operational Overview',
+            icon: Activity,
             description: 'Monitor daily operational metrics and KPIs',
             count: 'Live',
             color: 'text-indigo-600',
             bg: 'bg-indigo-50 dark:bg-indigo-900/20'
         },
         {
-            id: 'STAFF',
-            label: 'Staff Performance',
+            id: 'ROSTER',
+            label: 'Shift Roster',
             icon: Users,
-            description: 'Analyze supervisor and team performance',
+            description: 'Upload shift plans and track staff attendance vs schedule',
             count: 'Active',
             color: 'text-emerald-600',
             bg: 'bg-emerald-50 dark:bg-emerald-900/20'
         },
         {
-            id: 'MONTHLY',
-            label: 'Monthly Analytics',
-            icon: TrendingUp,
-            description: 'Long-term trend analysis and forecasting',
-            count: 'Report',
-            color: 'text-blue-600',
-            bg: 'bg-blue-50 dark:bg-blue-900/20'
+            id: 'LOGISTICS',
+            label: 'Logistics',
+            icon: Truck,
+            description: 'Track Active, Past, and Future vehicle movements',
+            count: 'Vehicles',
+            color: 'text-amber-600',
+            bg: 'bg-amber-50 dark:bg-amber-900/20'
+        },
+        {
+            id: 'STAFF',
+            label: 'Staff Performance',
+            icon: Target,
+            description: 'Analyze supervisor and team performance',
+            count: 'Metrics',
+            color: 'text-purple-600',
+            bg: 'bg-purple-50 dark:bg-purple-900/20'
         }
     ];
 
@@ -435,30 +389,27 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
                             <p className="text-slate-500 dark:text-slate-400">Select a report category to view detailed analytics.</p>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {reportTypes.map((item) => (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                            {reportTypes.map((report) => (
                                 <button
-                                    key={item.id}
-                                    onClick={() => {
-                                        setActiveReport(item.id);
-                                        setReportViewMode('DETAIL');
-                                    }}
+                                    key={report.id}
+                                    onClick={() => { setActiveReport(report.id); setReportViewMode('DETAIL'); }}
                                     className="group relative flex flex-col items-start p-6 h-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl hover:shadow-xl hover:shadow-indigo-500/10 hover:border-indigo-200 dark:hover:border-indigo-900 transition-all duration-300 text-left"
                                 >
-                                    <div className={cn("p-3 rounded-2xl mb-4 transition-colors", item.bg)}>
-                                        <item.icon className={cn("h-8 w-8", item.color)} />
+                                    <div className={cn("p-3 rounded-2xl mb-4 transition-colors", report.bg)}>
+                                        <report.icon className={cn("h-8 w-8", report.color)} />
                                     </div>
-                                    <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-1 group-hover:text-indigo-600 transition-colors">
-                                        {item.label}
-                                    </h3>
-                                    <p className="text-sm font-medium text-slate-400 mb-6">
-                                        {item.description}
+                                    <div className="flex justify-between items-start w-full mb-1">
+                                        <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 transition-colors">
+                                            {report.label}
+                                        </h3>
+                                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 uppercase tracking-widest">
+                                            {report.count}
+                                        </span>
+                                    </div>
+                                    <p className="text-sm font-medium text-slate-400">
+                                        {report.description}
                                     </p>
-                                    <div className="mt-auto w-full">
-                                        <div className="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 text-xs font-bold w-fit">
-                                            {item.count}
-                                        </div>
-                                    </div>
                                 </button>
                             ))}
                         </div>
@@ -489,21 +440,54 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
                                 <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 px-2 hidden lg:block">
                                     Report Center
                                 </h3>
-                                {reportTypes.map((item) => (
-                                    <button
-                                        key={item.id}
-                                        onClick={() => setActiveReport(item.id)}
-                                        className={cn(
-                                            'flex-shrink-0 lg:w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 border lg:border-none border-slate-100 dark:border-slate-800 lg:bg-transparent bg-white dark:bg-slate-900',
-                                            activeReport === item.id
-                                                ? 'bg-white dark:bg-slate-800 text-indigo-600 shadow-lg shadow-indigo-500/10 lg:scale-105 border-indigo-200 dark:border-indigo-900'
-                                                : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-700 lg:hover:pl-4'
-                                        )}
-                                    >
-                                        <item.icon size={16} className={item.color} />
-                                        <span className="whitespace-nowrap">{item.label}</span>
-                                    </button>
-                                ))}
+                                <button
+                                    onClick={() => { setActiveReport('DAILY'); setReportViewMode('DETAIL'); }}
+                                    className={cn(
+                                        'flex-shrink-0 lg:w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 border lg:border-none border-slate-100 dark:border-slate-800 lg:bg-transparent bg-white dark:bg-slate-900',
+                                        activeReport === 'DAILY'
+                                            ? 'bg-white dark:bg-slate-800 text-indigo-600 shadow-lg shadow-indigo-500/10 lg:scale-105 border-indigo-200 dark:border-indigo-900'
+                                            : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-700 lg:hover:pl-4'
+                                    )}
+                                >
+                                    <Activity size={16} className="text-indigo-600" />
+                                    <span className="whitespace-nowrap">Operational Overview</span>
+                                </button>
+                                <button
+                                    onClick={() => { setActiveReport('ROSTER'); setReportViewMode('DETAIL'); }}
+                                    className={cn(
+                                        'flex-shrink-0 lg:w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 border lg:border-none border-slate-100 dark:border-slate-800 lg:bg-transparent bg-white dark:bg-slate-900',
+                                        activeReport === 'ROSTER'
+                                            ? 'bg-white dark:bg-slate-800 text-emerald-600 shadow-lg shadow-emerald-500/10 lg:scale-105 border-emerald-200 dark:border-emerald-900'
+                                            : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-700 lg:hover:pl-4'
+                                    )}
+                                >
+                                    <Users size={16} className="text-emerald-600" />
+                                    <span className="whitespace-nowrap">Shift Roster</span>
+                                </button>
+                                <button
+                                    onClick={() => { setActiveReport('LOGISTICS'); setReportViewMode('DETAIL'); }}
+                                    className={cn(
+                                        'flex-shrink-0 lg:w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 border lg:border-none border-slate-100 dark:border-slate-800 lg:bg-transparent bg-white dark:bg-slate-900',
+                                        activeReport === 'LOGISTICS'
+                                            ? 'bg-white dark:bg-slate-800 text-amber-600 shadow-lg shadow-amber-500/10 lg:scale-105 border-amber-200 dark:border-amber-900'
+                                            : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-700 lg:hover:pl-4'
+                                    )}
+                                >
+                                    <Truck size={16} className="text-amber-600" />
+                                    <span className="whitespace-nowrap">Vehicle Logistics</span>
+                                </button>
+                                <button
+                                    onClick={() => { setActiveReport('STAFF'); setReportViewMode('DETAIL'); }}
+                                    className={cn(
+                                        'flex-shrink-0 lg:w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 border lg:border-none border-slate-100 dark:border-slate-800 lg:bg-transparent bg-white dark:bg-slate-900',
+                                        activeReport === 'STAFF'
+                                            ? 'bg-white dark:bg-slate-800 text-purple-600 shadow-lg shadow-purple-500/10 lg:scale-105 border-purple-200 dark:border-purple-900'
+                                            : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-700 lg:hover:pl-4'
+                                    )}
+                                >
+                                    <Target size={16} className="text-purple-600" />
+                                    <span className="whitespace-nowrap">Staff Performance</span>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -660,160 +644,183 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
                             </div>
 
                             {/* MAIN DATA STREAMING HUB */}
-                            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                                {/* Advanced Multi-Axis Chart */}
-                                {/* Advanced Multi-Axis Chart */}
-                                <Card className="xl:col-span-2 rounded-2xl shadow-xl shadow-slate-200/40 border-none overflow-hidden bg-white dark:bg-slate-900">
-                                    <CardHeader className="p-6 flex flex-row items-center justify-between border-b border-slate-50 dark:border-slate-800">
-                                        <div>
-                                            <CardTitle className="text-lg font-black tracking-tight flex items-center gap-2">
-                                                <Activity className="text-indigo-600" size={20} />
-                                                Operational Pulse
-                                                <div className="group/info relative ml-2 inline-block">
-                                                    <Info
-                                                        size={14}
-                                                        className="text-slate-300 hover:text-indigo-400 cursor-help transition-colors"
-                                                    />
-                                                    <div className="absolute left-0 top-full mt-2 w-64 p-3 bg-slate-800 text-white text-[10px] rounded-xl opacity-0 invisible group-hover/info:opacity-100 group-hover/info:visible transition-all z-50 pointer-events-none shadow-xl font-medium">
-                                                        Shows historical efficiency trends vs production volume to
-                                                        identify bottlenecks.
-                                                    </div>
-                                                </div>
-                                            </CardTitle>
-                                            <CardDescription className="text-xs font-bold mt-1">
-                                                Historical efficiency over time
-                                            </CardDescription>
+                            {activeReport === 'DAILY' && (
+                                <div className="space-y-6">
+                                    {/* 0. Relocated Performance Summary */}
+                                    {currentUser && currentUser.role !== Role.ADMIN && (
+                                        <div className="mb-6">
+                                            <UserPerformanceSummary />
                                         </div>
-                                    </CardHeader>
-                                    <CardContent className="p-4 h-[250px]">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <AreaChart data={dailyPerformance}>
-                                                <defs>
-                                                    <linearGradient id="colorPulse" x1="0" y1="0" x2="0" y2="1">
-                                                        <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.1} />
-                                                        <stop offset="95%" stopColor="#4f46e5" stopOpacity={0} />
-                                                    </linearGradient>
-                                                </defs>
-                                                <CartesianGrid
-                                                    strokeDasharray="10 10"
-                                                    vertical={false}
-                                                    stroke="#f8fafc"
-                                                />
-                                                <XAxis
-                                                    dataKey="date"
-                                                    axisLine={false}
-                                                    tickLine={false}
-                                                    tick={{ fontSize: 9, fontWeight: 700, fill: '#94a3b8' }}
-                                                    dy={10}
-                                                />
-                                                <YAxis
-                                                    axisLine={false}
-                                                    tickLine={false}
-                                                    tick={{ fontSize: 9, fontWeight: 700, fill: '#94a3b8' }}
-                                                />
-                                                <Tooltip
-                                                    contentStyle={{
-                                                        borderRadius: '16px',
-                                                        border: 'none',
-                                                        boxShadow: '0 20px 40px -10px rgb(0 0 0 / 0.1)',
-                                                        padding: '12px',
-                                                        fontSize: '11px'
-                                                    }}
-                                                />
-                                                <Area
-                                                    type="monotone"
-                                                    dataKey="efficiency"
-                                                    stroke="#4f46e5"
-                                                    strokeWidth={3}
-                                                    fillOpacity={1}
-                                                    fill="url(#colorPulse)"
-                                                    dot={{ r: 4, fill: '#4f46e5', strokeWidth: 2, stroke: '#fff' }}
-                                                    activeDot={{ r: 6, strokeWidth: 0, fill: '#4f46e5' }}
-                                                />
-                                            </AreaChart>
-                                        </ResponsiveContainer>
-                                    </CardContent>
-                                </Card>
+                                    )}
 
-                                {/* Supervisor Radar Analysis */}
-                                {/* Supervisor Radar Analysis */}
-                                <Card className="rounded-2xl shadow-xl shadow-slate-200/40 border-none bg-indigo-900 text-white relative overflow-hidden group">
-                                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-800 to-indigo-950" />
-                                    <div className="absolute -right-20 -bottom-20 w-80 h-80 bg-white/5 rounded-full blur-3xl" />
+                                    {/* 1. Analytics Charts (Moved from Dashboard) */}
+                                    <AnalyticsCharts sheets={filteredData} />
 
-                                    <CardHeader className="relative z-10 p-6">
-                                        <div className="flex items-center justify-between">
-                                            <Hexagon className="text-indigo-400 mb-2" size={24} />
-                                            <div className="group/info relative">
-                                                <Info
-                                                    size={14}
-                                                    className="text-indigo-400 hover:text-white cursor-help transition-colors"
-                                                />
-                                                <div className="absolute right-0 top-full mt-2 w-48 p-3 bg-black/80 text-white text-[10px] rounded-xl opacity-0 invisible group-hover/info:opacity-100 group-hover/info:visible transition-all z-50 pointer-events-none shadow-xl font-medium backdrop-blur-md">
-                                                    Visualizes supervisor performance across 5 key standardized
-                                                    metrics (Accuracy, Speed, etc).
-                                                </div>
+                                    {/* 2. Enhanced Metrics (Total Qty, Dispatched, Loaded) */}
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <Card className="bg-indigo-50/50 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-800">
+                                            <CardContent className="p-4 flex flex-col">
+                                                <span className="text-[10px] uppercase font-black text-indigo-400">Total Quantity (Target)</span>
+                                                <span className="text-2xl font-black text-indigo-700 dark:text-indigo-300">
+                                                    {filteredData.reduce((acc, s) => acc + s.stagingItems.reduce((a, i) => a + (i.ttlCases || 0), 0), 0).toLocaleString()}
+                                                </span>
+                                            </CardContent>
+                                        </Card>
+                                        <Card className="bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-800">
+                                            <CardContent className="p-4 flex flex-col">
+                                                <span className="text-[10px] uppercase font-black text-emerald-400">Loaded Quantity (Actual)</span>
+                                                <span className="text-2xl font-black text-emerald-700 dark:text-emerald-300">
+                                                    {filteredData.reduce((acc, s) => {
+                                                        const l = (s.loadingItems || []).reduce((a, i) => a + (i.total || 0), 0);
+                                                        const ad = (s.additionalItems || []).reduce((a, i) => a + (i.total || 0), 0);
+                                                        return acc + l + ad;
+                                                    }, 0).toLocaleString()}
+                                                </span>
+                                            </CardContent>
+                                        </Card>
+                                        <Card className="bg-blue-50/50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-800">
+                                            <CardContent className="p-4 flex flex-col">
+                                                <span className="text-[10px] uppercase font-black text-blue-400">Dispatched Quantity</span>
+                                                <span className="text-2xl font-black text-blue-700 dark:text-blue-300">
+                                                    {filteredData.filter(s => s.status === SheetStatus.COMPLETED).reduce((acc, s) => {
+                                                        const l = (s.loadingItems || []).reduce((a, i) => a + (i.total || 0), 0);
+                                                        const ad = (s.additionalItems || []).reduce((a, i) => a + (i.total || 0), 0);
+                                                        return acc + l + ad;
+                                                    }, 0).toLocaleString()}
+                                                </span>
+                                            </CardContent>
+                                        </Card>
+                                    </div>
+
+                                    {/* Existing Graphs */}
+                                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                                        {/* Keeping existing custom charts if needed, or rely on AnalyticsCharts */}
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeReport === 'ROSTER' && (
+                                <div className="space-y-6">
+                                    <Card className="border-none shadow-none bg-transparent">
+                                        <CardHeader>
+                                            <CardTitle>Shift Roster Management</CardTitle>
+                                            <CardDescription>Upload Excel Plan to sync with Daily Operations</CardDescription>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <RosterUploader onUploadSuccess={handleRosterUpload} />
+                                        </CardContent>
+                                    </Card>
+
+                                    {rosterData.length > 0 && (
+                                        <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800">
+                                            <h3 className="font-bold mb-4">Current Roster ({rosterData.length})</h3>
+                                            <div className="overflow-x-auto">
+                                                <table className="w-full text-xs text-left">
+                                                    <thead>
+                                                        <tr className="border-b border-slate-100 dark:border-slate-800">
+                                                            <th className="py-2">Date</th>
+                                                            <th className="py-2">Shift</th>
+                                                            <th className="py-2">Staff Name</th>
+                                                            <th className="py-2">Assigned Role</th>
+                                                            <th className="py-2">Vehicle</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {rosterData.slice(0, 10).map((r, i) => (
+                                                            <tr key={i} className="border-b border-slate-50 dark:border-slate-900">
+                                                                <td className="py-2">{r.date}</td>
+                                                                <td className="py-2">{r.shift}</td>
+                                                                <td className="py-2 font-bold">{r.staffName}</td>
+                                                                <td className="py-2 text-slate-500">{r.role}</td>
+                                                                <td className="py-2 font-mono">{r.vehicleNo || '-'}</td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                                {rosterData.length > 10 && <p className="text-[10px] text-slate-400 mt-2 text-center">Showing first 10 entries of {rosterData.length}</p>}
                                             </div>
                                         </div>
-                                        <CardTitle className="text-lg font-black">Quality Radar</CardTitle>
-                                        <CardDescription className="text-indigo-300 font-bold text-xs opacity-70">
-                                            Standardized Metrics
-                                        </CardDescription>
-                                    </CardHeader>
+                                    )}
+                                </div>
+                            )}
 
-                                    <CardContent className="h-[220px] relative z-10 flex items-center justify-center -mt-4">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <RadarChart
-                                                cx="50%"
-                                                cy="50%"
-                                                outerRadius="70%"
-                                                data={supervisorQuality}
-                                            >
-                                                <PolarGrid stroke="rgba(255,255,255,0.1)" />
-                                                <PolarAngleAxis
-                                                    dataKey="subject"
-                                                    tick={{
-                                                        fill: 'rgba(255,255,255,0.6)',
-                                                        fontSize: 9,
-                                                        fontWeight: 700
-                                                    }}
-                                                />
-                                                <PolarRadiusAxis
-                                                    angle={30}
-                                                    domain={[0, 100]}
-                                                    tick={false}
-                                                    axisLine={false}
-                                                />
-                                                <Radar
-                                                    name="Standard"
-                                                    dataKey="A"
-                                                    stroke="#818cf8"
-                                                    fill="#818cf8"
-                                                    fillOpacity={0.6}
-                                                />
-                                            </RadarChart>
-                                        </ResponsiveContainer>
-                                    </CardContent>
+                            {activeReport === 'LOGISTICS' && (
+                                <div className="space-y-8 animate-in slide-in-from-right-4">
+                                    {/* 1. ACTIVE VEHICLES (Loading/Locked) */}
+                                    <LogisticsTable
+                                        title="Active Vehicles (On-Site)"
+                                        color="amber"
+                                        entries={filteredData
+                                            .filter(s => s.status === SheetStatus.LOCKED || s.status === SheetStatus.LOADING_VERIFICATION_PENDING)
+                                            .map(s => ({
+                                                id: s.id,
+                                                date: s.date,
+                                                vehicleNo: s.vehicleNo || 'Unknown',
+                                                destination: s.destination,
+                                                status: s.status,
+                                                supervisor: s.loadingSvName,
+                                                totalQty: s.stagingItems.reduce((a, i) => a + (i.ttlCases || 0), 0),
+                                                loadedQty: (s.loadingItems || []).reduce((a, i) => a + (i.total || 0), 0)
+                                            }))}
+                                    />
 
-                                    <CardContent className="relative z-10 px-6 pb-6">
-                                        <div className="p-4 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md">
-                                            <h4 className="text-[9px] font-black uppercase tracking-[0.2em] mb-2">
-                                                Live Insights
-                                            </h4>
-                                            <p className="text-[10px] text-indigo-100 leading-relaxed font-bold">
-                                                Current fleet documentation compliance is at{' '}
-                                                <span className="text-emerald-400">88%</span>.
-                                            </p>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </div>
+                                    {/* 2. FUTURE VEHICLES (Drafts + Roster Predicted) */}
+                                    {/* Combining Draft sheets and Roster items that have vehicles */}
+                                    <LogisticsTable
+                                        title="Future / Planned Vehicles"
+                                        color="slate"
+                                        entries={[
+                                            ...filteredData.filter(s => s.status === SheetStatus.DRAFT || s.status === SheetStatus.STAGING_VERIFICATION_PENDING).map(s => ({
+                                                id: s.id,
+                                                date: s.date,
+                                                vehicleNo: s.vehicleNo || 'Pending',
+                                                destination: s.destination,
+                                                status: s.status,
+                                                totalQty: s.stagingItems.reduce((a, i) => a + (i.ttlCases || 0), 0),
+                                                loadedQty: 0
+                                            })),
+                                            ...rosterData.filter(r => r.vehicleNo && new Date(r.date) > new Date()).map((r, i) => ({
+                                                id: `roster-${i}`,
+                                                date: r.date,
+                                                vehicleNo: r.vehicleNo!,
+                                                destination: 'Scheduled',
+                                                status: 'PLANNED',
+                                                totalQty: 0,
+                                                loadedQty: 0
+                                            }))
+                                        ]}
+                                    />
+
+                                    {/* 3. PAST VEHICLES (Completed) */}
+                                    <LogisticsTable
+                                        title="Dispatched / Past Vehicles"
+                                        color="emerald"
+                                        entries={filteredData
+                                            .filter(s => s.status === SheetStatus.COMPLETED)
+                                            .map(s => ({
+                                                id: s.id,
+                                                date: s.date,
+                                                vehicleNo: s.vehicleNo || 'Unknown',
+                                                destination: s.destination,
+                                                status: s.status,
+                                                totalQty: s.stagingItems.reduce((a, i) => a + (i.ttlCases || 0), 0),
+                                                loadedQty: (s.loadingItems || []).reduce((a, i) => a + (i.total || 0), 0) + (s.additionalItems || []).reduce((a, i) => a + (i.total || 0), 0)
+                                            }))}
+                                    />
+                                </div>
+                            )}
+
+                            {activeReport === 'STAFF' && (
+                                <StaffPerformanceDetail />
+                            )}
                         </div>
                     </div>
                 </div>
+            </div>
 
-                {/* DEEP DIVE MODAL / OVERLAY */}
-                {(selectedSheet || selectedUser) && (
+            {/* DEEP DIVE MODAL / OVERLAY */}
+            {
+                (selectedSheet || selectedUser) && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-300">
                         <div
                             className="absolute inset-0 bg-slate-950/80 backdrop-blur-2xl"
@@ -926,7 +933,7 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
                                                 {
                                                     label: 'Time to Load',
                                                     val: '42 Min',
-                                                    icon: Clock3,
+                                                    icon: Clock,
                                                     col: 'amber'
                                                 },
                                                 {
@@ -1219,50 +1226,52 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
                             </div>
                         </Card>
                     </div>
-                )}
+                )
+            }
 
-                {/* FOOTER INSIGHTS */}
-                {/* FOOTER INSIGHTS */}
-                <div className="p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white relative overflow-hidden shadow-xl shadow-slate-200/40">
-                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10" />
-                    <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
-                        <div className="flex items-center gap-4">
-                            <div className="w-14 h-14 rounded-xl bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center">
-                                <Zap className="text-amber-400" size={24} />
-                            </div>
-                            <div>
-                                <div className="flex items-center gap-2">
-                                    <h4 className="text-lg font-black tracking-tight">
-                                        System Velocity Optimize
-                                    </h4>
-                                    <div className="group/info relative">
-                                        <Info
-                                            size={14}
-                                            className="text-slate-400 hover:text-white cursor-help transition-colors"
-                                        />
-                                        <div className="absolute bottom-full left-0 mb-2 w-64 p-3 bg-black/80 text-white text-[10px] rounded-xl opacity-0 invisible group-hover/info:opacity-100 group-hover/info:visible transition-all z-50 pointer-events-none shadow-xl font-medium backdrop-blur-md">
-                                            Predictive AI analysis suggesting resource allocation based
-                                            on incoming load.
-                                        </div>
+            {/* FOOTER INSIGHTS */}
+            {/* FOOTER INSIGHTS */}
+            <div className="p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white relative overflow-hidden shadow-xl shadow-slate-200/40">
+                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10" />
+                <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-xl bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center">
+                            <Zap className="text-amber-400" size={24} />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <h4 className="text-lg font-black tracking-tight">
+                                    System Velocity Optimize
+                                </h4>
+                                <div className="group/info relative">
+                                    <Info
+                                        size={14}
+                                        className="text-slate-400 hover:text-white cursor-help transition-colors"
+                                    />
+                                    <div className="absolute bottom-full left-0 mb-2 w-64 p-3 bg-black/80 text-white text-[10px] rounded-xl opacity-0 invisible group-hover/info:opacity-100 group-hover/info:visible transition-all z-50 pointer-events-none shadow-xl font-medium backdrop-blur-md">
+                                        Predictive AI analysis suggesting resource allocation based
+                                        on incoming load.
                                     </div>
                                 </div>
-                                <p className="text-indigo-300 font-bold max-w-sm mt-1 text-xs">
-                                    Predictive loading suggests Shift C will handle a peak of **
-                                    {(velocityMetrics.peakLoad / 1000).toFixed(1)}K cases**.
-                                </p>
                             </div>
+                            <p className="text-indigo-300 font-bold max-w-sm mt-1 text-xs">
+                                Predictive loading suggests Shift C will handle a peak of **
+                                {(velocityMetrics.peakLoad / 1000).toFixed(1)}K cases**.
+                            </p>
                         </div>
-                        <Button
-                            onClick={() => setShowProjection(true)}
-                            className="h-10 px-6 rounded-xl bg-white text-indigo-950 hover:bg-white/90 font-black text-xs uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-white/5"
-                        >
-                            View Projection
-                        </Button>
                     </div>
+                    <Button
+                        onClick={() => setShowProjection(true)}
+                        className="h-10 px-6 rounded-xl bg-white text-indigo-950 hover:bg-white/90 font-black text-xs uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-white/5"
+                    >
+                        View Projection
+                    </Button>
                 </div>
+            </div>
 
-                {/* PROJECTION MODAL */}
-                {showProjection && (
+            {/* PROJECTION MODAL */}
+            {
+                showProjection && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 sm:p-12 animate-in fade-in duration-300">
                         <div
                             className="absolute inset-0 bg-slate-950/80 backdrop-blur-2xl"
@@ -1356,8 +1365,9 @@ export function AnalyticsHub({ sheets: allSheets }: AnalyticsHubProps) {
                             </div>
                         </Card>
                     </div>
-                )}
-            </div>
+                )
+            }
+
         </>
     );
 }

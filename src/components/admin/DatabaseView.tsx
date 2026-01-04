@@ -20,8 +20,16 @@ import {
     Calendar,
     Clock,
     ArrowUp,
-    ArrowDown
+    ArrowDown,
+    MoreHorizontal,
+    Eye
 } from 'lucide-react';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu';
 import { OperationsMonitor } from './OperationsMonitor';
 import { t } from '@/lib/i18n';
 
@@ -151,7 +159,7 @@ export function DatabaseView({ sheets, currentUser, refreshSheets }: DatabaseVie
             if ((aValue || '') > (bValue || '')) return sortConfig.direction === 'asc' ? 1 : -1;
             return 0;
         });
-    }, [sheets, stageFilter, searchQuery, sortConfig]);
+    }, [sheets, stageFilter, searchQuery, sortConfig, timeFilter, startDate, endDate]);
 
     // Duration Helper
     const getDuration = (sheet: any) => {
@@ -241,10 +249,10 @@ export function DatabaseView({ sheets, currentUser, refreshSheets }: DatabaseVie
                                 {range === 'ALL'
                                     ? 'All Time'
                                     : range === '30D'
-                                      ? '30 Days'
-                                      : range === '90D'
-                                        ? '3 Months'
-                                        : 'Custom'}
+                                        ? '30 Days'
+                                        : range === '90D'
+                                            ? '3 Months'
+                                            : 'Custom'}
                             </button>
                         ))}
                     </div>
@@ -355,7 +363,7 @@ export function DatabaseView({ sheets, currentUser, refreshSheets }: DatabaseVie
                     <div className="w-full">
                         <div className="bg-slate-50/80 dark:bg-slate-950/50 text-slate-500 border-b border-slate-200 dark:border-white/5 backdrop-blur-sm sticky top-0 z-10 flex font-bold text-[9px] uppercase tracking-widest px-4">
                             <div
-                                className={`w-[10%] ${settings.density === 'compact' ? 'py-2' : 'py-3'} cursor-pointer hover:text-primary transition-colors flex items-center gap-1 group`}
+                                className={`w-[8%] ${settings.density === 'compact' ? 'py-2' : 'py-3'} cursor-pointer hover:text-primary transition-colors flex justify-center items-center gap-1 group`}
                                 onClick={() => handleSort('id')}
                             >
                                 {t('id', settings.language)}
@@ -373,7 +381,7 @@ export function DatabaseView({ sheets, currentUser, refreshSheets }: DatabaseVie
                                 )}
                             </div>
                             <div
-                                className={`w-[12%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}
+                                className={`w-[11%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}
                             >
                                 <span className="flex items-center gap-1.5">
                                     <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
@@ -381,7 +389,7 @@ export function DatabaseView({ sheets, currentUser, refreshSheets }: DatabaseVie
                                 </span>
                             </div>
                             <div
-                                className={`w-[12%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}
+                                className={`w-[11%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}
                             >
                                 <span className="flex items-center gap-1.5">
                                     <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
@@ -389,7 +397,7 @@ export function DatabaseView({ sheets, currentUser, refreshSheets }: DatabaseVie
                                 </span>
                             </div>
                             <div
-                                className={`w-[12%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}
+                                className={`w-[11%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}
                             >
                                 <span className="flex items-center gap-1.5">
                                     <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
@@ -397,12 +405,12 @@ export function DatabaseView({ sheets, currentUser, refreshSheets }: DatabaseVie
                                 </span>
                             </div>
                             <div
-                                className={`w-[14%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}
+                                className={`w-[11%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}
                             >
                                 {t('destination', settings.language)}
                             </div>
                             <div
-                                className={`w-[12%] ${settings.density === 'compact' ? 'py-2' : 'py-3'} cursor-pointer hover:text-primary transition-colors flex items-center gap-1 group`}
+                                className={`w-[10%] ${settings.density === 'compact' ? 'py-2' : 'py-3'} cursor-pointer hover:text-primary transition-colors flex justify-center items-center gap-1 group`}
                                 onClick={() => handleSort('date')}
                             >
                                 Date
@@ -420,19 +428,19 @@ export function DatabaseView({ sheets, currentUser, refreshSheets }: DatabaseVie
                                 )}
                             </div>
                             <div
-                                className={`w-[8%] ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}
+                                className={`w-[6%] ${settings.density === 'compact' ? 'py-2' : 'py-3'} text-center`}
                             >
                                 {t('duration', settings.language)}
                             </div>
                             <div
-                                className={`w-[10%] ${settings.density === 'compact' ? 'py-1' : 'py-3'}`}
+                                className={`w-[22%] ${settings.density === 'compact' ? 'py-1' : 'py-3'} text-center`}
                             >
                                 {t('status', settings.language)}
                             </div>
                             <div
-                                className={`w-[10%] text-right font-medium px-4 ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}
+                                className={`w-[3%] text-center font-medium px-4 ${settings.density === 'compact' ? 'py-2' : 'py-3'}`}
                             >
-                                {t('actions', settings.language)}
+
                             </div>
                         </div>
 
@@ -453,7 +461,7 @@ export function DatabaseView({ sheets, currentUser, refreshSheets }: DatabaseVie
                                                 const useLoadingSheet =
                                                     sheet.status === SheetStatus.LOCKED ||
                                                     sheet.status ===
-                                                        SheetStatus.LOADING_VERIFICATION_PENDING ||
+                                                    SheetStatus.LOADING_VERIFICATION_PENDING ||
                                                     sheet.status === SheetStatus.COMPLETED;
 
                                                 navigate(
@@ -464,12 +472,12 @@ export function DatabaseView({ sheets, currentUser, refreshSheets }: DatabaseVie
                                             }}
                                         >
                                             <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary scale-y-0 group-hover:scale-y-100 transition-transform origin-top duration-300" />
-                                            <div className="w-[10%] font-mono text-[10px] font-bold text-slate-500 group-hover:text-primary transition-colors truncate pr-2">
+                                            <div className="w-[8%] font-mono text-[10px] font-bold text-slate-500 group-hover:text-primary transition-colors truncate pr-2 text-center">
                                                 #{sheet.id.slice(-8)}
                                             </div>
 
                                             {/* Timeline Columns */}
-                                            <div className="w-[12%] font-medium text-slate-900 dark:text-slate-200 truncate pr-4">
+                                            <div className="w-[11%] font-medium text-slate-900 dark:text-slate-200 truncate pr-4">
                                                 <div className="flex items-center gap-1.5">
                                                     <div className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0" />
                                                     <span className="truncate text-xs">
@@ -478,7 +486,7 @@ export function DatabaseView({ sheets, currentUser, refreshSheets }: DatabaseVie
                                                 </div>
                                             </div>
 
-                                            <div className="w-[12%] text-slate-600 dark:text-slate-400 truncate pr-4">
+                                            <div className="w-[11%] text-slate-600 dark:text-slate-400 truncate pr-4">
                                                 {sheet.loadingSvName ? (
                                                     <div className="flex items-center gap-1.5">
                                                         <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
@@ -493,7 +501,7 @@ export function DatabaseView({ sheets, currentUser, refreshSheets }: DatabaseVie
                                                 )}
                                             </div>
 
-                                            <div className="w-[12%] text-slate-600 dark:text-slate-400 truncate pr-4">
+                                            <div className="w-[11%] text-slate-600 dark:text-slate-400 truncate pr-4">
                                                 {(() => {
                                                     const approver =
                                                         sheet.verifiedBy ||
@@ -514,7 +522,7 @@ export function DatabaseView({ sheets, currentUser, refreshSheets }: DatabaseVie
                                                 })()}
                                             </div>
 
-                                            <div className="w-[14%] truncate text-slate-500 pr-4">
+                                            <div className="w-[11%] truncate text-slate-500 pr-4">
                                                 <div className="flex flex-col">
                                                     <span className="text-foreground font-medium truncate">
                                                         {sheet.destination || '-'}
@@ -527,28 +535,27 @@ export function DatabaseView({ sheets, currentUser, refreshSheets }: DatabaseVie
                                                 </div>
                                             </div>
 
-                                            <div className="w-[12%] truncate text-slate-600 dark:text-slate-400 text-xs font-medium pr-4">
+                                            <div className="w-[10%] flex justify-center items-center text-xs">
                                                 {formatDate(sheet.date || sheet.createdAt)}
                                             </div>
 
-                                            <div className="w-[8%] text-[10px] font-mono text-slate-400 font-medium">
+                                            <div className="w-[6%] text-[10px] font-mono text-slate-400 font-medium text-center">
                                                 {getDuration(sheet)}
                                             </div>
 
-                                            <div className="w-[10%]">
+                                            <div className="w-[22%] flex justify-center">
                                                 <Badge
                                                     variant="outline"
                                                     className={`
                                                 text-[10px] font-extrabold uppercase tracking-tight px-3 py-1 rounded-full whitespace-nowrap border-2
-                                                ${
-                                                    isCompleted
-                                                        ? 'text-emerald-600 border-emerald-500/20 bg-emerald-500/10 dark:text-emerald-400'
-                                                        : sheet.status.includes('PENDING')
-                                                          ? 'text-amber-600 border-amber-500/20 bg-amber-500/10 dark:text-amber-400'
-                                                          : sheet.status === SheetStatus.LOCKED
-                                                            ? 'text-indigo-600 border-indigo-500/20 bg-indigo-500/10 dark:text-indigo-400'
-                                                            : 'text-slate-500 border-slate-200 bg-slate-50 dark:text-slate-400 dark:border-white/10 dark:bg-white/5'
-                                                }`}
+                                                ${isCompleted
+                                                            ? 'text-emerald-600 border-emerald-500/20 bg-emerald-500/10 dark:text-emerald-400'
+                                                            : sheet.status.includes('PENDING')
+                                                                ? 'text-amber-600 border-amber-500/20 bg-amber-500/10 dark:text-amber-400'
+                                                                : sheet.status === SheetStatus.LOCKED
+                                                                    ? 'text-indigo-600 border-indigo-500/20 bg-indigo-500/10 dark:text-indigo-400'
+                                                                    : 'text-slate-500 border-slate-200 bg-slate-50 dark:text-slate-400 dark:border-white/10 dark:bg-white/5'
+                                                        }`}
                                                 >
                                                     {(() => {
                                                         // Custom Override: Show "READY TO LOAD" for Loading Team when status is LOCKED
@@ -558,7 +565,7 @@ export function DatabaseView({ sheets, currentUser, refreshSheets }: DatabaseVie
                                                                 Role.LOADING_SUPERVISOR ||
                                                                 currentUser?.role === Role.ADMIN ||
                                                                 currentUser?.role ===
-                                                                    Role.SHIFT_LEAD)
+                                                                Role.SHIFT_LEAD)
                                                         ) {
                                                             return t(
                                                                 'ready_to_load',
@@ -574,92 +581,110 @@ export function DatabaseView({ sheets, currentUser, refreshSheets }: DatabaseVie
                                             </div>
 
                                             <div
-                                                className="w-[10%] flex justify-end gap-1 px-4"
+                                                className="w-[3%] flex justify-center gap-1 px-4"
                                                 onClick={(e) => e.stopPropagation()}
                                             >
-                                                {/* Quick Actions for Admin */}
-                                                {currentUser?.role === Role.ADMIN && (
-                                                    <>
-                                                        {(sheet.status ===
-                                                            SheetStatus.STAGING_VERIFICATION_PENDING ||
-                                                            sheet.status ===
-                                                                SheetStatus.LOADING_VERIFICATION_PENDING) && (
-                                                            <>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                    className="h-8 w-8 p-0 text-emerald-500 hover:bg-emerald-500/10 transition-all"
-                                                                    title={t(
-                                                                        'approve',
-                                                                        settings.language
-                                                                    )}
-                                                                    onClick={() =>
-                                                                        handleUpdateStatus(
-                                                                            sheet.id,
-                                                                            sheet.status ===
-                                                                                SheetStatus.STAGING_VERIFICATION_PENDING
-                                                                                ? SheetStatus.LOCKED
-                                                                                : SheetStatus.COMPLETED
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    <CheckCircle size={14} />
-                                                                </Button>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                    className="h-8 w-8 p-0 text-amber-500 hover:bg-amber-500/10 transition-all"
-                                                                    title={t(
-                                                                        'reject',
-                                                                        settings.language
-                                                                    )}
-                                                                    onClick={() =>
-                                                                        handleUpdateStatus(
-                                                                            sheet.id,
-                                                                            sheet.status ===
-                                                                                SheetStatus.STAGING_VERIFICATION_PENDING
-                                                                                ? SheetStatus.DRAFT
-                                                                                : SheetStatus.LOCKED
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    <XCircle size={14} />
-                                                                </Button>
-                                                            </>
-                                                        )}
-                                                    </>
-                                                )}
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-6 w-6 p-0 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
+                                                        >
+                                                            <MoreHorizontal size={14} className="text-slate-400" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end" className="w-[160px]">
+                                                        {(currentUser?.role === Role.ADMIN ||
+                                                            currentUser?.role === Role.SHIFT_LEAD) && (
+                                                                <>
+                                                                    {(sheet.status ===
+                                                                        SheetStatus.STAGING_VERIFICATION_PENDING ||
+                                                                        sheet.status ===
+                                                                        SheetStatus.LOADING_VERIFICATION_PENDING) && (
+                                                                            <DropdownMenuItem
+                                                                                onClick={() =>
+                                                                                    handleUpdateStatus(
+                                                                                        sheet.id,
+                                                                                        sheet.status ===
+                                                                                            SheetStatus.STAGING_VERIFICATION_PENDING
+                                                                                            ? SheetStatus.LOCKED
+                                                                                            : SheetStatus.COMPLETED
+                                                                                    )
+                                                                                }
+                                                                                className="text-emerald-600 focus:text-emerald-700"
+                                                                            >
+                                                                                <CheckCircle className="mr-2 h-3.5 w-3.5" />
+                                                                                {t('approve', settings.language)}
+                                                                            </DropdownMenuItem>
+                                                                        )}
 
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary transition-all"
-                                                    onClick={() =>
-                                                        navigate(
-                                                            isCompleted
-                                                                ? `/sheets/loading/${sheet.id}`
-                                                                : `/sheets/staging/${sheet.id}`
-                                                        )
-                                                    }
-                                                >
-                                                    <Printer
-                                                        size={14}
-                                                        className="opacity-70 group-hover:opacity-100"
-                                                    />
-                                                </Button>
-                                                {currentUser?.role === Role.ADMIN && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="h-8 w-8 p-0 hover:bg-red-500/10 hover:text-red-500 transition-all"
-                                                        onClick={() => handleDeleteSheet(sheet.id)}
-                                                    >
-                                                        <Trash2
-                                                            size={14}
-                                                            className="opacity-70 group-hover:opacity-100"
-                                                        />
-                                                    </Button>
-                                                )}
+                                                                    {(sheet.status ===
+                                                                        SheetStatus.STAGING_VERIFICATION_PENDING ||
+                                                                        sheet.status ===
+                                                                        SheetStatus.LOADING_VERIFICATION_PENDING) && (
+                                                                            <DropdownMenuItem
+                                                                                onClick={() =>
+                                                                                    handleUpdateStatus(
+                                                                                        sheet.id,
+                                                                                        sheet.status ===
+                                                                                            SheetStatus.STAGING_VERIFICATION_PENDING
+                                                                                            ? SheetStatus.DRAFT
+                                                                                            : SheetStatus.LOCKED
+                                                                                    )
+                                                                                }
+                                                                                className="text-amber-600 focus:text-amber-700"
+                                                                            >
+                                                                                <XCircle className="mr-2 h-3.5 w-3.5" />
+                                                                                {t('reject', settings.language)}
+                                                                            </DropdownMenuItem>
+                                                                        )}
+                                                                </>
+                                                            )}
+
+                                                        <DropdownMenuItem
+                                                            onClick={() => {
+                                                                // Print logic or visual feedback
+                                                                console.log('Print', sheet.id);
+                                                            }}
+                                                        >
+                                                            <Printer className="mr-2 h-3.5 w-3.5" />
+                                                            {t('print', settings.language)}
+                                                        </DropdownMenuItem>
+
+                                                        <DropdownMenuItem onClick={() => {
+                                                            navigate(
+                                                                isCompleted
+                                                                    ? `/sheets/loading/${sheet.id}`
+                                                                    : `/sheets/staging/${sheet.id}`
+                                                            )
+                                                        }}>
+                                                            <Eye className="mr-2 h-3.5 w-3.5" />
+                                                            View Details
+                                                        </DropdownMenuItem>
+
+                                                        {currentUser?.role === Role.ADMIN && (
+                                                            <DropdownMenuItem
+                                                                onClick={() => {
+                                                                    if (
+                                                                        confirm(
+                                                                            t(
+                                                                                'delete_confirm',
+                                                                                settings.language
+                                                                            )
+                                                                        )
+                                                                    ) {
+                                                                        handleDeleteSheet(sheet.id);
+                                                                    }
+                                                                }}
+                                                                className="text-red-600 focus:text-red-700 focus:bg-red-50"
+                                                            >
+                                                                <Trash2 className="mr-2 h-3.5 w-3.5" />
+                                                                {t('delete', settings.language)}
+                                                            </DropdownMenuItem>
+                                                        )}
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
                                             </div>
                                         </div>
                                     );
@@ -668,8 +693,9 @@ export function DatabaseView({ sheets, currentUser, refreshSheets }: DatabaseVie
                         )}
                     </div>
                 </div>
-            )}
-        </div>
+            )
+            }
+        </div >
     );
 }
 
@@ -689,10 +715,9 @@ function FilterButton({
             onClick={onClick}
             className={`
                 flex items-center gap-2 px-4 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all 
-                ${
-                    active
-                        ? 'bg-white dark:bg-slate-700 shadow-sm text-primary ring-1 ring-slate-200 dark:ring-white/10 scale-[1.02]'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-slate-200/50 dark:hover:bg-white/5'
+                ${active
+                    ? 'bg-white dark:bg-slate-700 shadow-sm text-primary ring-1 ring-slate-200 dark:ring-white/10 scale-[1.02]'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-slate-200/50 dark:hover:bg-white/5'
                 }
             `}
         >

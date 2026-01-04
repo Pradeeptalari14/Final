@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
+import { cn } from '@/lib/utils';
 import { SheetStatus, Role, Comment } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { SheetHeader } from './shared/SheetHeader';
 import { VerificationFooter as SharedVerificationFooter } from './shared/VerificationFooter';
-import { Printer, ArrowLeft, Save, CheckCircle, AlertTriangle, Camera, X, Clock } from 'lucide-react';
+import { Printer, ArrowLeft, Save, CheckCircle, AlertTriangle, Camera, X, Clock, RefreshCw } from 'lucide-react';
 import { useLoadingSheetLogic } from '@/hooks/useLoadingSheetLogic';
 
 // Sub-components
@@ -108,6 +109,7 @@ export default function LoadingSheet() {
             handleSubmit,
             handleVerificationAction,
             handleToggleRejection,
+            refreshSheets,
             setSvName,
             setSvSign,
             setSlSign,
@@ -148,6 +150,14 @@ export default function LoadingSheet() {
                     <LiveClock />
                 </div>
                 <div className="flex gap-2">
+                    <button
+                        type="button"
+                        onClick={() => refreshSheets()}
+                        title="Refresh Data"
+                        className="bg-white border border-slate-300 text-slate-500 p-2 rounded-lg hover:bg-slate-50 transition-colors"
+                    >
+                        <RefreshCw size={18} className={cn(loading && "animate-spin")} />
+                    </button>
                     <button
                         type="button"
                         onClick={() =>
@@ -325,14 +335,26 @@ export default function LoadingSheet() {
                         <button
                             type="button"
                             onClick={startCamera}
-                            className="px-6 py-2.5 bg-slate-100 text-slate-700 border border-slate-300 rounded-lg flex items-center gap-2 cursor-pointer hover:bg-slate-200 transition-colors pointer-events-auto"
+                            disabled={!states.isDataComplete}
+                            className={cn(
+                                "px-6 py-2.5 border rounded-lg flex items-center gap-2 cursor-pointer transition-colors font-bold",
+                                states.isDataComplete
+                                    ? "bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200"
+                                    : "bg-slate-50 text-slate-300 border-slate-200 cursor-not-allowed"
+                            )}
                         >
                             <Camera size={18} /> Add Photo
                         </button>
                         <button
                             type="button"
                             onClick={handleSubmit}
-                            className="px-8 py-2.5 bg-green-600 text-white rounded-lg flex items-center gap-2 font-bold shadow-lg cursor-pointer hover:bg-green-700 transition-colors pointer-events-auto"
+                            disabled={!states.isDataComplete || !states.isPhotoComplete}
+                            className={cn(
+                                "px-8 py-2.5 rounded-lg flex items-center gap-2 font-bold shadow-lg transition-colors",
+                                (states.isDataComplete && states.isPhotoComplete)
+                                    ? "bg-green-600 text-white hover:bg-green-700"
+                                    : "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
+                            )}
                         >
                             <CheckCircle size={18} /> Request Verification
                         </button>
