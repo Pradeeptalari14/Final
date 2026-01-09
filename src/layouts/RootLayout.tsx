@@ -278,11 +278,11 @@ function SidebarContent({
 
                 {/* TV MODE */}
                 <NavItem
-                    to="/admin/tv-performance"
+                    to="/tv-mode"
                     icon={Monitor}
                     label={t('tv_mode', settings.language) || "TV Mode"}
                     collapsed={collapsed && !isMobile}
-                    active={location.pathname === '/admin/tv-performance'}
+                    active={location.pathname === '/tv-mode'}
                 />
             </nav>
 

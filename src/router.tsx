@@ -7,6 +7,7 @@ import RegisterPage from './pages/Register';
 import { LoadingFallback } from './components/ui/LoadingFallback';
 import { LazyErrorBoundary } from './components/ui/LazyErrorBoundary';
 import RootLayout from './layouts/RootLayout';
+import ErrorPage from './pages/ErrorPage';
 
 // Helper to retry lazy imports or force refresh on failure (common during deployments)
 const lazyWithRetry = (componentImport: () => Promise<any>) =>
@@ -41,7 +42,7 @@ const TVModePerformance = lazyWithRetry(() => import('./components/admin/analyti
 
 export const router = createBrowserRouter([
     {
-        path: '/admin/tv-performance',
+        path: '/tv-mode',
         element: (
             <LazyErrorBoundary>
                 <Suspense fallback={<LoadingFallback />}>
@@ -52,15 +53,18 @@ export const router = createBrowserRouter([
     },
     {
         path: '/login',
-        element: <LoginPage />
+        element: <LoginPage />,
+        errorElement: <ErrorPage />
     },
     {
         path: '/register',
-        element: <RegisterPage />
+        element: <RegisterPage />,
+        errorElement: <ErrorPage />
     },
     {
         path: '/',
         element: <RootLayout />,
+        errorElement: <ErrorPage />,
         children: [
             {
                 index: true,
