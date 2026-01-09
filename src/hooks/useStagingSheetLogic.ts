@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
 import { useAppState } from '@/contexts/AppStateContext';
+import { useToast } from '@/contexts/ToastContext';
 import { SheetData, SheetStatus, Role, StagingItem } from '@/types';
 
 const EMPTY_ITEM: StagingItem = {
@@ -27,18 +28,25 @@ export const useStagingSheetLogic = () => {
         loading: dataLoading
     } = useData();
     const { devRole } = useAppState();
+    const { addToast } = useToast();
 
     // Determine effective role
     const currentRole = (devRole || currentUser?.role) as Role | undefined;
 
     const [formData, setFormData] = useState<Partial<SheetData>>({
         shift: '',
-        date: new Date().toISOString().split('T')[0],
+        date: (() => {
+            const d = new Date();
+            const offset = d.getTimezoneOffset() * 60000;
+            return new Date(d.getTime() - offset).toISOString().split('T')[0];
+        })(), // Use local date instead of UTC
         destination: '',
         supervisorName: currentUser?.fullName || currentUser?.username || '',
         empCode: currentUser?.empCode || '',
         loadingDockNo: '',
         loadingDoc: '',
+        loadingStartTime: '',
+        loadingEndTime: '',
         stagingItems: Array.from({ length: 5 }, (_, i) => ({ ...EMPTY_ITEM, srNo: i + 1 })),
         status: SheetStatus.DRAFT
     });
@@ -63,22 +71,31 @@ export const useStagingSheetLogic = () => {
             // New sheet logic
             if (id === 'new') {
                 if (currentUser && !isDirty.current) {
-                    setFormData((prev) => ({
-                        ...prev,
-                        supervisorName: prev.supervisorName || currentUser.fullName || currentUser.username || '',
-                        empCode: prev.empCode || currentUser.empCode || ''
-                    }));
+                    setFormData((prev) => {
+                        // Only set if not already set or it's a new session
+                        if (prev.id) return prev;
+                        return {
+                            ...prev,
+                            supervisorName: prev.supervisorName || currentUser.fullName || currentUser.username || '',
+                            empCode: prev.empCode || currentUser.empCode || ''
+                        };
+                    });
                 }
                 setLoading(false);
                 return;
             }
 
             // Existing sheet logic
+            // CRITICAL: If we have local unsaved changes, DO NOT let background sync overwrite them
+            if (isDirty.current) {
+                return;
+            }
+
             setLoading(true);
 
             // 1. Try local cache first
             const foundInCache = sheets.find((s) => s.id === id);
-            if (foundInCache && !isDirty.current) {
+            if (foundInCache) {
                 setFormData(foundInCache);
                 setLoading(false);
                 return;
@@ -125,15 +142,21 @@ export const useStagingSheetLogic = () => {
 
                 const { error } = await addSheet(sheetToSave);
                 if (error) throw error;
+                addToast('success', 'New sheet created successfully');
                 // Navigate to the newly created sheet URL
                 navigate(`/sheets/staging/${targetId}`, { replace: true });
             } else {
                 // If update, invoke updateSheet (which does UPDATE)
                 const { error } = await updateSheet(sheetToSave);
                 if (error) throw error;
+                // Only show toast if not being called by handleRequestVerification
+                if (formData.status === dataToSave.status) {
+                    addToast('success', 'Draft saved successfully');
+                }
             }
         } catch (err: unknown) {
             console.error(err);
+            addToast('error', 'Failed to save changes');
         } finally {
             setLoading(false);
         }
@@ -147,16 +170,18 @@ export const useStagingSheetLogic = () => {
             if (currentId) {
                 const { error } = await deleteSheet(currentId);
                 if (error) throw error;
+                addToast('success', 'Sheet deleted successfully');
                 navigate('/database');
             }
         } catch (error) {
             console.error('Delete failed', error);
+            addToast('error', 'Failed to delete sheet');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleRequestVerification = () => {
+    const handleRequestVerification = async () => {
         // Clear rejection reason on resubmit so it doesn't show as rejected in Dashboard
         const updated: Partial<SheetData> = {
             ...formData,
@@ -164,7 +189,11 @@ export const useStagingSheetLogic = () => {
             rejectionReason: undefined
         };
         setFormData(updated);
-        handleSave(updated);
+        await handleSave(updated);
+        addToast('success', 'Verification requested successfully');
+        // Clear dirty state before navigating
+        isDirty.current = false;
+        navigate('/database');
     };
 
     const updateItem = (index: number, field: keyof StagingItem, value: string | number) => {
@@ -187,44 +216,50 @@ export const useStagingSheetLogic = () => {
         setFormData({ ...formData, stagingItems: newItems });
     };
 
-    const addItem = () => {
+    const addItem = (count: number = 1) => {
         if (
             formData.status !== SheetStatus.LOCKED &&
             formData.status !== SheetStatus.STAGING_VERIFICATION_PENDING
         ) {
+            const currentLength = formData.stagingItems?.length || 0;
+            const newItems = Array.from({ length: count }, (_, i) => ({
+                ...EMPTY_ITEM,
+                srNo: currentLength + i + 1
+            }));
+
             setFormData({
                 ...formData,
                 stagingItems: [
                     ...(formData.stagingItems || []),
-                    { ...EMPTY_ITEM, srNo: (formData.stagingItems?.length || 0) + 1 }
+                    ...newItems
                 ]
             });
         }
     };
 
-    const handleVerificationAction = (approve: boolean, reason?: string) => {
+    const handleVerificationAction = async (approve: boolean, reason?: string) => {
         if (approve) {
-            if (confirm('Are you sure you want to verify and lock this sheet?')) {
-                const updated = {
-                    ...formData,
-                    status: SheetStatus.LOCKED,
-                    lockedBy: currentUser?.username,
-                    lockedAt: new Date().toISOString(),
-                    slSign: currentUser?.fullName,
-                    history: [
-                        ...(formData.history || []),
-                        {
-                            id: Date.now().toString(),
-                            actor: currentUser?.username || 'Unknown',
-                            action: 'STAGING_VERIFIED',
-                            timestamp: new Date().toISOString(),
-                            details: 'Verified and Locked State'
-                        }
-                    ]
-                };
-                setFormData(updated);
-                handleSave(updated);
-            }
+            // Confirmation is now handled by the UI component
+            const updated = {
+                ...formData,
+                status: SheetStatus.LOCKED,
+                lockedBy: currentUser?.username,
+                lockedAt: new Date().toISOString(),
+                slSign: currentUser?.fullName,
+                history: [
+                    ...(formData.history || []),
+                    {
+                        id: Date.now().toString(),
+                        actor: currentUser?.username || 'Unknown',
+                        action: 'STAGING_VERIFIED',
+                        timestamp: new Date().toISOString(),
+                        details: 'Verified and Locked State'
+                    }
+                ]
+            };
+            setFormData(updated);
+            await handleSave(updated);
+            addToast('success', 'Sheet verified and locked');
         } else {
             if (reason) {
                 const newComment = {
@@ -250,7 +285,8 @@ export const useStagingSheetLogic = () => {
                     ]
                 };
                 setFormData(updated);
-                handleSave(updated);
+                await handleSave(updated);
+                addToast('error', 'Sheet rejected');
             }
         }
     };

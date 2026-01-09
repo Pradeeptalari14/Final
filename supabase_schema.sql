@@ -16,11 +16,20 @@ CREATE TABLE IF NOT EXISTS public.sheets (
   created_at timestamptz DEFAULT now()
 );
 
--- 3. LOGS TABLE
-CREATE TABLE IF NOT EXISTS public.logs (
+-- 3. SECURITY LOGS TABLE
+CREATE TABLE IF NOT EXISTS public.security_logs (
   id text PRIMARY KEY,
-  data jsonb NOT NULL
+  data jsonb NOT NULL,
+  created_at timestamptz DEFAULT now()
 );
+
+-- 4. ACTIVITY LOGS TABLE
+CREATE TABLE IF NOT EXISTS public.activity_logs (
+  id text PRIMARY KEY,
+  data jsonb NOT NULL,
+  created_at timestamptz DEFAULT now()
+);
+
 
 -- 4. ENABLE RLS & PUBLIC ACCESS (Since Login is Removed)
 -- Users Table
@@ -35,11 +44,18 @@ DROP POLICY IF EXISTS "Public Access" ON public.sheets;
 CREATE POLICY "Public Access" ON public.sheets FOR ALL USING (true) WITH CHECK (true);
 GRANT ALL ON TABLE public.sheets TO anon, authenticated, service_role;
 
--- Logs Table
-ALTER TABLE public.logs ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Public Access" ON public.logs;
-CREATE POLICY "Public Access" ON public.logs FOR ALL USING (true) WITH CHECK (true);
-GRANT ALL ON TABLE public.logs TO anon, authenticated, service_role;
+-- Security Logs Table
+ALTER TABLE public.security_logs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public Access" ON public.security_logs;
+CREATE POLICY "Public Access" ON public.security_logs FOR ALL USING (true) WITH CHECK (true);
+GRANT ALL ON TABLE public.security_logs TO anon, authenticated, service_role;
+
+-- Activity Logs Table
+ALTER TABLE public.activity_logs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public Access" ON public.activity_logs;
+CREATE POLICY "Public Access" ON public.activity_logs FOR ALL USING (true) WITH CHECK (true);
+GRANT ALL ON TABLE public.activity_logs TO anon, authenticated, service_role;
+
 
 -- 5. SEED DATA (Default Admin User)
 -- Even though login is removed, the app might display this user in lists.

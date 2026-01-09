@@ -6,7 +6,35 @@ import { SheetData, User, SecurityLog, ActivityLog, Role } from '@/types';
 import { DataContext, useData } from './DataContextCore';
 import { useAppState } from './AppStateContext';
 import { useOfflineMutation } from '@/hooks/useOfflineMutation';
-export { useData };
+// 0. Raw API for SyncManager
+const performAddSheet = async (sheet: SheetData) => {
+    const { error } = await supabase.from('sheets').insert({ id: sheet.id, data: sheet });
+    if (error) throw error;
+    return { error: null };
+};
+
+const performUpdateSheet = async (sheet: SheetData) => {
+    const { error } = await supabase
+        .from('sheets')
+        .update({ data: sheet })
+        .eq('id', sheet.id);
+    if (error) throw error;
+    return { error: null };
+};
+
+const performDeleteSheet = async (id: string) => {
+    const { error } = await supabase.from('sheets').delete().eq('id', id);
+    if (error) throw error;
+    return { error: null };
+};
+
+const performUpdateUser = async (user: User) => {
+    const { error } = await supabase.from('users').update({ data: user }).eq('id', user.id);
+    if (error) throw error;
+    return { error: null };
+};
+
+export { useData, performAddSheet, performUpdateSheet, performDeleteSheet, performUpdateUser };
 
 export function DataProvider({
     children,
@@ -38,7 +66,7 @@ export function DataProvider({
         };
     }, []);
 
-    // 1. Sheets Query
+    // 1. Sheets Query - Optimized for high-speed sync
     const { data: sheets = [], isLoading: sheetsLoading } = useQuery<SheetData[]>({
         queryKey: ['sheets'],
         queryFn: async () => {
@@ -46,18 +74,44 @@ export function DataProvider({
                 id: string;
                 data: SheetData;
             }
+
+            // Priority 1: Fetch active sheets and most recent history for snappy load
             const [activeRes, archivedRes] = await Promise.all([
                 supabase
                     .from('sheets')
                     .select('*')
                     .or('data->isArchived.is.null,data->isArchived.eq.false'),
+                // Using a smaller limit for immediate responsiveness for archived sheets
                 supabase
                     .from('sheets')
                     .select('*')
                     .eq('data->isArchived', true)
                     .order('created_at', { ascending: false })
-                    .range(0, 499)
+                    .limit(50)
             ]);
+
+            // In the background, fetch the full history if needed (not part of the initial Promise.all)
+            // This is a separate, non-blocking call.
+            supabase
+                .from('sheets')
+                .select('*')
+                .eq('data->isArchived', true)
+                .order('created_at', { ascending: false })
+                .limit(100) // Original limit for full history
+                .then(({ data }: { data: SupabaseRow[] | null; error: unknown }) => {
+                    if (data) {
+                        // Background update of history if needed
+                        console.log('History fetched in background');
+                        // Potentially update queryClient cache here if you want the full history to eventually appear
+                        // queryClient.setQueryData(['sheets'], (oldData: SheetData[] | undefined) => {
+                        //     const newArchived = data.map((d: SupabaseRow) => ({ ...d.data, id: d.id, status: d.data.status || 'DRAFT' })) as SheetData[];
+                        //     const activeSheets = (oldData || []).filter(s => !s.isArchived);
+                        //     const combined = [...activeSheets, ...newArchived];
+                        //     const uniqueMap = new Map(combined.map((s) => [s.id, s]));
+                        //     return Array.from(uniqueMap.values());
+                        // });
+                    }
+                });
 
             const { data: activeData, error: activeError } = activeRes as {
                 data: SupabaseRow[] | null;
@@ -75,6 +129,7 @@ export function DataProvider({
                 id: d.id,
                 status: d.data.status || 'DRAFT'
             })) as SheetData[];
+
             const archived = (archivedData || []).map((d: SupabaseRow) => ({
                 ...d.data,
                 id: d.id,
@@ -84,7 +139,9 @@ export function DataProvider({
             const combined = [...active, ...archived];
             const uniqueMap = new Map(combined.map((s) => [s.id, s]));
             return Array.from(uniqueMap.values());
-        }
+        },
+        staleTime: 1000 * 5, // 5 seconds stale time
+        refetchOnWindowFocus: false,
     });
 
     // 2. Users Query
@@ -218,7 +275,8 @@ export function DataProvider({
         logActivityMutation.mutate({ action, details, actor });
     }, [currentUser, logActivityMutation]);
 
-    // Global Click Listener for "Every Click" info
+    // Global Click Listener - REMOVED FOR PERFORMANCE
+    /*
     useEffect(() => {
         const handleClick = (e: MouseEvent) => {
             const target = e.target as HTMLElement;
@@ -239,27 +297,48 @@ export function DataProvider({
         window.addEventListener('click', handleClick);
         return () => window.removeEventListener('click', handleClick);
     }, [currentUser, logActivity]);
+    */
 
     // 5. Mutations for Sheets
     const addSheetMutation = useOfflineMutation('addSheet', {
-        mutationFn: async (sheet: SheetData) => {
-            const { error } = await supabase.from('sheets').insert({ id: sheet.id, data: sheet });
-            if (error) throw error;
+        mutationFn: async (_sheet: SheetData) => {
+            // Queue via useOfflineMutation (which we will repurpose to ALWAYS queue)
+            // But we must return success for the promise to resolve
             return { error: null };
         },
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['sheets'] })
+        onMutate: async (newSheet: SheetData) => {
+            await queryClient.cancelQueries({ queryKey: ['sheets'] });
+            const previousSheets = queryClient.getQueryData<SheetData[]>(['sheets']);
+            queryClient.setQueryData(['sheets'], (old: SheetData[] = []) => {
+                return [...old, newSheet];
+            });
+            return { previousSheets };
+        },
+        onError: (_err, _newSheet, context: any) => {
+            if (context?.previousSheets) {
+                queryClient.setQueryData(['sheets'], context.previousSheets);
+            }
+        },
+        // We do NOT invalidate on success immediately to avoid overwriting optimistic update with stale server data
     });
 
     const updateSheetMutation = useOfflineMutation('updateSheet', {
-        mutationFn: async (sheet: SheetData) => {
-            const { error } = await supabase
-                .from('sheets')
-                .update({ data: sheet })
-                .eq('id', sheet.id);
-            if (error) throw error;
-            return { error: null };
+        mutationFn: async (_sheet: SheetData) => {
+            return { error: null }; // Optimistic success
         },
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['sheets'] })
+        onMutate: async (updatedSheet: SheetData) => {
+            await queryClient.cancelQueries({ queryKey: ['sheets'] });
+            const previousSheets = queryClient.getQueryData<SheetData[]>(['sheets']);
+            queryClient.setQueryData(['sheets'], (old: SheetData[] = []) => {
+                return old.map(s => s.id === updatedSheet.id ? updatedSheet : s);
+            });
+            return { previousSheets };
+        },
+        onError: (_err, _updatedSheet, context: any) => {
+            if (context?.previousSheets) {
+                queryClient.setQueryData(['sheets'], context.previousSheets);
+            }
+        }
     });
 
     // Delete is dangerous to queue blindly, keep standard for now or queue with caution.
@@ -280,10 +359,15 @@ export function DataProvider({
         const channel = supabase
             .channel('public:sheets')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'sheets' }, () => {
+                // High-speed invalidation: only refetch if relevant
+                // We could even update queryClient directly for "fraction second" feel
                 queryClient.invalidateQueries({ queryKey: ['sheets'] });
+
+                // Only show toast for other users' changes to avoid noise
+                // (This is a refinement, but basic sync is first priority)
                 toast.info('Data Updated Remotely', {
-                    description: 'Refreshing content...',
-                    duration: 2000
+                    description: 'Syncing changes...',
+                    duration: 1500
                 });
             })
             .subscribe((status: string) => {

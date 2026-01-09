@@ -38,7 +38,7 @@ export function StageColumn({
 
     return (
         <div
-            className={`rounded-lg border ${color} ${isCompact ? 'p-2' : 'p-3'} flex flex-col gap-2 transition-colors h-full relative group hover:bg-slate-50 dark:hover:bg-white/[0.02]`}
+            className={`rounded-lg border ${color} ${isCompact ? 'p-1.5' : 'p-3'} flex flex-col gap-2 transition-colors h-full relative group hover:bg-slate-50 dark:hover:bg-white/[0.02]`}
         >
             <div
                 className={`flex items-center justify-between border-b border-slate-200 dark:border-white/5 ${isCompact ? 'pb-1' : 'pb-2'}`}
@@ -68,27 +68,27 @@ export function StageColumn({
                                     navigate(f.link);
                                 }}
                                 className={`
-                                flex ${isMainHeader ? 'flex-row items-center justify-start gap-3 pl-3' : 'flex-col items-center justify-center'} 
-                                ${isCompact ? 'p-1' : 'p-2'} rounded 
+                                flex ${isMainHeader ? 'flex-row items-center justify-start gap-2 pl-2' : 'flex-col items-center justify-center'} 
+                                ${isCompact ? 'p-0.5' : 'p-2'} rounded 
                                 transition-all hover:scale-[1.02] active:scale-[0.98] 
                                 border border-white/5 shadow-sm
                                 ${f.color} 
-                                ${fullWidth ? 'min-h-[50px]' : ''}
-                                ${isMainHeader ? 'col-span-2 min-h-[40px]' : ''}
+                                ${fullWidth ? 'min-h-[40px]' : ''}
+                                ${isMainHeader ? (isCompact ? 'col-span-2 min-h-[30px]' : 'col-span-2 min-h-[40px]') : ''}
                                 ${isLastOddItem ? 'col-span-2' : ''}
                             `}
                             >
                                 {isMainHeader ? (
-                                    <div className="w-full flex items-center justify-between px-2">
-                                        <span className="text-xs font-bold uppercase opacity-80 text-left">
+                                    <div className="w-full flex items-center justify-between px-1">
+                                        <span className={`font-bold uppercase opacity-80 text-left ${isCompact ? 'text-[9px]' : 'text-xs'}`}>
                                             {f.label}
                                         </span>
-                                        <span className="text-2xl font-black">{f.count}</span>
+                                        <span className={`${isCompact ? 'text-lg' : 'text-2xl'} font-black`}>{f.count}</span>
                                     </div>
                                 ) : (
                                     <div className="text-center">
                                         <span
-                                            className={`font-bold leading-none block ${fullWidth ? 'text-base' : 'text-sm'}`}
+                                            className={`font-bold leading-none block ${fullWidth ? (isCompact ? 'text-sm' : 'text-base') : (isCompact ? 'text-xs' : 'text-sm')}`}
                                         >
                                             {f.count}
                                         </span>

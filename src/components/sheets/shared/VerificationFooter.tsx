@@ -4,6 +4,14 @@ import { Button } from '@/components/ui/button';
 import { SheetStatus } from '@/types';
 
 import { RejectionReasonModal } from './RejectionReasonModal';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+    DialogDescription
+} from '@/components/ui/dialog';
 
 interface VerificationFooterProps {
     status: SheetStatus;
@@ -18,8 +26,14 @@ export const VerificationFooter: React.FC<VerificationFooterProps> = ({
     onApprove,
     isStaging = false
 }) => {
-    const [checks, setChecks] = useState({ qty: false, condition: false, sign: false });
+    const [checks, setChecks] = useState({ qty: false, condition: false });
     const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+
+    const handleConfirm = () => {
+        onApprove(true);
+        setIsConfirmModalOpen(false);
+    };
 
     const isPending = isStaging
         ? status === SheetStatus.STAGING_VERIFICATION_PENDING
@@ -35,19 +49,38 @@ export const VerificationFooter: React.FC<VerificationFooterProps> = ({
                     type="header"
                 />
 
+                <Dialog open={isConfirmModalOpen} onOpenChange={setIsConfirmModalOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Confirm Verification</DialogTitle>
+                            <DialogDescription>
+                                Are you sure you want to verify and lock this sheet? This action cannot be undone.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setIsConfirmModalOpen(false)}>
+                                Cancel
+                            </Button>
+                            <Button className="bg-purple-600 hover:bg-purple-500 text-white" onClick={handleConfirm}>
+                                Confirm & Lock
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
                 <div
                     className={`w-full max-w-3xl pointer-events-auto ${isStaging ? 'bg-purple-50/95 border-purple-200' : 'bg-blue-50/95 border-blue-200'} backdrop-blur-sm border rounded-2xl shadow-2xl p-4 flex flex-col md:flex-row items-center gap-4`}
                 >
-                    <div className="flex-1 w-full">
+                    <div className="flex-1 w-full flex flex-col items-center justify-center text-center">
                         <h4
-                            className={`text-xs font-bold ${isStaging ? 'text-purple-700' : 'text-blue-700'} uppercase tracking-wider mb-2 flex items-center gap-2`}
+                            className={`text-xs font-bold ${isStaging ? 'text-purple-700' : 'text-blue-700'} uppercase tracking-wider mb-2 flex items-center justify-center gap-2`}
                         >
                             <ClipboardList size={14} /> Verification Checklist (
                             {isStaging ? 'Staging' : 'Loading'} Level)
                         </h4>
-                        <div className="grid grid-cols-3 gap-2">
-                            {['Qty Matches', 'Pallet OK', 'Supervisor Name'].map((label, idx) => {
-                                const key = ['qty', 'condition', 'sign'][
+                        <div className="flex flex-wrap items-center justify-center gap-4">
+                            {['Qty Matches', 'Pallet OK'].map((label, idx) => {
+                                const key = ['qty', 'condition'][
                                     idx
                                 ] as keyof typeof checks;
                                 return (
@@ -91,7 +124,7 @@ export const VerificationFooter: React.FC<VerificationFooterProps> = ({
                             <AlertTriangle className="mr-2" size={16} /> Reject
                         </Button>
                         <Button
-                            onClick={() => onApprove(true)}
+                            onClick={() => setIsConfirmModalOpen(true)}
                             disabled={!Object.values(checks).every(Boolean)}
                             className={`${isStaging ? 'bg-purple-600 hover:bg-purple-500' : 'bg-blue-600 hover:bg-blue-600'} text-white gap-2 transition-all h-10 ${!Object.values(checks).every(Boolean) ? 'opacity-50 cursor-not-allowed' : 'shadow-lg hover:scale-105'}`}
                         >

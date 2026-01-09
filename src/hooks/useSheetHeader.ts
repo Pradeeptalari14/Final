@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { SheetData, User } from '@/types';
 
 export const useSheetHeader = (
@@ -26,9 +26,17 @@ export const useSheetHeader = (
     const [sealNo, setSealNo] = useState('');
     const [regSerialNo, setRegSerialNo] = useState('');
 
+    const isInitialized = useRef<string | null>(null);
+
     // Sync Local State
     useEffect(() => {
         if (!currentSheet) return;
+
+        // Only initialize state if we haven't initialized for this specific sheet ID yet
+        // This prevents overwriting local typing during background refreshes
+        if (isInitialized.current === currentSheet.id) {
+            return;
+        }
 
         queueMicrotask(() => {
             setTransporter(currentSheet.transporter || '');
@@ -94,6 +102,8 @@ export const useSheetHeader = (
                     ? currentSheet.loadingSvName
                     : currentUserName
             );
+
+            isInitialized.current = currentSheet.id;
         });
     }, [currentSheet, currentUser, users]);
 

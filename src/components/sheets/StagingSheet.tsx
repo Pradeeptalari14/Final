@@ -9,9 +9,16 @@ import {
     ArrowLeft,
     Loader2,
     AlertTriangle,
+    ChevronDown,
     X,
-    RefreshCw
+    RefreshCw,
 } from 'lucide-react';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Button } from '@/components/ui/button';
 import { SheetStatus, Role, Comment, SheetData } from '@/types';
 import { Badge } from '@/components/ui/badge';
@@ -251,19 +258,40 @@ export default function StagingSheet() {
                 <div className="flex justify-center pb-8">
                     {formData.status !== SheetStatus.LOCKED &&
                         formData.status !== SheetStatus.STAGING_VERIFICATION_PENDING && (
-                            <Button
-                                variant="outline"
-                                onClick={addItem}
-                                className="w-full md:w-auto border border-dashed border-slate-300 text-slate-500 hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50/50 hover:shadow-sm transition-all duration-300 gap-2 py-8 px-12 rounded-xl text-base font-medium group"
-                            >
-                                <div className="bg-slate-100 group-hover:bg-indigo-100 p-2 rounded-full transition-colors">
-                                    <Plus
-                                        size={18}
-                                        className="text-slate-400 group-hover:text-indigo-500"
-                                    />
-                                </div>
-                                Add New Row
-                            </Button>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        className="w-full md:w-auto border border-dashed border-slate-300 text-slate-500 hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50/50 hover:shadow-sm transition-all duration-300 gap-2 py-8 px-12 rounded-xl text-base font-medium group"
+                                    >
+                                        <div className="bg-slate-100 group-hover:bg-indigo-100 p-2 rounded-full transition-colors">
+                                            <Plus
+                                                size={18}
+                                                className="text-slate-400 group-hover:text-indigo-500"
+                                            />
+                                        </div>
+                                        Add Rows
+                                        <ChevronDown className="ml-2 h-4 w-4 text-slate-400" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="center" className="w-56">
+                                    <DropdownMenuItem onClick={() => addItem(1)} className="cursor-pointer">
+                                        Add 1 Row
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => addItem(5)} className="cursor-pointer">
+                                        Add 5 Rows
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => addItem(10)} className="cursor-pointer">
+                                        Add 10 Rows
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => addItem(20)} className="cursor-pointer">
+                                        Add 20 Rows
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => addItem(30)} className="cursor-pointer">
+                                        Add 30 Rows
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         )}
                 </div>
 
@@ -305,9 +333,15 @@ export default function StagingSheet() {
                         </Button>
                         <Button
                             onClick={onRequestVerification}
+                            disabled={loading}
                             className="px-8 bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-500/20"
                         >
-                            <Lock className="mr-2" size={16} /> Request Verification
+                            {loading ? (
+                                <Loader2 className="animate-spin mr-2" />
+                            ) : (
+                                <Lock className="mr-2" size={16} />
+                            )}{' '}
+                            Request Verification
                         </Button>
                         <Button
                             onClick={() => handleSave()}

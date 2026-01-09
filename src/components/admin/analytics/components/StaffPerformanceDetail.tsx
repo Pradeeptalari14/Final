@@ -1,15 +1,13 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { getAllUsersStats } from '@/lib/performanceUtils';
 import {
     Users,
     Search,
     ArrowUpRight,
-    ArrowDownRight,
     Clock,
     CheckCircle2,
-    Target,
-    Filter
+    Target
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -23,7 +21,7 @@ export function StaffPerformanceDetail() {
     }, [users, sheets]);
 
     const filteredStats = useMemo(() => {
-        return staffStats.filter(s => {
+        return staffStats.filter((s: any) => {
             const matchesSearch =
                 s.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 s.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -70,7 +68,7 @@ export function StaffPerformanceDetail() {
 
             {/* Performance Grid */}
             <div className="grid grid-cols-1 gap-4">
-                {filteredStats.map((user) => (
+                {filteredStats.map((user: any) => (
                     <UserRow key={user.id} user={user} />
                 ))}
 

@@ -1,6 +1,6 @@
 import React from 'react';
-import { Plus } from 'lucide-react';
-import { SheetStatus, AdditionalItem } from '@/types';
+import { Plus, Camera } from 'lucide-react';
+import { SheetStatus, AdditionalItem, Role } from '@/types';
 import { SkuSelector } from '../shared/SkuSelector';
 
 interface AdditionalItemsSectionProps {
@@ -9,6 +9,8 @@ interface AdditionalItemsSectionProps {
     status: SheetStatus;
     totalAdditional: number;
     onItemChange: (id: number, field: string, value: string | number, index?: number) => void;
+    onAddPhoto: (label: string, skuName?: string) => void;
+    currentRole?: Role;
 }
 
 export const AdditionalItemsSection: React.FC<AdditionalItemsSectionProps> = ({
@@ -16,7 +18,9 @@ export const AdditionalItemsSection: React.FC<AdditionalItemsSectionProps> = ({
     isLocked,
     status,
     totalAdditional,
-    onItemChange
+    onItemChange,
+    onAddPhoto,
+    currentRole
 }) => {
     const isReadOnly =
         status === SheetStatus.COMPLETED || status === SheetStatus.LOADING_VERIFICATION_PENDING;
@@ -45,6 +49,7 @@ export const AdditionalItemsSection: React.FC<AdditionalItemsSectionProps> = ({
                                 </th>
                             ))}
                             <th className="p-2 text-center w-12">Total</th>
+                            {!isLocked && currentRole !== Role.SHIFT_LEAD && <th className="p-2 text-center w-8">Img</th>}
                         </tr>
                     </thead>
                     <tbody>
@@ -77,6 +82,17 @@ export const AdditionalItemsSection: React.FC<AdditionalItemsSectionProps> = ({
                                 <td className="p-2 text-center font-bold text-slate-900">
                                     {item.total}
                                 </td>
+                                {!isLocked && currentRole !== Role.SHIFT_LEAD && (
+                                    <td className="p-2 text-center border-r">
+                                        <button
+                                            onClick={() => onAddPhoto("Extra Loaded", item.skuName)}
+                                            className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-1 rounded transition-colors"
+                                            title="Add photo for extra items"
+                                        >
+                                            <Camera size={14} />
+                                        </button>
+                                    </td>
+                                )}
                             </tr>
                         ))}
                     </tbody>
@@ -104,6 +120,14 @@ export const AdditionalItemsSection: React.FC<AdditionalItemsSectionProps> = ({
                             </span>
                             <span className="text-sm font-bold text-blue-600">
                                 Total: {item.total}
+                                {!isLocked && currentRole !== Role.SHIFT_LEAD && (
+                                    <button
+                                        onClick={() => onAddPhoto("Extra Loaded", item.skuName)}
+                                        className="ml-2 inline-flex items-center gap-1 text-[10px] bg-blue-50 text-blue-700 px-2 py-1 rounded border border-blue-100"
+                                    >
+                                        <Camera size={12} /> Photo
+                                    </button>
+                                )}
                             </span>
                         </div>
                         <SkuSelector

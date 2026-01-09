@@ -1,6 +1,7 @@
 import { useRef } from 'react';
-import * as ReactWindow from 'react-window';
-const FixedSizeList = (ReactWindow as any).FixedSizeList || ReactWindow;
+import * as ReactWindowNamespace from 'react-window';
+const ReactWindow: any = ReactWindowNamespace;
+const FixedSizeList = ReactWindow.FixedSizeList || ReactWindow.default?.FixedSizeList || ReactWindow;
 import { AutoSizer } from 'react-virtualized-auto-sizer';
 import { SheetData, SheetStatus, Role, User, AppSettings } from '@/types';
 import { Badge } from '@/components/ui/badge';
@@ -39,7 +40,8 @@ export function VirtualDatabaseTable({
 }: VirtualDatabaseTableProps) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const listRef = useRef<any>(null);
-    const rowHeight = settings.density === 'compact' ? 48 : 64;
+    const isCompact = settings.density === 'compact';
+    const rowHeight = isCompact ? 48 : 64;
 
     const isRejected = (s: SheetData) => !!s.rejectionReason;
 
@@ -81,7 +83,7 @@ export function VirtualDatabaseTable({
         }
 
         return (
-            <Badge variant="outline" className={variantClass}>
+            <Badge variant="outline" className={`${variantClass} ${isCompact ? 'text-[8px] px-1 py-0 h-4' : 'text-[10px]'}`}>
                 {label}
             </Badge>
         );
@@ -98,37 +100,37 @@ export function VirtualDatabaseTable({
                 onClick={() => onRowClick(sheet)}
             >
                 {/* ID */}
-                <div className="pl-6 px-4 font-mono text-[10px] truncate text-blue-600 dark:text-blue-400 w-[14.28%] shrink-0">
+                <div className={`pl-6 px-4 font-mono ${isCompact ? 'text-[9px]' : 'text-[10px]'} truncate text-blue-600 dark:text-blue-400 w-[14.28%] shrink-0`}>
                     #{sheet.id.slice(-8)}
                 </div>
 
                 {/* Supervisor */}
                 <div className="px-4 w-[14.28%] truncate">
-                    <div className="truncate font-medium text-foreground text-sm leading-tight">
+                    <div className={`truncate font-medium text-foreground ${isCompact ? 'text-[11px]' : 'text-sm'} leading-tight`}>
                         {sheet.supervisorName}
                     </div>
-                    <div className="text-[10px] text-muted-foreground truncate opacity-70">
+                    <div className={`${isCompact ? 'text-[8px]' : 'text-[10px]'} text-muted-foreground truncate opacity-70`}>
                         {sheet.empCode}
                     </div>
                 </div>
 
                 {/* Shift / Dest */}
                 <div className="px-4 w-[14.28%] truncate">
-                    <div className="text-foreground/80 font-medium truncate text-xs leading-tight">
+                    <div className={`text-foreground/80 font-medium truncate ${isCompact ? 'text-[10px]' : 'text-xs'} leading-tight`}>
                         {sheet.shift}
                     </div>
-                    <div className="text-[10px] text-muted-foreground truncate opacity-70">
+                    <div className={`${isCompact ? 'text-[8px]' : 'text-[10px]'} text-muted-foreground truncate opacity-70`}>
                         {sheet.destination || sheet.loadingDoc || '-'}
                     </div>
                 </div>
 
                 {/* Duration */}
-                <div className="px-4 font-mono truncate text-[10px] text-slate-600 dark:text-slate-400 w-[14.28%] shrink-0">
+                <div className={`px-4 font-mono truncate ${isCompact ? 'text-[9px]' : 'text-[10px]'} text-slate-600 dark:text-slate-400 w-[14.28%] shrink-0`}>
                     {getDuration(sheet)}
                 </div>
 
                 {/* Date */}
-                <div className="px-4 truncate text-[10.5px] text-slate-600 dark:text-slate-400 w-[14.28%] shrink-0">
+                <div className={`px-4 truncate ${isCompact ? 'text-[9px]' : 'text-[10.5px]'} text-slate-600 dark:text-slate-400 w-[14.28%] shrink-0`}>
                     {new Date(sheet.date).toLocaleDateString()}
                 </div>
 
@@ -225,10 +227,10 @@ export function VirtualDatabaseTable({
     return (
         <div className="rounded-xl border border-slate-200 dark:border-white/5 overflow-hidden bg-white dark:bg-slate-900/50 shadow-sm flex flex-col h-full min-h-[500px]">
             {/* Header */}
-            <div className="flex items-center bg-muted/30 text-muted-foreground border-b border-border sticky top-0 z-10 backdrop-blur-md h-11 text-[10px] uppercase tracking-[0.15em] font-black shrink-0">
+            <div className={`flex items-center bg-muted/30 text-muted-foreground border-b border-border sticky top-0 z-10 backdrop-blur-md ${isCompact ? 'h-8 text-[9px]' : 'h-11 text-[10px]'} uppercase tracking-[0.15em] font-black shrink-0`}>
                 <div className="pl-6 px-4 w-[14.28%] flex items-center gap-2">
                     {t('sheet_id', settings.language)}
-                    <Badge variant="secondary" className="scale-75 origin-left opacity-70 px-1 font-black">{data.length}</Badge>
+                    <Badge variant="secondary" className={`${isCompact ? 'scale-65' : 'scale-75'} origin-left opacity-70 px-1 font-black`}>{data.length}</Badge>
                 </div>
                 <div className="w-[14.28%] px-4 text-left font-black">{t('supervisor', settings.language)}</div>
                 <div className="w-[14.28%] px-4 text-left font-black">{t('shift_dest', settings.language)}</div>

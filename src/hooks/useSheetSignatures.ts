@@ -16,8 +16,9 @@ export const useSheetSignatures = (
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [cameraActive, setCameraActive] = useState(false);
-    const [capturedImage, setCapturedImage] = useState<string | null>(null);
+    const [capturedImages, setCapturedImages] = useState<(string | { url: string; caption: string; timestamp: string })[]>([]);
     const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
+    const [initialCaption, setInitialCaption] = useState<string>('Evidence');
 
     // Sync Local State
     useEffect(() => {
@@ -33,7 +34,7 @@ export const useSheetSignatures = (
             setSvSign(currentSheet.loadingSupervisorSign || '');
             setSlSign(currentSheet.slSign || '');
             setDeoSign(currentSheet.deoSign || '');
-            setCapturedImage(currentSheet.capturedImages?.[0] || null);
+            setCapturedImages(currentSheet.capturedImages || []);
         });
     }, [currentSheet, currentUser]);
 
@@ -52,8 +53,9 @@ export const useSheetSignatures = (
         }
     }, [cameraActive, mediaStream]);
 
-    const startCamera = async () => {
+    const startCamera = async (defaultCaption: string = 'Evidence') => {
         try {
+            setInitialCaption(defaultCaption);
             setCameraActive(true);
             const stream = await navigator.mediaDevices.getUserMedia({ video: true });
             setMediaStream(stream);
@@ -65,14 +67,20 @@ export const useSheetSignatures = (
         }
     };
 
-    const capturePhoto = () => {
+    const capturePhoto = (caption: string = 'Evidence') => {
         if (videoRef.current && canvasRef.current) {
             const context = canvasRef.current.getContext('2d');
             if (context) {
                 canvasRef.current.width = videoRef.current.videoWidth;
                 canvasRef.current.height = videoRef.current.videoHeight;
                 context.drawImage(videoRef.current, 0, 0);
-                setCapturedImage(canvasRef.current.toDataURL('image/png'));
+                const newDataUrl = canvasRef.current.toDataURL('image/png');
+                const newImage = {
+                    url: newDataUrl,
+                    caption,
+                    timestamp: new Date().toISOString()
+                };
+                setCapturedImages(prev => [...prev, newImage]);
                 stopCamera();
             }
         }
@@ -91,12 +99,14 @@ export const useSheetSignatures = (
             slSign, setSlSign,
             deoSign, setDeoSign,
             remarks, setRemarks,
-            capturedImage
+            capturedImages,
+            setCapturedImages
         },
         camera: {
             videoRef,
             canvasRef,
             cameraActive,
+            initialCaption,
             startCamera,
             stopCamera,
             capturePhoto

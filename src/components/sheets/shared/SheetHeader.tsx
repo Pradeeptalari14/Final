@@ -248,29 +248,33 @@ export const SheetHeader: React.FC<SheetHeaderProps> = ({
                         />
                     </FieldWrapper>
 
-                    {/* Start Time */}
+                    {/* Time Fields - Only for Loading */}
                     <FieldWrapper label="Start Time" icon={Clock}>
                         <input
                             type="text"
                             value={data.loadingStartTime || ''}
                             onChange={(e) => onChange('loadingStartTime', e.target.value)}
-                            disabled={true}
-                            className="w-full bg-transparent text-sm font-medium text-slate-500 outline-none"
-                            placeholder="Auto-filled"
+                            disabled={isLocked || isCompleted}
+                            className={`w-full bg-transparent text-sm font-medium outline-none ${isLocked || isCompleted ? 'text-slate-500' : 'text-slate-700'}`}
+                            placeholder="HH:MM:SS"
                         />
                     </FieldWrapper>
 
-                    {/* End Time */}
                     <FieldWrapper label="End Time" icon={Clock}>
                         <input
                             type="text"
                             value={data.loadingEndTime || ''}
-                            readOnly
-                            className="w-full bg-transparent text-sm font-medium text-slate-500 outline-none"
-                            placeholder=""
+                            onChange={(e) => onChange('loadingEndTime', e.target.value)}
+                            disabled={isLocked || isCompleted}
+                            className={`w-full bg-transparent text-sm font-medium outline-none ${isLocked || isCompleted ? 'text-slate-500' : 'text-slate-700'}`}
+                            placeholder="HH:MM:SS"
                         />
                     </FieldWrapper>
+                </>
+            )}
 
+            {!isStaging && (
+                <>
                     {/* Status (15th Item) */}
                     <FieldWrapper label="Status" icon={FileCheck}>
                         <div

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, AlertTriangle, Filter } from 'lucide-react';
+import { Box, AlertTriangle, Filter, Camera } from 'lucide-react';
 import { SheetData, Role, SheetStatus } from '@/types';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -14,6 +14,7 @@ interface LoadingItemsTableProps {
     onLooseChange: (skuSrNo: number, value: string) => void;
     onToggleRejection?: (skuSrNo: number, reason?: string) => void;
     currentRole?: Role;
+    onAddPhoto: (label: string, skuName?: string) => void;
 }
 
 export const LoadingItemsTable: React.FC<LoadingItemsTableProps> = ({
@@ -23,7 +24,8 @@ export const LoadingItemsTable: React.FC<LoadingItemsTableProps> = ({
     onCellBlur,
     onLooseChange,
     onToggleRejection,
-    currentRole
+    currentRole,
+    onAddPhoto
 }) => {
     const [showRejectedOnly, setShowRejectedOnly] = useState(false);
     const [modalOpen, setModalOpen] = useState(false);
@@ -342,6 +344,17 @@ export const LoadingItemsTable: React.FC<LoadingItemsTableProps> = ({
                                                     className={`border-b border-slate-100 p-3 text-center font-bold ${lItem.balance !== 0 ? 'text-red-600' : 'text-green-600'}`}
                                                 >
                                                     {lItem.balance}
+                                                    {lItem.balance > 0 && !isLocked && currentRole !== Role.SHIFT_LEAD && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="ml-1 h-5 w-5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full"
+                                                            onClick={() => onAddPhoto("Loose Returned", sItem.skuName)}
+                                                            title="Add photo for loose returned items"
+                                                        >
+                                                            <Camera size={12} />
+                                                        </Button>
+                                                    )}
                                                 </td>
                                             </>
                                         )}
@@ -384,6 +397,14 @@ export const LoadingItemsTable: React.FC<LoadingItemsTableProps> = ({
                                         >
                                             {lItem.balance}
                                         </div>
+                                        {lItem.balance > 0 && !isLocked && currentRole !== Role.SHIFT_LEAD && (
+                                            <button
+                                                onClick={() => onAddPhoto("Loose Returned", sItem.skuName)}
+                                                className="mt-1 text-[10px] text-red-600 font-bold border border-red-200 bg-red-50 px-2 py-1 rounded flex items-center gap-1"
+                                            >
+                                                Take Photo
+                                            </button>
+                                        )}
                                     </div>
                                 )}
                             </div>

@@ -29,6 +29,7 @@ export function OperationalTableView({
     const navigate = useNavigate();
     const { addToast } = useToast();
     const { settings } = useAppState();
+    const isCompact = settings?.density === 'compact';
     const [processingId, setProcessingId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [dateFilter, setDateFilter] = useState('');
@@ -217,13 +218,13 @@ export function OperationalTableView({
     };
 
     return (
-        <div className="flex flex-col h-full space-y-6 animate-in fade-in slide-in-from-bottom-2">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div className={`flex flex-col h-full ${isCompact ? 'space-y-3' : 'space-y-6'} animate-in fade-in slide-in-from-bottom-2`}>
+            <div className={`flex flex-col md:flex-row md:items-center justify-between gap-4 ${isCompact ? 'mb-2' : 'mb-6'}`}>
                 <div className="flex flex-wrap gap-2">
                     <Button
                         variant="ghost"
                         onClick={() => onViewModeChange('ALL')}
-                        className={`text-xs px-4 rounded-lg transition-all ${activeViewMode === 'ALL'
+                        className={`${isCompact ? 'text-[10px] px-2 h-7' : 'text-xs px-4 h-9'} rounded-lg transition-all ${activeViewMode === 'ALL'
                             ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-black shadow-md ring-1 ring-slate-200 dark:ring-white/10 scale-105'
                             : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50'
                             } uppercase tracking-wider`}
@@ -236,7 +237,7 @@ export function OperationalTableView({
                             <Button
                                 variant="ghost"
                                 onClick={() => onViewModeChange('VIEW_STAGING_DRAFT')}
-                                className={`text-xs px-4 rounded-lg transition-all ${activeViewMode === 'VIEW_STAGING_DRAFT' || activeViewMode === 'DRAFT'
+                                className={`${isCompact ? 'text-[10px] px-2 h-7' : 'text-xs px-4 h-9'} rounded-lg transition-all ${activeViewMode === 'VIEW_STAGING_DRAFT' || activeViewMode === 'DRAFT'
                                     ? 'bg-blue-600 text-white font-black shadow-md scale-105'
                                     : 'text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20'
                                     } uppercase tracking-wider`}
@@ -246,7 +247,7 @@ export function OperationalTableView({
                             <Button
                                 variant="ghost"
                                 onClick={() => onViewModeChange('VIEW_STAGING_VERIFY')}
-                                className={`text-xs px-4 rounded-lg transition-all ${activeViewMode === 'VIEW_STAGING_VERIFY' || activeViewMode === 'PENDING'
+                                className={`${isCompact ? 'text-[10px] px-2 h-7' : 'text-xs px-4 h-9'} rounded-lg transition-all ${activeViewMode === 'VIEW_STAGING_VERIFY' || activeViewMode === 'PENDING'
                                     ? 'bg-blue-600 text-white font-black shadow-md scale-105'
                                     : 'text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20'
                                     } uppercase tracking-wider border border-blue-100/50`}
@@ -256,7 +257,7 @@ export function OperationalTableView({
                             <Button
                                 variant="ghost"
                                 onClick={() => onViewModeChange('VIEW_LOCKED')}
-                                className={`text-xs px-4 rounded-lg transition-all ${activeViewMode === 'VIEW_LOCKED' || activeViewMode === 'LOCKED'
+                                className={`${isCompact ? 'text-[10px] px-2 h-7' : 'text-xs px-4 h-9'} rounded-lg transition-all ${activeViewMode === 'VIEW_LOCKED' || activeViewMode === 'LOCKED'
                                     ? 'bg-blue-600 text-white font-black shadow-md scale-105'
                                     : 'text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20'
                                     } uppercase tracking-wider`}
@@ -266,7 +267,7 @@ export function OperationalTableView({
                             <Button
                                 variant="ghost"
                                 onClick={() => onViewModeChange('VIEW_COMPLETED')}
-                                className={`text-xs px-4 rounded-lg transition-all ${activeViewMode === 'VIEW_COMPLETED' || activeViewMode === 'COMPLETED'
+                                className={`${isCompact ? 'text-[10px] px-2 h-7' : 'text-xs px-4 h-9'} rounded-lg transition-all ${activeViewMode === 'VIEW_COMPLETED' || activeViewMode === 'COMPLETED'
                                     ? 'bg-emerald-600 text-white font-black shadow-md scale-105'
                                     : 'text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
                                     } uppercase tracking-wider`}
@@ -276,7 +277,7 @@ export function OperationalTableView({
                             <Button
                                 variant="ghost"
                                 onClick={() => onViewModeChange('VIEW_STAGING_REJECTED')}
-                                className={`text-xs px-4 rounded-lg transition-all ${activeViewMode === 'VIEW_STAGING_REJECTED' || activeViewMode === 'REJECTED'
+                                className={`${isCompact ? 'text-[10px] px-2 h-7' : 'text-xs px-4 h-9'} rounded-lg transition-all ${activeViewMode === 'VIEW_STAGING_REJECTED' || activeViewMode === 'REJECTED'
                                     ? 'bg-red-600 text-white font-black shadow-md scale-105'
                                     : 'text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20'
                                     } uppercase tracking-wider`}
@@ -393,13 +394,13 @@ export function OperationalTableView({
                 <div className="flex flex-wrap items-center gap-3">
                     <div className="relative">
                         <Search
-                            size={14}
+                            size={isCompact ? 12 : 14}
                             className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
                         />
                         <input
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="bg-muted/50 border border-border rounded-lg pl-9 pr-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:border-primary/50 focus:outline-none w-40"
+                            className={`bg-muted/50 border border-border rounded-lg pl-9 pr-3 ${isCompact ? 'py-1 text-[10px]' : 'py-2 text-sm'} text-foreground placeholder-muted-foreground focus:border-primary/50 focus:outline-none w-40`}
                             placeholder={t('search_placeholder', settings.language)}
                         />
                     </div>
@@ -407,7 +408,7 @@ export function OperationalTableView({
                         type="date"
                         value={dateFilter}
                         onChange={(e) => setDateFilter(e.target.value)}
-                        className="bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:border-primary/50 focus:outline-none [color-scheme:dark] dark:[color-scheme:dark]"
+                        className={`bg-muted/50 border border-border rounded-lg px-3 ${isCompact ? 'py-1 text-[10px]' : 'py-2 text-sm'} text-foreground focus:border-primary/50 focus:outline-none [color-scheme:dark] dark:[color-scheme:dark]`}
                     />
                 </div>
             </div>

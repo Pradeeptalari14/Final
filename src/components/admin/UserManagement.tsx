@@ -13,8 +13,7 @@ import {
     PanelLeft,
     Filter,
     ArrowUpDown,
-    Download,
-    ChevronDown
+    Download
 } from 'lucide-react';
 import { useData } from '@/contexts/DataContext';
 import { useAppState } from '@/contexts/AppStateContext';
@@ -50,6 +49,7 @@ type SortDirection = 'asc' | 'desc';
 export function UserManagement({ users, refreshUsers, sheets }: UserManagementProps) {
     const { currentUser } = useData();
     const { settings } = useAppState();
+    const isCompact = settings?.density === 'compact';
 
     const {
         userSearchQuery,
@@ -225,33 +225,30 @@ export function UserManagement({ users, refreshUsers, sheets }: UserManagementPr
                 <div className="h-full overflow-y-auto px-4 pt-1 lg:p-6">
                     <div className="max-w-7xl mx-auto space-y-6">
                         <div>
-                            <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 mb-1">User Directory</h2>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">Select a category to manage users and permissions.</p>
+                            <h2 className={`${isCompact ? 'text-xl md:text-2xl' : 'text-2xl'} font-black text-slate-800 dark:text-slate-100 mb-1`}>User Directory</h2>
+                            <p className={`${isCompact ? 'text-[10px]' : 'text-sm'} text-slate-500 dark:text-slate-400`}>Select a category to manage users and permissions.</p>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 ${isCompact ? 'gap-3' : 'gap-4'}`}>
                             {navItems.map((item) => (
                                 <button
                                     key={item.id}
                                     onClick={() => handleCategoryClick(item.id)}
-                                    className="group relative flex flex-col items-start p-4 h-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl hover:shadow-lg hover:shadow-indigo-500/10 hover:border-indigo-200 dark:hover:border-indigo-900 transition-all duration-300 text-left"
+                                    className={`group relative flex flex-col items-start ${isCompact ? 'p-3' : 'p-4'} h-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl hover:shadow-lg hover:shadow-indigo-500/10 hover:border-indigo-200 dark:hover:border-indigo-900 transition-all duration-300 text-left`}
                                 >
-                                    <div className={cn("p-2 rounded-xl mb-3 transition-colors", item.id === 'ALL' ? "bg-slate-100 dark:bg-slate-800" : "bg-indigo-50 dark:bg-indigo-900/20")}>
-                                        <item.icon className={cn("h-6 w-6", item.color)} />
+                                    <div className={cn(isCompact ? "p-1.5 rounded-lg mb-2" : "p-2 rounded-xl mb-3", "transition-colors", item.id === 'ALL' ? "bg-slate-100 dark:bg-slate-800" : "bg-indigo-50 dark:bg-indigo-900/20")}>
+                                        <item.icon className={cn(isCompact ? "h-5 w-5" : "h-6 w-6", item.color)} />
                                     </div>
-                                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-1 group-hover:text-indigo-600 transition-colors">
+                                    <h3 className={`${isCompact ? 'text-base' : 'text-lg'} font-bold text-slate-800 dark:text-slate-100 mb-1 group-hover:text-indigo-600 transition-colors`}>
                                         {item.label}
                                     </h3>
-                                    <p className="text-xs font-medium text-slate-400 mb-4 line-clamp-2">
+                                    <p className={`${isCompact ? 'text-[9px]' : 'text-xs'} font-medium text-slate-400 mb-4 line-clamp-2`}>
                                         Manage {item.label.toLowerCase()} settings and access.
                                     </p>
                                     <div className="mt-auto flex items-center justify-between w-full">
                                         <Badge variant="secondary" className="bg-slate-100 dark:bg-slate-800 text-slate-600 px-2 py-0.5 text-xs font-bold rounded-md border-0 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/50 group-hover:text-indigo-600 transition-colors">
                                             {item.count} Users
                                         </Badge>
-                                        <div className="h-6 w-6 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center opacity-0 group-hover:opacity-100 transform translate-x-[-10px] group-hover:translate-x-0 transition-all duration-300">
-                                            <ChevronDown className="h-3 w-3 -rotate-90 text-indigo-600" />
-                                        </div>
                                     </div>
                                 </button>
                             ))}
@@ -260,10 +257,10 @@ export function UserManagement({ users, refreshUsers, sheets }: UserManagementPr
                 </div>
             ) : (
                 // --- LIST MODE: Split View (Sidebar + Table) ---
-                <div className="flex flex-col lg:flex-row h-full gap-4 lg:gap-6">
+                <div className={`flex flex-col lg:flex-row h-full ${isCompact ? 'gap-2 lg:gap-4' : 'gap-4 lg:gap-6'}`}>
                     {/* LEFT SIDEBAR - DIRECTORY TREE */}
                     {isSidebarOpen && (
-                        <div className="w-full lg:w-64 shrink-0 flex flex-row lg:flex-col gap-2 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0 scrollbar-hide bg-white/50 lg:bg-transparent p-2 lg:p-0 rounded-2xl lg:rounded-none border lg:border-none border-slate-100 dark:border-slate-800">
+                        <div className={`w-full lg:w-64 shrink-0 flex flex-row lg:flex-col gap-2 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0 scrollbar-hide bg-white/50 lg:bg-transparent ${isCompact ? 'p-1 lg:p-0' : 'p-2 lg:p-0'} rounded-2xl lg:rounded-none border lg:border-none border-slate-100 dark:border-slate-800`}>
                             <div className="px-2 lg:px-4 py-2 lg:w-full min-w-[200px]">
                                 <button
                                     onClick={() => setIsOverview(true)}
@@ -281,7 +278,9 @@ export function UserManagement({ users, refreshUsers, sheets }: UserManagementPr
                                             key={item.id}
                                             onClick={() => setFilter(item.id as Role | 'ALL' | 'PENDING' | 'LOCKED')}
                                             className={cn(
-                                                'flex-shrink-0 lg:w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 border lg:border-none border-slate-100 dark:border-slate-800 lg:bg-transparent bg-white dark:bg-slate-900',
+                                                'flex-shrink-0 lg:w-full flex items-center justify-between px-3',
+                                                isCompact ? 'py-1.5 rounded-lg text-[10px]' : 'py-2.5 rounded-xl text-sm',
+                                                'font-medium transition-all duration-200 border lg:border-none border-slate-100 dark:border-slate-800 lg:bg-transparent bg-white dark:bg-slate-900',
                                                 userFilter === item.id
                                                     ? 'bg-white dark:bg-slate-800 text-indigo-600 shadow-lg shadow-indigo-500/10 lg:scale-105 border-indigo-200 dark:border-indigo-900'
                                                     : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-700 lg:hover:pl-4'
@@ -309,7 +308,7 @@ export function UserManagement({ users, refreshUsers, sheets }: UserManagementPr
                     {/* MAIN CONTENT - DATA GRID */}
                     <div className="flex-1 flex flex-col bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden min-w-0">
                         {/* TOOLBAR */}
-                        <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl sticky top-0 z-30 transition-all">
+                        <div className={`${isCompact ? 'p-2' : 'p-4'} border-b border-slate-100 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl sticky top-0 z-30 transition-all`}>
                             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                                 <div className="flex items-center gap-3 w-full flex-1">
                                     <Button
@@ -362,7 +361,7 @@ export function UserManagement({ users, refreshUsers, sheets }: UserManagementPr
                                         <DropdownMenuContent align="end" className="w-56">
                                             <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
                                             <DropdownMenuSeparator />
-                                            <DropdownMenuRadioGroup value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+                                            <DropdownMenuRadioGroup value={statusFilter} onValueChange={(v) => setStatusFilter(v as 'ALL' | 'ACTIVE' | 'LOCKED')}>
                                                 <DropdownMenuRadioItem value="ALL">All Users</DropdownMenuRadioItem>
                                                 <DropdownMenuRadioItem value="ACTIVE">Active Only</DropdownMenuRadioItem>
                                                 <DropdownMenuRadioItem value="LOCKED">Locked Accounts</DropdownMenuRadioItem>
@@ -381,7 +380,7 @@ export function UserManagement({ users, refreshUsers, sheets }: UserManagementPr
                                         <DropdownMenuContent align="end" className="w-48">
                                             <DropdownMenuLabel>Sort Order</DropdownMenuLabel>
                                             <DropdownMenuSeparator />
-                                            <DropdownMenuRadioGroup value={sortConfig.key} onValueChange={(v) => setSortConfig(prev => ({ ...prev, key: v as any }))}>
+                                            <DropdownMenuRadioGroup value={sortConfig.key} onValueChange={(v) => setSortConfig(prev => ({ ...prev, key: v as SortKey }))}>
                                                 <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem>
                                                 <DropdownMenuRadioItem value="role">Role</DropdownMenuRadioItem>
                                                 <DropdownMenuRadioItem value="lastActive">Last Active</DropdownMenuRadioItem>
@@ -420,6 +419,7 @@ export function UserManagement({ users, refreshUsers, sheets }: UserManagementPr
                                 onDelete={handleDeleteUser}
                                 onResetPassword={setPasswordResetUser}
                                 onRowClick={(user) => setSelectedUser(user)}
+                                density={settings?.density}
                             />
                         </div>
 

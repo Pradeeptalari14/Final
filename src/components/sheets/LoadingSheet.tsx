@@ -4,7 +4,7 @@ import { SheetStatus, Role, Comment } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { SheetHeader } from './shared/SheetHeader';
 import { VerificationFooter as SharedVerificationFooter } from './shared/VerificationFooter';
-import { Printer, ArrowLeft, Save, CheckCircle, AlertTriangle, Camera, X, Clock, RefreshCw } from 'lucide-react';
+import { Printer, ArrowLeft, Save, CheckCircle, AlertTriangle, X, Clock, RefreshCw, Loader2 } from 'lucide-react';
 import { useLoadingSheetLogic } from '@/hooks/useLoadingSheetLogic';
 
 // Sub-components
@@ -89,6 +89,7 @@ export default function LoadingSheet() {
     const {
         currentSheet,
         loading,
+        actionLoading,
         currentUser,
         states,
         errors,
@@ -96,7 +97,7 @@ export default function LoadingSheet() {
         dismissValidationError,
         header,
         footer,
-        camera: { videoRef, canvasRef, cameraActive, startCamera, stopCamera, capturePhoto },
+        camera: { videoRef, canvasRef, cameraActive, startCamera, stopCamera, capturePhoto, initialCaption },
         totals,
         lists,
         handlers: {
@@ -118,10 +119,20 @@ export default function LoadingSheet() {
     } = useLoadingSheetLogic();
 
 
+    const handleAddPhoto = (label: string, skuName?: string) => {
+        const fullCaption = skuName ? `${label}: ${skuName}` : label;
+        startCamera(fullCaption);
+    };
+
     if (loading || !currentSheet)
         return <div className="p-8 text-center text-slate-500">Loading Sheet Data...</div>;
 
     const { isLocked, isCompleted, isPendingVerification } = states;
+
+    // Dynamic Camera Options
+    const cameraOptions = ['Evidence'];
+    if (lists.returnedItems.length > 0) cameraOptions.push('Loose Returned');
+    if (lists.overLoadedItems.length > 0 || lists.extraItemsWithQty.length > 0) cameraOptions.push('Extra Loaded');
 
     return (
         <div className="flex flex-col gap-4 w-full px-4 pb-24 print:w-full print:max-w-none print:pb-0 print:gap-1">
@@ -182,9 +193,11 @@ export default function LoadingSheet() {
                         <button
                             type="button"
                             onClick={handleSaveProgress}
-                            className="bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-slate-50 transition-colors"
+                            disabled={actionLoading}
+                            className="bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            <Save size={16} /> Save Progress
+                            {actionLoading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                            Save Progress
                         </button>
                     )}
                 </div>
@@ -207,15 +220,21 @@ export default function LoadingSheet() {
                         ATTACHED IMAGES ({currentSheet.capturedImages.length})
                     </div>
                     <div className="grid grid-cols-1 gap-4">
-                        {currentSheet.capturedImages.map((imgUrl, i) => (
-                            <div key={i} className="border border-black p-1">
-                                <img
-                                    src={imgUrl}
-                                    className="w-full h-auto object-contain max-h-[90vh]"
-                                    alt={`Evidence ${i + 1}`}
-                                />
-                            </div>
-                        ))}
+                        {currentSheet.capturedImages.map((img, i) => {
+                            const url = typeof img === 'string' ? img : img.url;
+                            return (
+                                <div key={i} className="border border-black p-1 text-center break-inside-avoid page-break-inside-avoid">
+                                    <div className="mb-2 text-base font-bold text-slate-900 border-b border-slate-200 pb-1 uppercase tracking-wide">
+                                        {typeof img !== 'string' ? img.caption : `Evidence ${i + 1}`}
+                                    </div>
+                                    <img
+                                        src={url}
+                                        className="w-full h-auto object-contain max-h-[80vh] mx-auto"
+                                        alt={`Evidence ${i + 1}`}
+                                    />
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             )}
@@ -274,14 +293,17 @@ export default function LoadingSheet() {
                     onLooseChange={handleLooseChange}
                     onToggleRejection={handleToggleRejection}
                     currentRole={currentUser?.role}
+                    onAddPhoto={handleAddPhoto}
                 />
 
                 <AdditionalItemsSection
                     additionalItems={currentSheet.additionalItems || []}
-                    isLocked={isLocked}
-                    status={currentSheet.status as SheetStatus}
+                    isLocked={states.isLocked}
+                    status={currentSheet.status}
                     totalAdditional={totals.totalAdditional}
                     onItemChange={handleAdditionalChange}
+                    onAddPhoto={handleAddPhoto}
+                    currentRole={currentUser?.role}
                 />
 
                 <LoadingSummary
@@ -294,17 +316,32 @@ export default function LoadingSheet() {
                     currentSheet={currentSheet}
                 />
 
-                {footer.capturedImage && (
+                {footer.capturedImages && footer.capturedImages.length > 0 && (
                     <div className="p-6 border-b border-slate-200 bg-white">
                         <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
-                            Captured Photo
+                            Captured Photos ({footer.capturedImages.length})
                         </h3>
-                        <div className="max-w-md rounded-lg overflow-hidden border border-slate-200 shadow-sm">
-                            <img
-                                src={footer.capturedImage}
-                                alt="Loading Proof"
-                                className="w-full h-auto object-cover"
-                            />
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {footer.capturedImages.map((img, idx) => {
+                                const isObj = typeof img !== 'string';
+                                const url = isObj ? img.url : img;
+                                const caption = isObj ? img.caption : `Image ${idx + 1}`;
+
+                                return (
+                                    <div key={idx} className="relative group rounded-lg overflow-hidden border border-slate-200 shadow-sm aspect-video bg-black">
+                                        <img
+                                            src={url}
+                                            alt={`Evidence ${idx + 1}`}
+                                            className="w-full h-full object-contain"
+                                        />
+                                        <div className="absolute inset-x-0 bottom-0 bg-black/60 backdrop-blur-sm p-2">
+                                            <p className="text-white text-[10px] font-bold text-center uppercase tracking-wide truncate">
+                                                {caption}
+                                            </p>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
                 )}
@@ -328,13 +365,15 @@ export default function LoadingSheet() {
                         <button
                             type="button"
                             onClick={handleSaveProgress}
-                            className="px-6 py-2.5 bg-white text-slate-700 border border-slate-300 rounded-lg flex items-center gap-2 cursor-pointer hover:bg-slate-50 transition-colors font-bold shadow-sm"
+                            disabled={actionLoading}
+                            className="px-6 py-2.5 bg-white text-slate-700 border border-slate-300 rounded-lg flex items-center gap-2 cursor-pointer hover:bg-slate-50 transition-colors font-bold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            <Save size={18} /> Save Progress
+                            {actionLoading ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                            Save Progress
                         </button>
                         <button
                             type="button"
-                            onClick={startCamera}
+                            onClick={() => startCamera('Evidence')}
                             disabled={!states.isDataComplete}
                             className={cn(
                                 "px-6 py-2.5 border rounded-lg flex items-center gap-2 cursor-pointer transition-colors font-bold",
@@ -343,20 +382,21 @@ export default function LoadingSheet() {
                                     : "bg-slate-50 text-slate-300 border-slate-200 cursor-not-allowed"
                             )}
                         >
-                            <Camera size={18} /> Add Photo
+                            {states.isPhotoComplete ? "Add More Photos" : "Add Photo"}
                         </button>
                         <button
                             type="button"
                             onClick={handleSubmit}
-                            disabled={!states.isDataComplete || !states.isPhotoComplete}
+                            disabled={!states.isDataComplete || !states.isPhotoComplete || actionLoading}
                             className={cn(
                                 "px-8 py-2.5 rounded-lg flex items-center gap-2 font-bold shadow-lg transition-colors",
-                                (states.isDataComplete && states.isPhotoComplete)
+                                (states.isDataComplete && states.isPhotoComplete && !actionLoading)
                                     ? "bg-green-600 text-white hover:bg-green-700"
                                     : "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
                             )}
                         >
-                            <CheckCircle size={18} /> Request Verification
+                            {actionLoading ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle size={18} />}
+                            Request Verification
                         </button>
                     </div>
                 )}
@@ -378,6 +418,8 @@ export default function LoadingSheet() {
                 videoRef={videoRef}
                 onStop={stopCamera}
                 onCapture={capturePhoto}
+                options={cameraOptions}
+                initialCaption={initialCaption}
             />
             <canvas ref={canvasRef} className="hidden" />
 

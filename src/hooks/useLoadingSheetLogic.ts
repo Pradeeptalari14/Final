@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
 import { SheetData, SheetStatus, Role } from '@/types';
+import { useToast } from '@/contexts/ToastContext';
 import { useSheetHeader } from './useSheetHeader';
 import { useSheetGrid } from './useSheetGrid';
 import { useSheetSignatures } from './useSheetSignatures';
@@ -18,17 +19,36 @@ export const useLoadingSheetLogic = () => {
         users,
         loading: dataLoading
     } = useData();
+    const { addToast } = useToast();
     const [currentSheet, setCurrentSheet] = useState<SheetData | null>(null);
     const [loading, setLoading] = useState(true);
+    const [actionLoading, setActionLoading] = useState(false);
     const [errors] = useState<string[]>([]);
+    const isDirty = useRef(false);
+    const prevId = useRef(id);
+
+    // Reset dirty state if navigating to a different sheet
+    useEffect(() => {
+        if (id !== prevId.current) {
+            isDirty.current = false;
+            prevId.current = id;
+        }
+    }, [id]);
 
     // --- Sub-Hooks ---
     const { headerState, handleHeaderChange } = useSheetHeader(currentSheet, currentUser, users);
+
+    // Wrap setCurrentSheet to track dirty state
+    const setSheetData = (data: React.SetStateAction<SheetData | null>) => {
+        setCurrentSheet(data);
+        isDirty.current = true;
+    };
+
     const {
         validationError,
         dismissValidationError,
         handlers: gridHandlers
-    } = useSheetGrid(currentSheet, setCurrentSheet);
+    } = useSheetGrid(currentSheet, setSheetData);
     const { signatureState, camera } = useSheetSignatures(currentSheet, currentUser);
 
     const { setEndTime } = headerState; // Exposed setter for submit logic
@@ -38,8 +58,15 @@ export const useLoadingSheetLogic = () => {
         if (!id) return;
 
         const loadSheet = async () => {
-            // 1. Try local cache first
-            if (currentSheet && currentSheet.id === id) return; // Don't overwrite local unsaved changes
+            // Already loaded this sheet? Don't overwrite to avoid resetting sub-hook states
+            if (currentSheet && currentSheet.id === id) {
+                return;
+            }
+
+            // CRITICAL: If we have local unsaved changes, DO NOT let background sync overwrite them
+            if (isDirty.current) {
+                return;
+            }
 
             setLoading(true);
 
@@ -61,7 +88,7 @@ export const useLoadingSheetLogic = () => {
                     await refreshSheets();
                 }
             }
-            setLoading(false); // End loading even if not found to show "Sheet Not Found"
+            setLoading(false);
         };
 
         loadSheet();
@@ -121,7 +148,7 @@ export const useLoadingSheetLogic = () => {
             loadingSupervisorSign: signatureState.svSign,
             slSign: signatureState.slSign,
             deoSign: signatureState.deoSign,
-            capturedImages: signatureState.capturedImage ? [signatureState.capturedImage] : [],
+            capturedImages: signatureState.capturedImages || [],
             completedBy: status === SheetStatus.COMPLETED ? currentUser?.username : undefined,
             completedAt: status === SheetStatus.COMPLETED ? new Date().toISOString() : undefined,
             comments: signatureState.remarks
@@ -139,7 +166,8 @@ export const useLoadingSheetLogic = () => {
     };
 
     const handleSaveProgress = async () => {
-        if (!currentSheet) return;
+        if (!currentSheet || actionLoading) return;
+        setActionLoading(true);
         try {
             const data = buildSheetData(currentSheet.status);
             const hasStartedLog = currentSheet.history?.some((h) => h.action === 'LOADING_STARTED');
@@ -156,19 +184,45 @@ export const useLoadingSheetLogic = () => {
                 ];
             }
             await updateSheet(data);
-            alert('Progress Saved Successfully!');
+            isDirty.current = false;
+            addToast('success', 'Progress saved successfully');
         } catch (e) {
             console.error(e);
-            alert('Failed to save progress.');
+            addToast('error', 'Failed to save progress');
+        } finally {
+            setActionLoading(false);
         }
     };
 
     const handleSubmit = async () => {
-        if (!currentSheet) return;
+        if (!currentSheet || actionLoading) return;
         if (!signatureState.svName || signatureState.svName.trim() === '') {
-            alert('Supervisor Name is required to complete the sheet.');
+            addToast('error', 'Supervisor Name is required to complete the sheet');
             return;
         }
+
+        // Strict Photo Validation
+        const images = signatureState.capturedImages || [];
+        const hasEvidence = images.some(img => typeof img !== 'string' && img.caption === 'Evidence');
+        const hasLoose = images.some(img => typeof img !== 'string' && img.caption === 'Loose Returned');
+        const hasExtra = images.some(img => typeof img !== 'string' && img.caption === 'Extra Loaded');
+
+        const needsLoose = lists.returnedItems.length > 0;
+        const needsExtra = lists.overLoadedItems.length > 0 || lists.extraItemsWithQty.length > 0;
+
+        if (!hasEvidence) {
+            addToast('error', 'Missing Evidence Photo for the total sheet');
+            return;
+        }
+        if (needsLoose && !hasLoose) {
+            addToast('error', 'Missing Evidence Photo for Loose Returned items');
+            return;
+        }
+        if (needsExtra && !hasExtra) {
+            addToast('error', 'Missing Evidence Photo for Extra Loaded items');
+            return;
+        }
+        setActionLoading(true);
         const timeNow = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
         setEndTime(timeNow); // Update local hook state
         const tempSheet = buildSheetData(SheetStatus.LOADING_VERIFICATION_PENDING);
@@ -192,18 +246,22 @@ export const useLoadingSheetLogic = () => {
         try {
             await updateSheet(finalSheet);
             setCurrentSheet(finalSheet);
-            alert('Submitted for Shift Lead Verification!');
+            isDirty.current = false;
+            addToast('success', 'Submitted for final verification');
             navigate('/database');
         } catch (e) {
             console.error(e);
-            alert('Failed to submit.');
+            addToast('error', 'Failed to submit');
+        } finally {
+            setActionLoading(false);
         }
     };
 
     const handleVerificationAction = async (approve: boolean, reason?: string) => {
-        if (!currentSheet) return;
-        if (approve) {
-            if (confirm('Confirm final approval? This sheet will be marked as COMPLETED.')) {
+        if (!currentSheet || actionLoading) return;
+        setActionLoading(true);
+        try {
+            if (approve) {
                 const finalSheet: SheetData = {
                     ...currentSheet,
                     status: SheetStatus.COMPLETED,
@@ -228,38 +286,45 @@ export const useLoadingSheetLogic = () => {
                 };
                 await updateSheet(finalSheet);
                 setCurrentSheet(finalSheet);
+                addToast('success', 'Sheet approved and completed');
                 navigate('/database');
+            } else {
+                if (reason) {
+                    const rejectedSheet: SheetData = {
+                        ...currentSheet,
+                        status: SheetStatus.LOCKED,
+                        rejectionReason: reason,
+                        comments: [
+                            ...(currentSheet.comments || []),
+                            {
+                                id: Date.now().toString(),
+                                author: currentUser?.username || 'Shift Lead',
+                                text: `REJECTED: ${reason}`,
+                                timestamp: new Date().toISOString()
+                            }
+                        ],
+                        history: [
+                            ...(currentSheet.history || []),
+                            {
+                                id: Date.now().toString(),
+                                actor: currentUser?.username || 'Unknown',
+                                action: 'REJECTED_LOADING',
+                                timestamp: new Date().toISOString(),
+                                details: `Rejected: ${reason}`
+                            }
+                        ]
+                    };
+                    await updateSheet(rejectedSheet);
+                    setCurrentSheet(rejectedSheet);
+                    addToast('error', 'Sheet rejected');
+                    navigate('/database');
+                }
             }
-        } else {
-            if (reason) {
-                const rejectedSheet: SheetData = {
-                    ...currentSheet,
-                    status: SheetStatus.LOCKED,
-                    rejectionReason: reason,
-                    comments: [
-                        ...(currentSheet.comments || []),
-                        {
-                            id: Date.now().toString(),
-                            author: currentUser?.username || 'Shift Lead',
-                            text: `REJECTED: ${reason}`,
-                            timestamp: new Date().toISOString()
-                        }
-                    ],
-                    history: [
-                        ...(currentSheet.history || []),
-                        {
-                            id: Date.now().toString(),
-                            actor: currentUser?.username || 'Unknown',
-                            action: 'REJECTED_LOADING',
-                            timestamp: new Date().toISOString(),
-                            details: `Rejected: ${reason}`
-                        }
-                    ]
-                };
-                await updateSheet(rejectedSheet);
-                setCurrentSheet(rejectedSheet);
-                navigate('/database');
-            }
+        } catch (e) {
+            console.error(e);
+            addToast('error', 'Failed to perform verification action');
+        } finally {
+            setActionLoading(false);
         }
     };
 
@@ -310,21 +375,16 @@ export const useLoadingSheetLogic = () => {
 
     const isDataComplete = useMemo(() => {
         if (!currentSheet) return false;
-        const mainComplete = (currentSheet.loadingItems || []).every(
-            (li) => li.balance === 0 || li.isRejected
-        );
-        return mainComplete && (totals.grandTotalLoaded > 0 || currentSheet.stagingItems.length === 0);
+        // Relaxed complete check: As long as something is loaded, we allow submission.
+        // Discrepancies (Returns/Overloads) are warnings, not blockers.
+        return totals.grandTotalLoaded > 0 || currentSheet.stagingItems.length === 0;
     }, [currentSheet, totals.grandTotalLoaded]);
-
-    const isPhotoComplete = useMemo(() => {
-        return !!signatureState.capturedImage || (currentSheet?.capturedImages && currentSheet.capturedImages.length > 0);
-    }, [signatureState.capturedImage, currentSheet?.capturedImages]);
 
     const states = {
         isCompleted: currentSheet?.status === SheetStatus.COMPLETED,
         isPendingVerification: currentSheet?.status === SheetStatus.LOADING_VERIFICATION_PENDING,
         isDataComplete,
-        isPhotoComplete,
+        isPhotoComplete: true, // Unblock button to allow click-validation feedback
         isLocked:
             currentSheet?.status === SheetStatus.COMPLETED ||
             (currentSheet?.status === SheetStatus.LOADING_VERIFICATION_PENDING &&
@@ -336,6 +396,7 @@ export const useLoadingSheetLogic = () => {
         id,
         currentSheet,
         loading,
+        actionLoading,
         currentUser,
         states,
         errors,

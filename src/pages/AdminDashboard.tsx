@@ -127,28 +127,30 @@ export default function AdminDashboard() {
         setSearchParams(newParams);
     };
 
+    const isCompact = settings?.density === 'compact';
+
     if (loading) return <div>{t('loading_dots', settings?.language || 'en')}</div>;
 
     return (
         <div className="h-full flex flex-col bg-slate-50/50 dark:bg-slate-950 overflow-hidden relative">
             {/* MAIN CONTENT AREA */}
             <main
-                className={`flex-1 overflow-y-auto space-y-6 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800 ${activeSection === 'users' ? 'p-0' : 'p-4 md:p-8'
+                className={`flex-1 overflow-y-auto ${isCompact ? 'space-y-3' : 'space-y-6'} scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800 ${activeSection === 'users' ? 'p-0' : (isCompact ? 'p-2 md:p-3' : 'p-4 md:p-8')
                     }`}
             >
                 {/* HEADER & KEY METRICS (Only show on operational tabs to reduce clutter) */}
                 {activeSection !== 'users' &&
                     activeSection !== 'audit_logs' &&
                     activeSection !== 'reports' && (
-                        <div className="space-y-6">
-                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 flex-wrap">
+                        <div className={isCompact ? 'space-y-3' : 'space-y-6'}>
+                            <div className={`flex flex-col md:flex-row justify-between items-start md:items-center ${isCompact ? 'gap-2' : 'gap-4'} flex-wrap`}>
                                 <div>
-                                    <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent dark:from-slate-100 dark:to-slate-300">
+                                    <h1 className={`${isCompact ? 'text-lg md:text-xl' : 'text-2xl md:text-3xl'} font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent dark:from-slate-100 dark:to-slate-300`}>
                                         {activeSection === 'dashboard'
                                             ? t('operational_overview', settings.language)
                                             : t('admin_dashboard', settings.language)}
                                     </h1>
-                                    <p className="text-slate-500 dark:text-slate-400 mt-1">
+                                    <p className={`${isCompact ? 'text-[9px] mt-0.5' : 'text-slate-500 mt-1'} dark:text-slate-400`}>
                                         {t('welcome_back', settings.language)},{' '}
                                         {currentUser?.fullName}
                                     </p>
@@ -156,15 +158,15 @@ export default function AdminDashboard() {
 
                                 <div className="flex items-center gap-4">
                                     {/* User Profile */}
-                                    <div className="flex items-center gap-3 bg-white dark:bg-slate-900 p-1.5 pr-4 rounded-full border shadow-sm">
-                                        <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500">
-                                            <UserIcon size={16} />
+                                    <div className={`flex items-center gap-3 bg-white dark:bg-slate-900 ${isCompact ? 'p-1 pr-3' : 'p-1.5 pr-4'} rounded-full border shadow-sm`}>
+                                        <div className={`${isCompact ? 'w-6 h-6' : 'w-8 h-8'} rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500`}>
+                                            <UserIcon size={isCompact ? 12 : 16} />
                                         </div>
                                         <div className="flex flex-col">
-                                            <span className="text-xs font-bold text-slate-700 dark:text-slate-200 leading-none">
+                                            <span className={`${isCompact ? 'text-[10px]' : 'text-xs'} font-bold text-slate-700 dark:text-slate-200 leading-none`}>
                                                 {currentUser?.fullName}
                                             </span>
-                                            <span className="text-[10px] text-slate-400 font-medium uppercase">
+                                            <span className={`${isCompact ? 'text-[8px]' : 'text-[10px]'} text-slate-400 font-medium uppercase`}>
                                                 {currentUser?.role === Role.ADMIN
                                                     ? t('admin', settings.language)
                                                     : currentUser?.role === Role.SHIFT_LEAD
@@ -178,17 +180,17 @@ export default function AdminDashboard() {
                                                                 : t('users', settings.language)}
                                             </span>
                                         </div>
-                                        <div className="flex items-center gap-1 pl-2 border-l border-slate-200 dark:border-slate-700">
+                                        <div className={`flex items-center gap-1 ${isCompact ? 'pl-1' : 'pl-2'} border-l border-slate-200 dark:border-slate-700`}>
                                             {/* Reports Link (Admin/Shift Lead) - NEW: Power BI Integration */}
                                             {(currentUser?.role === Role.ADMIN ||
                                                 currentUser?.role === Role.SHIFT_LEAD) && (
                                                     <button
                                                         onClick={() => handleNavigation('reports')}
-                                                        className={`p-1.5 rounded-full transition-colors ${activeSection === 'reports' ? 'text-indigo-600 bg-indigo-50' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                                                        className={`rounded-full transition-colors ${isCompact ? 'p-1' : 'p-1.5'} ${activeSection === 'reports' ? 'text-indigo-600 bg-indigo-50' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-300'}`}
                                                         title="Management Reports (Power BI)"
                                                     >
                                                         <HistoryIcon
-                                                            size={14}
+                                                            size={isCompact ? 12 : 14}
                                                             className={
                                                                 activeSection === 'reports'
                                                                     ? 'animate-pulse'
@@ -203,10 +205,10 @@ export default function AdminDashboard() {
                                                 currentUser?.role === Role.SHIFT_LEAD) && (
                                                     <button
                                                         onClick={() => handleNavigation('audit_logs')}
-                                                        className={`p-1.5 rounded-full transition-colors ${activeSection === 'audit_logs' ? 'text-primary bg-primary/10' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                                                        className={`rounded-full transition-colors ${isCompact ? 'p-1' : 'p-1.5'} ${activeSection === 'audit_logs' ? 'text-primary bg-primary/10' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-300'}`}
                                                         title={t('audit_logs', settings.language)}
                                                     >
-                                                        <HistoryIcon size={14} />
+                                                        <HistoryIcon size={isCompact ? 12 : 14} />
                                                     </button>
                                                 )}
 
@@ -214,29 +216,29 @@ export default function AdminDashboard() {
                                             {currentUser?.role === Role.ADMIN && (
                                                 <button
                                                     onClick={() => handleNavigation('security')}
-                                                    className={`p-1.5 rounded-full transition-colors ${activeSection === 'security' ? 'text-emerald-600 bg-emerald-50' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                                                    className={`rounded-full transition-colors ${isCompact ? 'p-1' : 'p-1.5'} ${activeSection === 'security' ? 'text-emerald-600 bg-emerald-50' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-300'}`}
                                                     title="Security Scanner"
                                                 >
-                                                    <ShieldCheck size={14} />
+                                                    <ShieldCheck size={isCompact ? 12 : 14} />
                                                 </button>
                                             )}
 
                                             {/* Settings Link */}
                                             <button
                                                 onClick={() => navigate('/settings')}
-                                                className="p-1.5 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                                                className={`rounded-full hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors ${isCompact ? 'p-1' : 'p-1.5'}`}
                                                 title={t('settings', settings.language)}
                                             >
-                                                <Settings size={14} />
+                                                <Settings size={isCompact ? 12 : 14} />
                                             </button>
 
                                             {/* Logout */}
                                             <button
                                                 onClick={handleLogout}
-                                                className="p-1.5 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-400 hover:text-red-500 transition-colors"
+                                                className={`rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-400 hover:text-red-500 transition-colors ${isCompact ? 'p-1' : 'p-1.5'}`}
                                                 title={t('sign_out', settings.language)}
                                             >
-                                                <LogOut size={14} />
+                                                <LogOut size={isCompact ? 12 : 14} />
                                             </button>
                                         </div>
                                     </div>
@@ -248,6 +250,7 @@ export default function AdminDashboard() {
                                 currentUser={currentUser}
                                 activeSection={activeSection}
                                 onNavigate={handleNavigation}
+                                density={settings?.density}
                                 stats={{
                                     staging: activeStaging,
                                     loading: activeLoading,
@@ -301,7 +304,7 @@ export default function AdminDashboard() {
 
                 {/* 5. DASHBOARD VIEW (Live Monitor) */}
                 {activeSection === 'dashboard' && (
-                    <div className="space-y-6">
+                    <div className={isCompact ? 'space-y-3' : 'space-y-6'}>
                         {/* Analytics Charts moved to Report Center */}
                         <LiveOperationsMonitor sheets={relevantSheets} onRefresh={refreshSheets} />
                     </div>

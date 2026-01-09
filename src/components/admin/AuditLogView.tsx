@@ -12,6 +12,18 @@ interface AuditLogViewProps {
     currentUser: User | null;
 }
 
+interface UnifiedLog {
+    id?: string;
+    timestamp: string;
+    actor: string;
+    action: string;
+    details: string;
+    sheetId?: string;
+    supervisor?: string;
+    status?: string;
+    severity?: string;
+}
+
 export function AuditLogView({ sheets, currentUser }: AuditLogViewProps) {
     const { securityLogs, activityLogs } = useData();
     const { settings } = useAppState();
@@ -23,9 +35,8 @@ export function AuditLogView({ sheets, currentUser }: AuditLogViewProps) {
     const [timeFilter, setTimeFilter] = useState<'ALL' | '30D' | '90D' | 'CUSTOM'>('ALL');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
-
     const logs = useMemo(() => {
-        let baseLogs: any[] = [];
+        let baseLogs: UnifiedLog[] = [];
 
         if (logType === 'security') {
             baseLogs = [...securityLogs];
@@ -39,7 +50,7 @@ export function AuditLogView({ sheets, currentUser }: AuditLogViewProps) {
                     sheetId: sheet.id,
                     supervisor: sheet.supervisorName,
                     status: sheet.status,
-                    severity: (log as any).severity || 'LOW'
+                    severity: (log as UnifiedLog).severity || 'LOW'
                 }))
             );
         }
@@ -97,7 +108,7 @@ export function AuditLogView({ sheets, currentUser }: AuditLogViewProps) {
                 (log) =>
                     log.action.startsWith('STAGING_') ||
                     log.actor === currentUser.username ||
-                    (log as any).supervisor === currentUser.username
+                    log.supervisor === currentUser.username
             );
         } else if (currentUser?.role === Role.LOADING_SUPERVISOR) {
             baseLogs = baseLogs.filter(
@@ -357,39 +368,37 @@ export function AuditLogView({ sheets, currentUser }: AuditLogViewProps) {
                                             <span
                                                 className={`
                                             px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider whitespace-nowrap
-                                            ${
-                                                log.action.includes('REJECT')
-                                                    ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
-                                                    : log.action.includes('CLICK')
-                                                      ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
-                                                      : log.action.includes('VERIFIED') ||
-                                                          log.action === 'COMPLETED'
-                                                        ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
-                                                        : 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
-                                            }
+                                            ${log.action.includes('REJECT')
+                                                        ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                                                        : log.action.includes('CLICK')
+                                                            ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
+                                                            : log.action.includes('VERIFIED') ||
+                                                                log.action === 'COMPLETED'
+                                                                ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                                                : 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+                                                    }
                                         `}
                                             >
                                                 {log.action.includes('CLICK')
                                                     ? log.action
                                                     : t(
-                                                          log.action.toLowerCase() as any,
-                                                          settings.language
-                                                      ).replace(/_/g, ' ')}
+                                                        log.action.toLowerCase() as any,
+                                                        settings.language
+                                                    ).replace(/_/g, ' ')}
                                             </span>
                                         </td>
                                         <td className="px-4 py-3">
                                             <span
                                                 className={`
                                             px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider
-                                            ${
-                                                log.severity === 'CRITICAL'
-                                                    ? 'bg-red-600 text-white'
-                                                    : log.severity === 'HIGH'
-                                                      ? 'bg-orange-100 text-orange-600'
-                                                      : log.severity === 'MEDIUM'
-                                                        ? 'bg-amber-100 text-amber-600'
-                                                        : 'bg-slate-100 text-slate-600'
-                                            }
+                                            ${log.severity === 'CRITICAL'
+                                                        ? 'bg-red-600 text-white'
+                                                        : log.severity === 'HIGH'
+                                                            ? 'bg-orange-100 text-orange-600'
+                                                            : log.severity === 'MEDIUM'
+                                                                ? 'bg-amber-100 text-amber-600'
+                                                                : 'bg-slate-100 text-slate-600'
+                                                    }
                                         `}
                                             >
                                                 {log.severity || 'LOW'}

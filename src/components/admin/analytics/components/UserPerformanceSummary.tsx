@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { calculateUserStats } from '@/lib/performanceUtils';
 import { Clock, CheckSquare, Target, Activity } from 'lucide-react';

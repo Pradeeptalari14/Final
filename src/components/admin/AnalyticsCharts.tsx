@@ -14,12 +14,15 @@ import {
     Pie,
     Cell
 } from 'recharts';
+import { useAppState } from '@/contexts/AppStateContext';
 
 interface AnalyticsChartsProps {
     sheets: SheetData[];
+    className?: string;
 }
 
-export function AnalyticsCharts({ sheets: allSheets }: AnalyticsChartsProps) {
+export function AnalyticsCharts({ sheets: allSheets, className }: AnalyticsChartsProps) {
+    const { settings } = useAppState();
     const [timeRange, setTimeRange] = useState<'7D' | '30D' | '90D' | 'CUSTOM'>('7D');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
@@ -111,9 +114,10 @@ export function AnalyticsCharts({ sheets: allSheets }: AnalyticsChartsProps) {
 
     // Colors for Pie Chart
     const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
+    const isCompact = settings?.density === 'compact';
 
     return (
-        <div className="space-y-4">
+        <div className={isCompact ? 'space-y-2' : 'space-y-4'}>
             <div className="flex justify-end items-center gap-2">
                 <span className="text-[10px] uppercase font-bold text-slate-400">Time Range:</span>
                 <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-white/5">
@@ -126,10 +130,10 @@ export function AnalyticsCharts({ sheets: allSheets }: AnalyticsChartsProps) {
                             {range === '7D'
                                 ? '7 Days'
                                 : range === '30D'
-                                  ? '30 Days'
-                                  : range === '90D'
-                                    ? '3 Months'
-                                    : 'Custom'}
+                                    ? '30 Days'
+                                    : range === '90D'
+                                        ? '3 Months'
+                                        : 'Custom'}
                         </button>
                     ))}
                 </div>
@@ -171,9 +175,9 @@ export function AnalyticsCharts({ sheets: allSheets }: AnalyticsChartsProps) {
                 </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-4">
+            <div className={`grid grid-cols-1 md:grid-cols-2 ${isCompact ? 'gap-3' : 'gap-6'} animate-in fade-in slide-in-from-bottom-4 ${className}`}>
                 {/* BAR CHART: Daily Activity */}
-                <Card className="shadow-lg shadow-slate-200/50 border-slate-200 dark:border-white/5 dark:bg-slate-900/50">
+                <Card className={`shadow-lg shadow-slate-200/50 border-slate-200 dark:border-white/5 dark:bg-slate-900/50 bg-white/50 backdrop-blur-sm`}>
                     <CardHeader>
                         <CardTitle>Daily Activity</CardTitle>
                         <CardDescription>
@@ -181,11 +185,11 @@ export function AnalyticsCharts({ sheets: allSheets }: AnalyticsChartsProps) {
                             {timeRange === '7D'
                                 ? '7 days'
                                 : timeRange === '30D'
-                                  ? '30 days'
-                                  : '3 months'}
+                                    ? '30 days'
+                                    : '3 months'}
                         </CardDescription>
                     </CardHeader>
-                    <CardContent className="h-[300px]">
+                    <CardContent className={isCompact ? 'h-[200px]' : 'h-[300px]'}>
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={dailyActivity}>
                                 <CartesianGrid
@@ -225,12 +229,12 @@ export function AnalyticsCharts({ sheets: allSheets }: AnalyticsChartsProps) {
                 </Card>
 
                 {/* PIE CHART: Status Distribution */}
-                <Card className="shadow-lg shadow-slate-200/50 border-slate-200">
+                <Card className="shadow-lg shadow-slate-200/50 border-slate-200 dark:border-white/5 dark:bg-slate-900/50 bg-white/50 backdrop-blur-sm">
                     <CardHeader>
                         <CardTitle>Sheet Status Distribution</CardTitle>
                         <CardDescription>Breakdown by current status</CardDescription>
                     </CardHeader>
-                    <CardContent className="h-[300px]">
+                    <CardContent className={isCompact ? 'h-[200px]' : 'h-[300px]'}>
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie

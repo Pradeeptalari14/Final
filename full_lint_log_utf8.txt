@@ -1,0 +1,70 @@
+﻿
+> unicharm-operations_v8@0.0.0 lint
+> eslint src --ext .ts,.tsx
+
+
+C:\Users\makso\Downloads\unicharm-operations_v8\src\components\admin\AnalyticsHub.tsx
+  1:29  error  'useEffect' is defined but never used  unused-imports/no-unused-imports
+
+C:\Users\makso\Downloads\unicharm-operations_v8\src\components\admin\AuditLogView.tsx
+   28:23  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   42:39  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  100:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  375:87  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\makso\Downloads\unicharm-operations_v8\src\components\admin\DatabaseView.tsx
+  130:37  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  165:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  177:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  191:25  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  215:25  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  576:91  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  648:65  warning  Unexpected console statement              no-console
+
+C:\Users\makso\Downloads\unicharm-operations_v8\src\components\admin\OperationalTableView.tsx
+  111:9   warning  Unexpected console statement  no-console
+  113:13  warning  Unexpected console statement  no-console
+
+C:\Users\makso\Downloads\unicharm-operations_v8\src\components\admin\UserManagement.tsx
+  365:133  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  384:158  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\makso\Downloads\unicharm-operations_v8\src\components\admin\VirtualDatabaseTable.tsx
+  3:39  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\makso\Downloads\unicharm-operations_v8\src\components\admin\analytics\RosterUploader.tsx
+  82:23  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\makso\Downloads\unicharm-operations_v8\src\components\admin\analytics\components\StaffPerformanceDetail.tsx
+    8:5   error    'ArrowDownRight' is defined but never used  unused-imports/no-unused-imports
+   12:5   error    'Filter' is defined but never used          unused-imports/no-unused-imports
+   88:36  warning  Unexpected any. Specify a different type    @typescript-eslint/no-explicit-any
+  167:71  warning  Unexpected any. Specify a different type    @typescript-eslint/no-explicit-any
+
+C:\Users\makso\Downloads\unicharm-operations_v8\src\components\admin\analytics\components\UserPerformanceSummary.tsx
+  66:63  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\makso\Downloads\unicharm-operations_v8\src\hooks\useLoadingSheetLogic.ts
+  319:37  error  Compilation Skipped: Existing memoization could not be preserved
+
+React Compiler has skipped optimizing this component because the existing manual memoization could not be preserved. The inferred dependencies did not match the manually specified dependencies, which could cause the value to change more or less frequently than expected. The inferred dependency was `currentSheet`, but the source dependencies were [signatureState.capturedImage, currentSheet?.capturedImages]. Inferred less specific property than source.
+
+C:\Users\makso\Downloads\unicharm-operations_v8\src\hooks\useLoadingSheetLogic.ts:319:37
+  317 |     }, [currentSheet, totals.grandTotalLoaded]);
+  318 |
+> 319 |     const isPhotoComplete = useMemo(() => {
+      |                                     ^^^^^^^
+> 320 |         return !!signatureState.capturedImage || (currentSheet?.capturedImages && currentSheet.capturedImages.length > 0);
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 321 |     }, [signatureState.capturedImage, currentSheet?.capturedImages]);
+      | ^^^^^^ Could not preserve existing manual memoization
+  322 |
+  323 |     const states = {
+  324 |         isCompleted: currentSheet?.status === SheetStatus.COMPLETED,  react-hooks/preserve-manual-memoization
+
+C:\Users\makso\Downloads\unicharm-operations_v8\src\router.tsx
+  12:55  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+Γ£û 25 problems (4 errors, 21 warnings)
+  3 errors and 0 warnings potentially fixable with the `--fix` option.
+

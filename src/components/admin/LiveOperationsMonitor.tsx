@@ -23,6 +23,7 @@ interface LiveOperationsMonitorProps {
 
 export function LiveOperationsMonitor({ sheets, onRefresh }: LiveOperationsMonitorProps) {
     const { settings } = useAppState();
+    const isCompact = settings?.density === 'compact';
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -99,27 +100,27 @@ export function LiveOperationsMonitor({ sheets, onRefresh }: LiveOperationsMonit
     }
 
     return (
-        <Card>
-            <CardHeader className="pb-3 border-b border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 space-y-0">
+        <Card className={isCompact ? 'border-border/50 shadow-none' : ''}>
+            <CardHeader className={`${isCompact ? 'py-1.5 px-3' : 'pb-3'} border-b border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 space-y-0`}>
                 <div className="flex items-center gap-2">
-                    <CardTitle className="flex items-center gap-2 text-lg">
+                    <CardTitle className={`flex items-center gap-2 ${isCompact ? 'text-base' : 'text-lg'}`}>
                         <span className="relative flex h-3 w-3">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
                         </span>
                         {t('live_operations', settings.language)}
                     </CardTitle>
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant="secondary" className={isCompact ? 'text-[10px] h-5 py-0 px-1.5' : 'text-xs'}>
                         {activeSheets.length} {t('active_sheets', settings.language)}
                     </Badge>
                 </div>
 
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                     <div className="relative w-full sm:w-48">
-                        <Search className="absolute left-2 top-1.5 h-4 w-4 text-muted-foreground" />
+                        <Search className={`absolute left-2 ${isCompact ? 'top-1' : 'top-1.5'} h-3.5 w-3.5 text-muted-foreground`} />
                         <Input
                             placeholder={t('search_placeholder', settings.language)}
-                            className="h-8 pl-8 text-xs w-full"
+                            className={`${isCompact ? 'h-6 text-[10px]' : 'h-8 text-xs'} pl-8 w-full`}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -129,18 +130,18 @@ export function LiveOperationsMonitor({ sheets, onRefresh }: LiveOperationsMonit
                         size="sm"
                         onClick={handleRefresh}
                         disabled={isRefreshing}
-                        className="h-8 w-8 p-0 shrink-0"
+                        className={`${isCompact ? 'h-6 w-6' : 'h-8 w-8'} p-0 shrink-0`}
                     >
-                        <RefreshCcw size={16} className={isRefreshing ? 'animate-spin' : ''} />
+                        <RefreshCcw size={isCompact ? 12 : 16} className={isRefreshing ? 'animate-spin' : ''} />
                         <span className="sr-only">{t('refresh', settings.language)}</span>
                     </Button>
                     <Button
                         variant={isTVMode ? 'secondary' : 'ghost'}
                         size="sm"
                         onClick={toggleTVMode}
-                        className={`h-8 gap-2 ${isTVMode ? 'bg-primary text-primary-foreground text-xs' : 'text-slate-500'}`}
+                        className={`${isCompact ? 'h-6' : 'h-8'} gap-2 ${isTVMode ? 'bg-primary text-primary-foreground text-[10px]' : 'text-slate-500 text-[10px]'}`}
                     >
-                        {isTVMode ? <Minimize size={16} /> : <Monitor size={16} />}
+                        {isTVMode ? <Minimize size={isCompact ? 12 : 16} /> : <Monitor size={isCompact ? 12 : 16} />}
                         <span className="hidden md:inline">
                             {isTVMode ? 'Exit Fullscreen' : 'TV Mode'}
                         </span>
@@ -157,13 +158,13 @@ export function LiveOperationsMonitor({ sheets, onRefresh }: LiveOperationsMonit
                         activeOperations.map((op) => (
                             <div
                                 key={op.id}
-                                className={`p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-muted/50 transition-colors ${isTVMode ? 'py-8 border-b-2' : ''}`}
+                                className={`${isCompact ? 'p-1.5 px-3' : 'p-4'} flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-muted/50 transition-colors ${isTVMode ? 'py-8 border-b-2' : ''}`}
                             >
                                 <div className="flex items-start sm:items-center gap-4">
                                     <div
-                                        className={`p-2 rounded-full shrink-0 ${isTVMode ? 'p-4' : ''} ${op.type === 'Staging' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/20' : 'bg-orange-100 text-orange-600 dark:bg-orange-900/20'}`}
+                                        className={`${isCompact ? 'p-1.5' : 'p-2'} rounded-full shrink-0 ${isTVMode ? 'p-4' : ''} ${op.type === 'Staging' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/20' : 'bg-orange-100 text-orange-600 dark:bg-orange-900/20'}`}
                                     >
-                                        <PlayCircle size={isTVMode ? 32 : 20} />
+                                        <PlayCircle size={isTVMode ? 32 : (isCompact ? 16 : 20)} />
                                     </div>
                                     <div className="space-y-1">
                                         <div
@@ -172,7 +173,7 @@ export function LiveOperationsMonitor({ sheets, onRefresh }: LiveOperationsMonit
                                             {op.supervisor}
                                             <Badge
                                                 variant="outline"
-                                                className={`${isTVMode ? 'text-sm py-1 px-3' : 'text-[10px]'} uppercase font-bold border-emerald-500/30 text-emerald-500 bg-emerald-500/5`}
+                                                className={`${isTVMode ? 'text-sm py-1 px-3' : (isCompact ? 'text-[8px] h-4 py-0 px-1' : 'text-[10px]')} uppercase font-bold border-emerald-500/30 text-emerald-500 bg-emerald-500/5`}
                                             >
                                                 {t(
                                                     op.status.toLowerCase() as string,
@@ -196,10 +197,10 @@ export function LiveOperationsMonitor({ sheets, onRefresh }: LiveOperationsMonit
                                 </div>
 
                                 <div
-                                    className={`flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 pt-2 sm:pt-0 mt-2 sm:mt-0 ${isTVMode ? 'gap-4' : ''}`}
+                                    className={`flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 ${isCompact ? 'pt-1 mt-1' : 'pt-2 mt-2'} sm:pt-0 sm:mt-0 ${isTVMode ? 'gap-4' : ''}`}
                                 >
                                     <Badge
-                                        className={`mb-0 sm:mb-1 ${isTVMode ? 'text-lg py-2 px-6' : ''} ${op.type === 'Staging' ? 'bg-blue-500 hover:bg-blue-600' : 'bg-orange-500 hover:bg-orange-600'}`}
+                                        className={`mb-0 sm:mb-1 ${isTVMode ? 'text-lg py-2 px-6' : (isCompact ? 'text-[9px] h-4 py-0 px-1' : '')} ${op.type === 'Staging' ? 'bg-blue-500 hover:bg-blue-600' : 'bg-orange-500 hover:bg-orange-600'}`}
                                     >
                                         {t(
                                             op.status.toLowerCase() as string,
@@ -207,9 +208,9 @@ export function LiveOperationsMonitor({ sheets, onRefresh }: LiveOperationsMonit
                                         ).replace(/_/g, ' ')}
                                     </Badge>
                                     <div
-                                        className={`text-muted-foreground flex items-center gap-1 ${isTVMode ? 'text-sm font-bold' : 'text-[10px]'}`}
+                                        className={`text-muted-foreground flex items-center gap-1 ${isTVMode ? 'text-sm font-bold' : (isCompact ? 'text-[9px]' : 'text-[10px]')}`}
                                     >
-                                        <Clock size={isTVMode ? 14 : 10} />
+                                        <Clock size={isTVMode ? 14 : (isCompact ? 9 : 10)} />
                                         {new Date(op.timestamp).toLocaleTimeString([], {
                                             hour: '2-digit',
                                             minute: '2-digit'

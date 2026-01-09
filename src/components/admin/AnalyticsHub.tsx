@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { SheetData, SheetStatus } from '@/types';
@@ -32,13 +32,15 @@ import {
     PanelLeft,
     Info,
     Truck,
-    Clock
+    Clock,
+    Monitor
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { useAppState } from '@/contexts/AppStateContext';
 import { useData } from '@/contexts/DataContext';
-import { StaffPerformanceDetail } from './analytics/components/StaffPerformanceDetail';
+import { StaffLeaderboard } from './analytics/components/StaffLeaderboard';
 import { AnalyticsCharts } from './AnalyticsCharts';
 import { RosterUploader, RosterEntry } from './analytics/RosterUploader';
 import { LogisticsTable } from './analytics/LogisticsTable';
@@ -54,6 +56,8 @@ interface AnalyticsHubProps {
 }
 
 export function AnalyticsHub({ sheets: allSheets, currentUser, onRefresh: _onRefresh }: AnalyticsHubProps) {
+    const { settings } = useAppState();
+    const isCompact = settings?.density === 'compact';
     const navigate = useNavigate();
     const { users } = useData();
     const [timeRange, setTimeRange] = useState<'7D' | '30D' | '90D'>('7D');
@@ -62,6 +66,7 @@ export function AnalyticsHub({ sheets: allSheets, currentUser, onRefresh: _onRef
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [selectedUser, setSelectedUser] = useState<any | null>(null);
     const [showProjection, setShowProjection] = useState(false);
+    const [leaderboardCategory, setLeaderboardCategory] = useState<'STAGING' | 'LOADING' | 'SHIFT_LEAD'>('STAGING');
     const [rosterData, setRosterData] = useState<RosterEntry[]>([]);
 
     // Load Roster from IDB on mount
@@ -381,33 +386,33 @@ export function AnalyticsHub({ sheets: allSheets, currentUser, onRefresh: _onRef
 
     if (reportViewMode === 'OVERVIEW') {
         return (
-            <div className="h-[calc(100vh-100px)] animate-in fade-in zoom-in-95 duration-300">
-                <div className="h-full overflow-y-auto p-4 lg:p-8">
-                    <div className="max-w-5xl mx-auto space-y-8">
+            <div className={`h-[calc(100vh-100px)] animate-in fade-in zoom-in-95 duration-300`}>
+                <div className={`h-full overflow-y-auto ${isCompact ? 'p-2 lg:p-4' : 'p-4 lg:p-8'}`}>
+                    <div className={`max-w-5xl mx-auto ${isCompact ? 'space-y-4' : 'space-y-8'}`}>
                         <div>
-                            <h2 className="text-3xl font-black text-slate-800 dark:text-slate-100 mb-2">Report Center</h2>
-                            <p className="text-slate-500 dark:text-slate-400">Select a report category to view detailed analytics.</p>
+                            <h2 className={`${isCompact ? 'text-xl md:text-2xl' : 'text-3xl'} font-black text-slate-800 dark:text-slate-100 mb-1`}>Report Center</h2>
+                            <p className={`${isCompact ? 'text-[10px]' : 'text-sm'} text-slate-500 dark:text-slate-400`}>Select a report category to view detailed analytics.</p>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 ${isCompact ? 'gap-4' : 'gap-6'}`}>
                             {reportTypes.map((report) => (
                                 <button
                                     key={report.id}
                                     onClick={() => { setActiveReport(report.id); setReportViewMode('DETAIL'); }}
-                                    className="group relative flex flex-col items-start p-6 h-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl hover:shadow-xl hover:shadow-indigo-500/10 hover:border-indigo-200 dark:hover:border-indigo-900 transition-all duration-300 text-left"
+                                    className={`group relative flex flex-col items-start ${isCompact ? 'p-4' : 'p-6'} h-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl hover:shadow-xl hover:shadow-indigo-500/10 hover:border-indigo-200 dark:hover:border-indigo-900 transition-all duration-300 text-left`}
                                 >
-                                    <div className={cn("p-3 rounded-2xl mb-4 transition-colors", report.bg)}>
-                                        <report.icon className={cn("h-8 w-8", report.color)} />
+                                    <div className={cn(isCompact ? "p-2 rounded-xl mb-3" : "p-3 rounded-2xl mb-4", "transition-colors", report.bg)}>
+                                        <report.icon className={cn(isCompact ? "h-6 w-6" : "h-8 w-8", report.color)} />
                                     </div>
                                     <div className="flex justify-between items-start w-full mb-1">
-                                        <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 transition-colors">
+                                        <h3 className={`${isCompact ? 'text-lg' : 'text-xl'} font-bold text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 transition-colors`}>
                                             {report.label}
                                         </h3>
                                         <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 uppercase tracking-widest">
                                             {report.count}
                                         </span>
                                     </div>
-                                    <p className="text-sm font-medium text-slate-400">
+                                    <p className={`${isCompact ? 'text-[10px]' : 'text-sm'} font-medium text-slate-400`}>
                                         {report.description}
                                     </p>
                                 </button>
@@ -574,6 +579,14 @@ export function AnalyticsHub({ sheets: allSheets, currentUser, onRefresh: _onRef
                                         </div>
                                         <Button
                                             variant="outline"
+                                            className="h-14 w-14 rounded-2xl border-none bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20"
+                                            onClick={() => navigate('/admin/tv-performance')}
+                                            title="Launch TV Mode Leaderboard"
+                                        >
+                                            <Monitor size={20} />
+                                        </Button>
+                                        <Button
+                                            variant="outline"
                                             className="h-14 w-14 rounded-2xl border-none bg-slate-100 hover:bg-indigo-50 text-indigo-600 transition-all"
                                             onClick={handleExport}
                                             title="Export Detailed Report"
@@ -594,16 +607,17 @@ export function AnalyticsHub({ sheets: allSheets, currentUser, onRefresh: _onRef
                                             kpi.glow
                                         )}
                                     >
-                                        <CardContent className="p-5 relative z-10">
-                                            <div className="flex justify-between items-start mb-4">
+                                        <CardContent className={`${isCompact ? 'p-3' : 'p-5'} relative z-10`}>
+                                            <div className={`flex justify-between items-start ${isCompact ? 'mb-2' : 'mb-4'}`}>
                                                 <div
                                                     className={cn(
-                                                        'p-2.5 rounded-xl transition-all duration-500 group-hover:rotate-[15deg] shadow-sm',
+                                                        isCompact ? 'p-1.5 rounded-lg' : 'p-2.5 rounded-xl',
+                                                        'transition-all duration-500 group-hover:rotate-[15deg] shadow-sm',
                                                         kpi.bg,
                                                         kpi.color
                                                     )}
                                                 >
-                                                    <kpi.icon size={20} />
+                                                    <kpi.icon size={isCompact ? 16 : 20} />
                                                 </div>
                                                 <div className="flex gap-2">
                                                     <div
@@ -621,18 +635,9 @@ export function AnalyticsHub({ sheets: allSheets, currentUser, onRefresh: _onRef
                                                         )}
                                                         {kpi.trend}
                                                     </div>
-                                                    <div className="group/info relative">
-                                                        <Info
-                                                            size={16}
-                                                            className="text-slate-300 hover:text-indigo-400 cursor-help transition-colors"
-                                                        />
-                                                        <div className="absolute right-0 top-full mt-2 w-48 p-3 bg-slate-800 text-white text-[10px] rounded-xl opacity-0 invisible group-hover/info:opacity-100 group-hover/info:visible transition-all z-50 pointer-events-none shadow-xl font-medium">
-                                                            {kpi.description}
-                                                        </div>
-                                                    </div>
                                                 </div>
                                             </div>
-                                            <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter mb-1">
+                                            <h3 className={`${isCompact ? 'text-xl' : 'text-2xl'} font-black text-slate-900 dark:text-white tracking-tighter mb-1`}>
                                                 {kpi.value}
                                             </h3>
                                             <p className="text-[10px] text-slate-400 uppercase font-bold tracking-[0.2em]">
@@ -657,19 +662,19 @@ export function AnalyticsHub({ sheets: allSheets, currentUser, onRefresh: _onRef
                                     <AnalyticsCharts sheets={filteredData} />
 
                                     {/* 2. Enhanced Metrics (Total Qty, Dispatched, Loaded) */}
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className={`grid grid-cols-1 md:grid-cols-3 ${isCompact ? 'gap-3' : 'gap-4'}`}>
                                         <Card className="bg-indigo-50/50 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-800">
-                                            <CardContent className="p-4 flex flex-col">
-                                                <span className="text-[10px] uppercase font-black text-indigo-400">Total Quantity (Target)</span>
-                                                <span className="text-2xl font-black text-indigo-700 dark:text-indigo-300">
+                                            <CardContent className={`${isCompact ? 'p-3' : 'p-4'} flex flex-col`}>
+                                                <span className={`${isCompact ? 'text-[8px]' : 'text-[10px]'} uppercase font-black text-indigo-400`}>Total Quantity (Target)</span>
+                                                <span className={`${isCompact ? 'text-xl' : 'text-2xl'} font-black text-indigo-700 dark:text-indigo-300`}>
                                                     {filteredData.reduce((acc, s) => acc + s.stagingItems.reduce((a, i) => a + (i.ttlCases || 0), 0), 0).toLocaleString()}
                                                 </span>
                                             </CardContent>
                                         </Card>
                                         <Card className="bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-800">
-                                            <CardContent className="p-4 flex flex-col">
-                                                <span className="text-[10px] uppercase font-black text-emerald-400">Loaded Quantity (Actual)</span>
-                                                <span className="text-2xl font-black text-emerald-700 dark:text-emerald-300">
+                                            <CardContent className={`${isCompact ? 'p-3' : 'p-4'} flex flex-col`}>
+                                                <span className={`${isCompact ? 'text-[8px]' : 'text-[10px]'} uppercase font-black text-emerald-400`}>Loaded Quantity (Actual)</span>
+                                                <span className={`${isCompact ? 'text-xl' : 'text-2xl'} font-black text-emerald-700 dark:text-emerald-300`}>
                                                     {filteredData.reduce((acc, s) => {
                                                         const l = (s.loadingItems || []).reduce((a, i) => a + (i.total || 0), 0);
                                                         const ad = (s.additionalItems || []).reduce((a, i) => a + (i.total || 0), 0);
@@ -679,9 +684,9 @@ export function AnalyticsHub({ sheets: allSheets, currentUser, onRefresh: _onRef
                                             </CardContent>
                                         </Card>
                                         <Card className="bg-blue-50/50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-800">
-                                            <CardContent className="p-4 flex flex-col">
-                                                <span className="text-[10px] uppercase font-black text-blue-400">Dispatched Quantity</span>
-                                                <span className="text-2xl font-black text-blue-700 dark:text-blue-300">
+                                            <CardContent className={`${isCompact ? 'p-3' : 'p-4'} flex flex-col`}>
+                                                <span className={`${isCompact ? 'text-[8px]' : 'text-[10px]'} uppercase font-black text-blue-400`}>Dispatched Quantity</span>
+                                                <span className={`${isCompact ? 'text-xl' : 'text-2xl'} font-black text-blue-700 dark:text-blue-300`}>
                                                     {filteredData.filter(s => s.status === SheetStatus.COMPLETED).reduce((acc, s) => {
                                                         const l = (s.loadingItems || []).reduce((a, i) => a + (i.total || 0), 0);
                                                         const ad = (s.additionalItems || []).reduce((a, i) => a + (i.total || 0), 0);
@@ -712,27 +717,27 @@ export function AnalyticsHub({ sheets: allSheets, currentUser, onRefresh: _onRef
                                     </Card>
 
                                     {rosterData.length > 0 && (
-                                        <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800">
-                                            <h3 className="font-bold mb-4">Current Roster ({rosterData.length})</h3>
+                                        <div className={`bg-white dark:bg-slate-900 rounded-2xl ${isCompact ? 'p-3' : 'p-6'} border border-slate-200 dark:border-slate-800`}>
+                                            <h3 className={`font-bold ${isCompact ? 'mb-2 text-sm' : 'mb-4'}`}>Current Roster ({rosterData.length})</h3>
                                             <div className="overflow-x-auto">
                                                 <table className="w-full text-xs text-left">
                                                     <thead>
                                                         <tr className="border-b border-slate-100 dark:border-slate-800">
-                                                            <th className="py-2">Date</th>
-                                                            <th className="py-2">Shift</th>
-                                                            <th className="py-2">Staff Name</th>
-                                                            <th className="py-2">Assigned Role</th>
-                                                            <th className="py-2">Vehicle</th>
+                                                            <th className={`${isCompact ? 'py-1' : 'py-2'}`}>Date</th>
+                                                            <th className={`${isCompact ? 'py-1' : 'py-2'}`}>Shift</th>
+                                                            <th className={`${isCompact ? 'py-1' : 'py-2'}`}>Staff Name</th>
+                                                            <th className={`${isCompact ? 'py-1' : 'py-2'}`}>Assigned Role</th>
+                                                            <th className={`${isCompact ? 'py-1' : 'py-2'}`}>Vehicle</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
                                                         {rosterData.slice(0, 10).map((r, i) => (
                                                             <tr key={i} className="border-b border-slate-50 dark:border-slate-900">
-                                                                <td className="py-2">{r.date}</td>
-                                                                <td className="py-2">{r.shift}</td>
-                                                                <td className="py-2 font-bold">{r.staffName}</td>
-                                                                <td className="py-2 text-slate-500">{r.role}</td>
-                                                                <td className="py-2 font-mono">{r.vehicleNo || '-'}</td>
+                                                                <td className={`${isCompact ? 'py-1' : 'py-2'}`}>{r.date}</td>
+                                                                <td className={`${isCompact ? 'py-1' : 'py-2'}`}>{r.shift}</td>
+                                                                <td className={`${isCompact ? 'py-1' : 'py-2'} font-bold`}>{r.staffName}</td>
+                                                                <td className={`${isCompact ? 'py-1' : 'py-2'} text-slate-500`}>{r.role}</td>
+                                                                <td className={`${isCompact ? 'py-1' : 'py-2'} font-mono`}>{r.vehicleNo || '-'}</td>
                                                             </tr>
                                                         ))}
                                                     </tbody>
@@ -750,6 +755,7 @@ export function AnalyticsHub({ sheets: allSheets, currentUser, onRefresh: _onRef
                                     <LogisticsTable
                                         title="Active Vehicles (On-Site)"
                                         color="amber"
+                                        density={settings?.density}
                                         entries={filteredData
                                             .filter(s => s.status === SheetStatus.LOCKED || s.status === SheetStatus.LOADING_VERIFICATION_PENDING)
                                             .map(s => ({
@@ -769,6 +775,7 @@ export function AnalyticsHub({ sheets: allSheets, currentUser, onRefresh: _onRef
                                     <LogisticsTable
                                         title="Future / Planned Vehicles"
                                         color="slate"
+                                        density={settings?.density}
                                         entries={[
                                             ...filteredData.filter(s => s.status === SheetStatus.DRAFT || s.status === SheetStatus.STAGING_VERIFICATION_PENDING).map(s => ({
                                                 id: s.id,
@@ -795,6 +802,7 @@ export function AnalyticsHub({ sheets: allSheets, currentUser, onRefresh: _onRef
                                     <LogisticsTable
                                         title="Dispatched / Past Vehicles"
                                         color="emerald"
+                                        density={settings?.density}
                                         entries={filteredData
                                             .filter(s => s.status === SheetStatus.COMPLETED)
                                             .map(s => ({
@@ -811,12 +819,45 @@ export function AnalyticsHub({ sheets: allSheets, currentUser, onRefresh: _onRef
                             )}
 
                             {activeReport === 'STAFF' && (
-                                <StaffPerformanceDetail />
+                                <div className="space-y-6">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div>
+                                            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Performance Leaderboard</h3>
+                                            <p className="text-sm text-slate-500">Recognizing top contributors in staging operations</p>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
+                                                {(['STAGING', 'LOADING', 'SHIFT_LEAD'] as const).map((cat) => (
+                                                    <button
+                                                        key={cat}
+                                                        onClick={() => setLeaderboardCategory(cat)}
+                                                        className={cn(
+                                                            "px-3 py-1.5 text-xs font-bold rounded-md transition-all",
+                                                            leaderboardCategory === cat
+                                                                ? "bg-white dark:bg-slate-700 text-indigo-600 shadow-sm"
+                                                                : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                                                        )}
+                                                    >
+                                                        {cat === 'STAGING' ? 'Staging' : cat === 'LOADING' ? 'Loading' : 'Ops Lead'}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            <button
+                                                onClick={() => navigate('/admin/tv-performance')}
+                                                className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-colors"
+                                            >
+                                                <Maximize2 size={14} />
+                                                TV Mode
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <StaffLeaderboard sheets={filteredData} roleFilter={leaderboardCategory} />
+                                </div>
                             )}
                         </div>
                     </div>
                 </div>
-            </div>
+            </div >
 
             {/* DEEP DIVE MODAL / OVERLAY */}
             {

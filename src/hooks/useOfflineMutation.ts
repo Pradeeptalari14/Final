@@ -1,6 +1,5 @@
 import { useMutation, UseMutationOptions } from '@tanstack/react-query';
 import { set, get } from 'idb-keyval';
-import { toast } from 'sonner';
 
 export interface OfflineMutation {
     id: string;
@@ -20,48 +19,33 @@ export function useOfflineMutation<TData, TError, TVariables>(
     return useMutation<TData, TError, TVariables>({
         ...options,
         mutationFn: async (variables) => {
-            if (!navigator.onLine) {
-                // If offline, throw specific error to trigger onError
-                throw new Error('OFFLINE_MODE');
-            }
-            if (options?.mutationFn) {
-                // @ts-expect-error: Argument count mismatch in some TQuery versions
-                return await options.mutationFn(variables);
-            }
-            throw new Error('No mutation function provided');
+            // OPTIMIZED BACKGROUND SYNC STRATEGY:
+            // 1. Always queue the mutation to IDB
+            // 2. Trigger the sync process immediately
+            // 3. Return successfully to the UI so it doesn't block
+
+            const mutation: OfflineMutation = {
+                id: crypto.randomUUID(),
+                key: mutationKey,
+                payload: variables,
+                timestamp: Date.now(),
+                retryCount: 0
+            };
+
+            const queue = (await get<OfflineMutation[]>(QUEUE_KEY)) || [];
+            queue.push(mutation);
+            await set(QUEUE_KEY, queue);
+
+            // Trigger immediate sync attempt in background
+            window.dispatchEvent(new Event('trigger-sync'));
+
+            // Optimistic success return
+            // We return a mock object that mimics the expected structure { error: null }
+            // This prevents crashes when consumers destructure const { error } = await mutation.mutateAsync(...)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            return { error: null } as any;
         },
-        onError: async (error, variables, context) => {
-            if ((error as Error).message === 'OFFLINE_MODE') {
-                const mutation: OfflineMutation = {
-                    id: crypto.randomUUID(),
-                    key: mutationKey,
-                    payload: variables,
-                    timestamp: Date.now(),
-                    retryCount: 0
-                };
-
-                // Save to Queue
-                const queue = (await get<OfflineMutation[]>(QUEUE_KEY)) || [];
-                queue.push(mutation);
-                await set(QUEUE_KEY, queue);
-
-                toast.warning('Offline: Changes Saved Locally', {
-                    description: 'Will sync automatically when online.',
-                    duration: 4000
-                });
-
-                // Optimistically update UI if onMutate provided fallback data
-                // This logic depends on implementation specifics, but basic toast is critical.
-
-                // Mimic success to prevent app crash if caller expects success
-                // We return null as TData, which might require type loosening in caller
-                return;
-            }
-
-            if (options?.onError) {
-                // @ts-expect-error: Argument count mismatch in some TQuery versions
-                options.onError(error, variables, context);
-            }
-        }
+        // We removed standard onError handling because we catch everything by queuing.
+        // The actual sync errors are handled by SyncManager.
     });
 }

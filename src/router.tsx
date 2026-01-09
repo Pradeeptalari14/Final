@@ -37,8 +37,19 @@ const DashboardOverview = lazyWithRetry(() => import('./pages/Dashboard'));
 const SettingsPage = lazyWithRetry(() => import('./pages/Settings'));
 const StagingSheet = lazyWithRetry(() => import('./components/sheets/StagingSheet'));
 const LoadingSheet = lazyWithRetry(() => import('./components/sheets/LoadingSheet'));
+const TVModePerformance = lazyWithRetry(() => import('./components/admin/analytics/TVModePerformance'));
 
 export const router = createBrowserRouter([
+    {
+        path: '/admin/tv-performance',
+        element: (
+            <LazyErrorBoundary>
+                <Suspense fallback={<LoadingFallback />}>
+                    <TVModePerformance />
+                </Suspense>
+            </LazyErrorBoundary>
+        )
+    },
     {
         path: '/login',
         element: <LoginPage />

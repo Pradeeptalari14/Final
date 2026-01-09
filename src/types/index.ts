@@ -24,6 +24,7 @@ export interface User {
     isLocked?: boolean;
     isDeleted?: boolean;
     password?: string; // Only used for legacy simple auth comparison
+    photoURL?: string;
 }
 
 export interface StagingItem {
@@ -58,6 +59,12 @@ export interface AdditionalItem {
     skuName: string;
     counts: number[];
     total: number;
+}
+
+export interface CapturedImage {
+    url: string;
+    caption: string;
+    timestamp: string;
 }
 
 export interface HistoryLog {
@@ -142,7 +149,7 @@ export interface SheetData {
     verifiedBy?: string;
     verifiedAt?: string;
 
-    capturedImages?: string[];
+    capturedImages?: (string | CapturedImage)[];
     history?: HistoryLog[];
     comments?: Comment[];
 }

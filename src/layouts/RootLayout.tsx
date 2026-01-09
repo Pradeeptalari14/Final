@@ -10,7 +10,8 @@ import {
     Users,
     FileText,
     WifiOff,
-    BarChart3
+    BarChart3,
+    Monitor
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
@@ -273,6 +274,15 @@ function SidebarContent({
                     label={t('database', settings.language)}
                     collapsed={collapsed && !isMobile}
                     active={location.pathname === '/database'}
+                />
+
+                {/* TV MODE */}
+                <NavItem
+                    to="/admin/tv-performance"
+                    icon={Monitor}
+                    label={t('tv_mode', settings.language) || "TV Mode"}
+                    collapsed={collapsed && !isMobile}
+                    active={location.pathname === '/admin/tv-performance'}
                 />
             </nav>
 

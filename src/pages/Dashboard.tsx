@@ -347,7 +347,7 @@ export default function DashboardOverview() {
                 className="flex items-center justify-between"
             >
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-foreground mb-1">
+                    <h1 className={`${settings?.density === 'compact' ? 'text-xl' : 'text-2xl'} font-bold tracking-tight text-foreground mb-1`}>
                         {t('dashboard', settings.language)}
                     </h1>
                 </div>
@@ -426,12 +426,12 @@ export default function DashboardOverview() {
                                 {/* Total Users (Full Width) */}
                                 <button
                                     onClick={() => navigate('/admin?section=users')}
-                                    className="col-span-2 flex items-center justify-between px-4 py-2 rounded bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold hover:scale-[1.02] transition-all group min-h-[40px]"
+                                    className={`col-span-2 flex items-center justify-between px-4 ${settings?.density === 'compact' ? 'py-1' : 'py-2'} rounded bg-white dark:bg-slate-800 border-l-4 border-slate-600 shadow-sm text-slate-800 dark:text-slate-200 font-bold hover:scale-[1.02] transition-all group min-h-[40px]`}
                                 >
                                     <span className="text-[10px] uppercase font-bold tracking-wider opacity-70">
                                         {t('total_users', settings.language)}
                                     </span>
-                                    <span className="font-bold text-2xl">
+                                    <span className={`font-bold ${settings?.density === 'compact' ? 'text-xl' : 'text-2xl'}`}>
                                         {userStats?.total || 0}
                                     </span>
                                 </button>
@@ -439,12 +439,12 @@ export default function DashboardOverview() {
                                 {/* Pending (Alert) */}
                                 <button
                                     onClick={() => navigate('/admin?section=users&filter=PENDING')}
-                                    className="flex flex-col items-center justify-center p-2 rounded bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold hover:scale-[1.02] transition-all relative overflow-hidden"
+                                    className={`flex flex-col items-center justify-center ${settings?.density === 'compact' ? 'p-1' : 'p-2'} rounded bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-900 dark:text-red-400 font-bold hover:scale-[1.02] transition-all relative overflow-hidden`}
                                 >
                                     <div className="absolute top-0 right-0 p-1 opacity-20">
-                                        <Plus size={24} />
+                                        <Plus size={settings?.density === 'compact' ? 18 : 24} />
                                     </div>
-                                    <span className="font-bold text-lg">
+                                    <span className={`font-bold ${settings?.density === 'compact' ? 'text-base' : 'text-lg'}`}>
                                         {users.filter((u) => !u.isApproved).length}
                                     </span>
                                     <span className="text-[9px] opacity-80 uppercase mt-1">
@@ -457,9 +457,9 @@ export default function DashboardOverview() {
                                     onClick={() =>
                                         navigate('/admin?section=users&filter=STAGING_SUPERVISOR')
                                     }
-                                    className="flex flex-col items-center justify-center p-2 rounded bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 text-blue-900 dark:text-blue-400 font-bold hover:scale-[1.02] transition-all"
+                                    className={`flex flex-col items-center justify-center ${settings?.density === 'compact' ? 'p-1' : 'p-2'} rounded bg-blue-100 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 text-blue-900 dark:text-blue-400 font-bold hover:scale-[1.02] transition-all`}
                                 >
-                                    <span className="font-bold text-lg">
+                                    <span className={`font-bold ${settings?.density === 'compact' ? 'text-base' : 'text-lg'}`}>
                                         {userStats?.staging || 0}
                                     </span>
                                     <span className="text-[9px] opacity-80 uppercase mt-1">
@@ -472,9 +472,9 @@ export default function DashboardOverview() {
                                     onClick={() =>
                                         navigate('/admin?section=users&filter=LOADING_SUPERVISOR')
                                     }
-                                    className="flex flex-col items-center justify-center p-2 rounded bg-orange-100 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-500/30 text-orange-900 dark:text-orange-400 font-bold hover:scale-[1.02] transition-all"
+                                    className={`flex flex-col items-center justify-center ${settings?.density === 'compact' ? 'p-1' : 'p-2'} rounded bg-orange-100 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-500/30 text-orange-900 dark:text-orange-400 font-bold hover:scale-[1.02] transition-all`}
                                 >
-                                    <span className="font-bold text-lg">
+                                    <span className={`font-bold ${settings?.density === 'compact' ? 'text-base' : 'text-lg'}`}>
                                         {userStats?.loading || 0}
                                     </span>
                                     <span className="text-[9px] opacity-80 uppercase mt-1">
@@ -487,9 +487,9 @@ export default function DashboardOverview() {
                                     onClick={() =>
                                         navigate('/admin?section=users&filter=SHIFT_LEAD')
                                     }
-                                    className="flex flex-col items-center justify-center p-2 rounded bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold hover:scale-[1.02] transition-all"
+                                    className={`flex flex-col items-center justify-center ${settings?.density === 'compact' ? 'p-1' : 'p-2'} rounded bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400 font-bold hover:scale-[1.02] transition-all`}
                                 >
-                                    <span className="font-bold text-lg">
+                                    <span className={`font-bold ${settings?.density === 'compact' ? 'text-base' : 'text-lg'}`}>
                                         {userStats?.shift || 0}
                                     </span>
                                     <span className="text-[9px] opacity-80 uppercase mt-1">
