@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { SheetData, Role } from '@/types';
+import { SheetData, Role, User } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Trophy, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -13,6 +13,7 @@ import {
 interface StaffLeaderboardProps {
     sheets: SheetData[];
     roleFilter: 'STAGING' | 'LOADING' | 'SHIFT_LEAD';
+    onUserSelect?: (user: User) => void;
 }
 
 interface StaffMetric {
@@ -25,7 +26,7 @@ interface StaffMetric {
     subLabel: string; // e.g., "Vehicles" or "Staging Places"
 }
 
-export const StaffLeaderboard: React.FC<StaffLeaderboardProps> = ({ sheets, roleFilter }) => {
+export const StaffLeaderboard: React.FC<StaffLeaderboardProps> = ({ sheets, roleFilter, onUserSelect }) => {
     const { users } = useData();
 
     const metrics = useMemo(() => {
@@ -40,7 +41,7 @@ export const StaffLeaderboard: React.FC<StaffLeaderboardProps> = ({ sheets, role
 
         const calculated = candidates.map(u => {
             const name = u.fullName || u.username;
-            let metric: StaffMetric = {
+            const metric: StaffMetric = {
                 name,
                 sheetsCount: 0,
                 totalQty: 0,
@@ -78,7 +79,7 @@ export const StaffLeaderboard: React.FC<StaffLeaderboardProps> = ({ sheets, role
         active.sort((a, b) => b.totalQty - a.totalQty);
 
         // Assign Rank
-        return active.map((m, i) => ({ ...m, rank: i + 1 }));
+        return active.map((m, i: number) => ({ ...m, rank: i + 1 }));
 
     }, [sheets, roleFilter, users]);
 
@@ -125,7 +126,17 @@ export const StaffLeaderboard: React.FC<StaffLeaderboardProps> = ({ sheets, role
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                 {metrics.map((staff) => (
-                                    <tr key={staff.rank} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/80 transition-colors group">
+                                    <tr
+                                        key={staff.rank}
+                                        onClick={() => {
+                                            const user = users.find(u => (u.fullName || u.username) === staff.name);
+                                            if (user && onUserSelect) onUserSelect(user);
+                                        }}
+                                        className={cn(
+                                            "hover:bg-slate-50/80 dark:hover:bg-slate-800/80 transition-colors group",
+                                            onUserSelect && "cursor-pointer"
+                                        )}
+                                    >
                                         <td className="px-6 py-4 text-center font-bold text-slate-500 dark:text-slate-400">
                                             {staff.rank}
                                         </td>

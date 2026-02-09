@@ -1,17 +1,20 @@
-import React from 'react';
 import { StagingItem, SheetStatus } from '@/types';
 import { SkuSelector } from '../shared/SkuSelector';
+import { Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface StagingMobileCardsProps {
     items: StagingItem[];
     status: SheetStatus;
     onUpdateItem: (index: number, field: keyof StagingItem, value: string | number) => void;
+    onRemoveItem: (index: number) => void;
 }
 
 export const StagingMobileCards: React.FC<StagingMobileCardsProps> = ({
     items,
     status,
-    onUpdateItem
+    onUpdateItem,
+    onRemoveItem
 }) => {
     // Helper to determine read-only state
     const isReadOnly =
@@ -33,18 +36,34 @@ export const StagingMobileCards: React.FC<StagingMobileCardsProps> = ({
                             <span className="bg-slate-100 text-slate-500 text-[10px] px-2 py-0.5 rounded font-mono font-bold">
                                 ITEM #{isReadOnly ? index + 1 : item.srNo}
                             </span>
-                            <div className="text-blue-700 font-bold flex items-center gap-1.5">
-                                <span className="text-[10px] text-slate-400 uppercase tracking-widest">
-                                    Total:
-                                </span>
-                                <span className="text-lg leading-none">{item.ttlCases || 0}</span>
+                            <div className="flex items-center gap-2">
+                                <div className="text-blue-700 font-bold flex items-center gap-1.5">
+                                    <span className="text-[10px] text-slate-400 uppercase tracking-widest">
+                                        Total:
+                                    </span>
+                                    <span className="text-lg leading-none">{item.ttlCases || 0}</span>
+                                </div>
+                                {!isReadOnly && (
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => {
+                                            if (confirm('Delete this row?')) {
+                                                onRemoveItem(item.srNo);
+                                            }
+                                        }}
+                                        className="h-8 w-8 p-0 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full"
+                                    >
+                                        <Trash2 size={16} />
+                                    </Button>
+                                )}
                             </div>
                         </div>
 
                         <SkuSelector
                             value={item.skuName}
                             onChange={(val) =>
-                                onUpdateItem(isReadOnly ? index : item.srNo - 1, 'skuName', val)
+                                onUpdateItem(item.srNo, 'skuName', val)
                             }
                             disabled={isReadOnly}
                             placeholder="Select SKU Description"
@@ -61,7 +80,7 @@ export const StagingMobileCards: React.FC<StagingMobileCardsProps> = ({
                                     value={item.casesPerPlt || ''}
                                     onChange={(e) =>
                                         onUpdateItem(
-                                            isReadOnly ? index : item.srNo - 1,
+                                            item.srNo,
                                             'casesPerPlt',
                                             e.target.value
                                         )
@@ -79,7 +98,7 @@ export const StagingMobileCards: React.FC<StagingMobileCardsProps> = ({
                                     value={item.fullPlt || ''}
                                     onChange={(e) =>
                                         onUpdateItem(
-                                            isReadOnly ? index : item.srNo - 1,
+                                            item.srNo,
                                             'fullPlt',
                                             e.target.value
                                         )
@@ -97,7 +116,7 @@ export const StagingMobileCards: React.FC<StagingMobileCardsProps> = ({
                                     value={item.loose || ''}
                                     onChange={(e) =>
                                         onUpdateItem(
-                                            isReadOnly ? index : item.srNo - 1,
+                                            item.srNo,
                                             'loose',
                                             e.target.value
                                         )

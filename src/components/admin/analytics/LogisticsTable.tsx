@@ -20,13 +20,14 @@ interface LogisticsTableProps {
     title: string;
     entries: LogisticsEntry[];
     emptyMessage?: string;
-    color?: 'blue' | 'emerald' | 'amber' | 'slate';
+    color?: 'blue' | 'emerald' | 'amber' | 'slate' | 'indigo' | 'purple';
     density?: 'compact' | 'comfortable';
+    onRowClick?: (id: string) => void;
 }
 
 const PAGE_SIZE = 10;
 
-export function LogisticsTable({ title, entries, emptyMessage = 'No vehicles found.', color = 'blue', density }: LogisticsTableProps) {
+export function LogisticsTable({ title, entries, emptyMessage = 'No vehicles found.', color = 'blue', density, onRowClick }: LogisticsTableProps) {
     const isCompact = density === 'compact';
     const [currentPage, setCurrentPage] = useState(1);
 
@@ -42,7 +43,9 @@ export function LogisticsTable({ title, entries, emptyMessage = 'No vehicles fou
             case 'emerald': return 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800';
             case 'amber': return 'text-amber-600 bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-800';
             case 'slate': return 'text-slate-600 bg-slate-50 dark:bg-slate-900/20 border-slate-100 dark:border-slate-800';
-            default: return 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-800';
+            case 'indigo': return 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-800';
+            case 'purple': return 'text-purple-600 bg-purple-50 dark:bg-purple-900/20 border-purple-100 dark:border-purple-800';
+            default: return 'text-blue-600 bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800';
         }
     };
 
@@ -65,7 +68,6 @@ export function LogisticsTable({ title, entries, emptyMessage = 'No vehicles fou
                     </div>
                 </div>
 
-                {/* Pagination Controls */}
                 {totalPages > 1 && (
                     <div className="flex items-center gap-2">
                         <Button
@@ -114,7 +116,14 @@ export function LogisticsTable({ title, entries, emptyMessage = 'No vehicles fou
                             </tr>
                         ) : (
                             currentData.map((row) => (
-                                <tr key={row.id} className="group hover:bg-indigo-50/50 dark:hover:bg-slate-800/50 transition-colors">
+                                <tr
+                                    key={row.id}
+                                    onClick={() => onRowClick?.(row.id)}
+                                    className={cn(
+                                        "group transition-colors",
+                                        onRowClick ? "cursor-pointer hover:bg-indigo-50/50 dark:hover:bg-slate-800/50" : "hover:bg-slate-50/50"
+                                    )}
+                                >
                                     <td className={`${isCompact ? 'py-1.5' : 'py-3'} pl-6`}>
                                         <div className="flex flex-col">
                                             <span className={`font-bold text-slate-700 dark:text-slate-200 ${isCompact ? 'text-[10px]' : ''}`}>

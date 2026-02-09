@@ -17,9 +17,13 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
     options,
     initialCaption = 'Evidence'
 }) => {
-    if (!cameraActive) return null;
-
     const [selectedCaption, setSelectedCaption] = React.useState(initialCaption);
+
+    React.useEffect(() => {
+        setSelectedCaption(initialCaption);
+    }, [initialCaption]);
+
+    if (!cameraActive) return null;
 
     return (
         <div className="fixed inset-0 bg-black/80 z-[60] flex flex-col items-center justify-center p-4">

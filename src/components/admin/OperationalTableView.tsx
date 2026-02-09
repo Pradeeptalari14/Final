@@ -16,6 +16,7 @@ interface OperationalTableViewProps {
     onViewModeChange: (value: string) => void;
     currentUser: User | null;
     refreshSheets: () => Promise<void>;
+    isLoading?: boolean;
 }
 
 export function OperationalTableView({
@@ -24,7 +25,8 @@ export function OperationalTableView({
     activeViewMode,
     onViewModeChange,
     currentUser,
-    refreshSheets
+    refreshSheets,
+    isLoading = false
 }: OperationalTableViewProps) {
     const navigate = useNavigate();
     const { addToast } = useToast();
@@ -34,10 +36,6 @@ export function OperationalTableView({
     const [searchQuery, setSearchQuery] = useState('');
     const [dateFilter, setDateFilter] = useState('');
     const isRejected = (s: SheetData) => !!s.rejectionReason;
-
-    // --- Filter Logic ---
-
-    // --- Filter Logic ---
 
     // --- Filter Logic ---
 
@@ -107,11 +105,6 @@ export function OperationalTableView({
                 result = relevantSheets.filter((s) => (s.status || '').toUpperCase() === 'DRAFT' && isRejected(s));
             else if (activeViewMode === 'VIEW_LOADING_REJECTED')
                 result = relevantSheets.filter((s) => ((s.status || '').toUpperCase() === 'LOCKED' || (s.status || '').toUpperCase() === 'LOADING_VERIFICATION_PENDING') && isRejected(s));
-        }
-
-        console.log('[OperationalTableView] Final Status Filter Result:', result.length);
-        if (result.length > 0) {
-            console.log('[OperationalTableView] Samples:', result.slice(0, 3).map(s => ({ id: s.id, status: s.status })));
         }
 
         // 4. Final Sort
@@ -414,32 +407,39 @@ export function OperationalTableView({
             </div>
 
             <div className="flex-1 relative border border-red-500/20 rounded-xl overflow-hidden shadow-inner bg-slate-100/30 dark:bg-slate-900/10 min-h-[600px]">
-                <VirtualDatabaseTable
-                    data={filteredSheets}
-                    settings={settings}
-                    currentUser={currentUser}
-                    processingId={processingId}
-                    searchQuery={searchQuery}
-                    onDelete={handleDeleteSheet}
-                    onQuickApprove={handleQuickApprove}
-                    onQuickReject={handleQuickReject}
-                    onRowClick={(sheet) => {
-                        const isStagingUser = currentUser?.role === Role.STAGING_SUPERVISOR;
-                        let target = `/sheets/staging/${sheet.id}`;
+                {isLoading ? (
+                    <div className="flex w-full h-full items-center justify-center flex-col gap-3 text-slate-500 animate-pulse">
+                        <div className="w-10 h-10 border-4 border-slate-200 border-t-primary rounded-full animate-spin" />
+                        <span className="font-bold uppercase tracking-widest text-xs">Loading operations data...</span>
+                    </div>
+                ) : (
+                    <VirtualDatabaseTable
+                        data={filteredSheets}
+                        settings={settings}
+                        currentUser={currentUser}
+                        processingId={processingId}
+                        searchQuery={searchQuery}
+                        onDelete={handleDeleteSheet}
+                        onQuickApprove={handleQuickApprove}
+                        onQuickReject={handleQuickReject}
+                        onRowClick={(sheet) => {
+                            const isStagingUser = currentUser?.role === Role.STAGING_SUPERVISOR;
+                            let target = `/sheets/staging/${sheet.id}`;
 
-                        if (sheet.status === SheetStatus.COMPLETED) {
-                            target = `/sheets/loading/${sheet.id}`;
-                        } else if (
-                            (sheet.status === SheetStatus.LOADING_VERIFICATION_PENDING ||
-                                sheet.status === SheetStatus.LOCKED) &&
-                            !isStagingUser
-                        ) {
-                            target = `/sheets/loading/${sheet.id}`;
-                        }
+                            if (sheet.status === SheetStatus.COMPLETED) {
+                                target = `/sheets/loading/${sheet.id}`;
+                            } else if (
+                                (sheet.status === SheetStatus.LOADING_VERIFICATION_PENDING ||
+                                    sheet.status === SheetStatus.LOCKED) &&
+                                !isStagingUser
+                            ) {
+                                target = `/sheets/loading/${sheet.id}`;
+                            }
 
-                        navigate(target);
-                    }}
-                />
+                            navigate(target);
+                        }}
+                    />
+                )}
             </div>
         </div>
     );

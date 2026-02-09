@@ -5,6 +5,7 @@ import { MoreHorizontal } from 'lucide-react';
 
 interface UserTableProps {
     users: User[];
+    loading?: boolean;
     lastActiveMap: Map<string, number>;
     onToggleStatus: (user: User) => void;
     onEdit: (user: User) => void;
@@ -17,6 +18,7 @@ interface UserTableProps {
 
 export const UserTable: React.FC<UserTableProps> = ({
     users,
+    loading,
     onRowClick,
     density
 }) => {
@@ -24,27 +26,33 @@ export const UserTable: React.FC<UserTableProps> = ({
     return (
         <div className="w-full">
             <table className="w-full text-left text-sm border-collapse">
-                <thead className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md sticky top-0 z-10 shadow-sm">
+                <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-white/10 sticky top-0 z-10 shadow-sm">
                     <tr>
-                        <th className={`${isCompact ? 'py-1' : 'py-2'} pl-6 font-black text-[10px] uppercase tracking-[0.2em] text-slate-400 w-[20%]`}>
+                        <th className={`${isCompact ? 'py-2' : 'py-3'} pl-6 font-extrabold text-[11px] uppercase tracking-wider text-slate-500 w-[20%]`}>
                             User Name
                         </th>
-                        <th className={`${isCompact ? 'py-1' : 'py-2'} font-black text-[10px] uppercase tracking-[0.2em] text-slate-400 w-[25%]`}>
+                        <th className={`${isCompact ? 'py-2' : 'py-3'} font-extrabold text-[11px] uppercase tracking-wider text-slate-500 w-[25%]`}>
                             Full Name
                         </th>
-                        <th className={`${isCompact ? 'py-1' : 'py-2'} font-black text-[10px] uppercase tracking-[0.2em] text-slate-400 w-[25%]`}>
+                        <th className={`${isCompact ? 'py-2' : 'py-3'} font-extrabold text-[11px] uppercase tracking-wider text-slate-500 w-[25%]`}>
                             Email
                         </th>
-                        <th className={`${isCompact ? 'py-1' : 'py-2'} font-black text-[10px] uppercase tracking-[0.2em] text-slate-400 w-[20%]`}>
+                        <th className={`${isCompact ? 'py-2' : 'py-3'} font-extrabold text-[11px] uppercase tracking-wider text-slate-500 w-[20%]`}>
                             Employee Code
                         </th>
-                        <th className={`${isCompact ? 'py-1' : 'py-2'} pr-6 text-right font-black text-[10px] uppercase tracking-[0.2em] text-slate-400 w-[10%]`}>
+                        <th className={`${isCompact ? 'py-2' : 'py-3'} pr-6 text-right font-extrabold text-[11px] uppercase tracking-wider text-slate-500 w-[10%]`}>
                             View
                         </th>
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {users.length === 0 ? (
+                    {loading ? (
+                        <tr>
+                            <td colSpan={5} className="py-12 text-center text-slate-400 italic">
+                                Loading directory...
+                            </td>
+                        </tr>
+                    ) : users.length === 0 ? (
                         <tr>
                             <td colSpan={5} className="py-12 text-center text-slate-400 italic">
                                 No directory objects found.
@@ -59,7 +67,16 @@ export const UserTable: React.FC<UserTableProps> = ({
                                     className="group cursor-pointer hover:bg-indigo-50/50 dark:hover:bg-slate-800/50 transition-colors"
                                 >
                                     <td className={`${isCompact ? 'py-1' : 'py-2'} pl-6`}>
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-full bg-slate-100 overflow-hidden border border-slate-200 shrink-0">
+                                                {user.photoURL ? (
+                                                    <img src={user.photoURL} alt={user.username} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-slate-400 bg-slate-50 uppercase">
+                                                        {user.username.substring(0, 2)}
+                                                    </div>
+                                                )}
+                                            </div>
                                             <p className="text-[10px] text-slate-500 font-bold">
                                                 {user.username}
                                             </p>

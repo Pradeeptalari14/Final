@@ -1,4 +1,3 @@
-import React from 'react';
 import { cn } from '@/lib/utils';
 import {
     Plus,
@@ -10,7 +9,6 @@ import {
     Loader2,
     AlertTriangle,
     ChevronDown,
-    X,
     RefreshCw,
 } from 'lucide-react';
 import {
@@ -20,7 +18,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from '@/components/ui/button';
-import { SheetStatus, Role, Comment, SheetData } from '@/types';
+import { SheetStatus, Role, SheetData } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { PrintableStagingSheet } from '@/components/print/PrintableStagingSheet';
 import { SheetHeader } from './shared/SheetHeader';
@@ -31,50 +29,9 @@ import { useStagingSheetLogic } from '@/hooks/useStagingSheetLogic';
 import { RejectionSection } from './shared/RejectionSection';
 import { FileSpreadsheet } from 'lucide-react';
 import { exportStagingToExcel } from '@/lib/excelExport';
+import { Skeleton, SkeletonPatterns } from '@/components/ui/SkeletonLoader';
 
-const DismissibleAlert = ({ comments }: { comments: Comment[] }) => {
-    const [isVisible, setIsVisible] = React.useState(true);
-    if (!isVisible) return null;
-    return (
-        <div className="bg-white border-l-4 border-red-500 rounded-lg shadow-sm p-4 flex gap-4 animate-in fade-in slide-in-from-top-2 relative mb-4">
-            <button
-                onClick={() => setIsVisible(false)}
-                className="absolute top-3 right-3 text-slate-400 hover:text-slate-600 transition-colors"
-            >
-                <X size={16} />
-            </button>
-            <div className="bg-red-50 p-2.5 rounded-full h-fit text-red-500 shrink-0">
-                <AlertTriangle size={20} />
-            </div>
-            <div className="flex-1">
-                <h3 className="font-bold text-slate-800 text-sm mb-2 flex items-center gap-2">
-                    Shift Lead Feedback
-                    <span className="text-[10px] font-normal uppercase tracking-wider bg-red-50 text-red-600 px-2 py-0.5 rounded-sm border border-red-100">
-                        Review Required
-                    </span>
-                </h3>
-                <div className="space-y-3">
-                    {comments.map((comment, i) => (
-                        <div
-                            key={i}
-                            className="text-sm text-slate-600 bg-slate-50 p-3 rounded-md border border-slate-100"
-                        >
-                            <div className="flex justify-between items-start mb-1">
-                                <span className="font-bold text-slate-900 text-xs uppercase tracking-wide">
-                                    {comment.author}
-                                </span>
-                                <span className="text-slate-400 text-[10px]">
-                                    {new Date(comment.timestamp).toLocaleString()}
-                                </span>
-                            </div>
-                            <p className="leading-relaxed text-slate-700">{comment.text}</p>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </div>
-    );
-};
+import { DismissibleAlert } from '@/components/shared/DismissibleAlert';
 
 export default function StagingSheet() {
     const {
@@ -86,18 +43,33 @@ export default function StagingSheet() {
         handleRequestVerification,
         updateItem,
         addItem,
+        removeItem,
         handleVerificationAction,
         handleToggleRejection,
         currentRole,
         navigate,
         id,
         dataLoading,
-        refreshSheets
+        refreshSheets,
+        isSaving
     } = useStagingSheetLogic();
 
     const handlePrint = () => {
         window.print();
     };
+    /* ... skipped lines ... */
+    <Button
+        onClick={() => handleSave()}
+        disabled={loading || isSaving}
+        className="px-8 bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-lg shadow-indigo-500/20 hover:shadow-xl hover:-translate-y-0.5 transition-all"
+    >
+        {loading || isSaving ? (
+            <Loader2 className="animate-spin mr-2" />
+        ) : (
+            <Save className="mr-2" size={18} />
+        )}{' '}
+        {isSaving ? 'Saving...' : 'Save Draft'}
+    </Button>
 
     const onRequestVerification = () => {
         const errors: string[] = [];
@@ -119,8 +91,14 @@ export default function StagingSheet() {
     if (id && id !== 'new' && (!formData.id || formData.id !== id)) {
         if (dataLoading) {
             return (
-                <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-400">
-                    <Loader2 className="animate-spin mr-2" /> Loading Sheet Data...
+                <div className="bg-slate-50 min-h-screen p-4 md:p-8 space-y-6 animate-in fade-in duration-500">
+                    <Skeleton className="h-20 w-full rounded-xl border border-slate-200" />
+                    <div className="bg-white shadow-xl shadow-slate-200 rounded-xl overflow-hidden border border-slate-200">
+                        <SkeletonPatterns.SheetHeader />
+                        <div className="p-8">
+                            <SkeletonPatterns.TableRows rows={10} />
+                        </div>
+                    </div>
                 </div>
             );
         }
@@ -153,7 +131,7 @@ export default function StagingSheet() {
 
 
             {/* Top Bar */}
-            <div className="print:hidden border-b border-slate-200/80 p-4 md:px-8 flex justify-between items-center sticky top-0 z-30 shadow-sm backdrop-blur-xl bg-white/80">
+            <div className="print:hidden border-b border-slate-200/80 p-4 md:px-8 flex justify-between items-center sticky top-0 z-30 shadow-sm glass">
                 <div className="flex items-center gap-4">
                     <Button
                         variant="ghost"
@@ -244,6 +222,7 @@ export default function StagingSheet() {
                     items={formData.stagingItems || []}
                     status={formData.status as SheetStatus}
                     onUpdateItem={updateItem}
+                    onRemoveItem={removeItem}
                     currentRole={currentRole}
                     onToggleRejection={handleToggleRejection}
                 />
@@ -253,6 +232,7 @@ export default function StagingSheet() {
                     items={formData.stagingItems || []}
                     status={formData.status as SheetStatus}
                     onUpdateItem={updateItem}
+                    onRemoveItem={removeItem}
                 />
 
                 <div className="flex justify-center pb-8">
@@ -310,7 +290,7 @@ export default function StagingSheet() {
             {formData.status !== SheetStatus.LOCKED &&
                 formData.status !== SheetStatus.STAGING_VERIFICATION_PENDING &&
                 formData.status !== SheetStatus.COMPLETED && (
-                    <div className="sticky bottom-0 w-full p-4 bg-white/90 backdrop-blur-xl border-t border-slate-200 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)] flex justify-center gap-4 z-40 print:hidden animate-in slide-in-from-bottom-2">
+                    <div className="sticky bottom-0 w-full p-4 glass border-t border-slate-200 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)] flex justify-center gap-4 z-40 print:hidden animate-in slide-in-from-bottom-2">
                         <Button
                             variant="outline"
                             onClick={() => navigate(-1)}
@@ -345,15 +325,15 @@ export default function StagingSheet() {
                         </Button>
                         <Button
                             onClick={() => handleSave()}
-                            disabled={loading}
+                            disabled={loading || isSaving}
                             className="px-8 bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-lg shadow-indigo-500/20 hover:shadow-xl hover:-translate-y-0.5 transition-all"
                         >
-                            {loading ? (
+                            {loading || isSaving ? (
                                 <Loader2 className="animate-spin mr-2" />
                             ) : (
                                 <Save className="mr-2" size={18} />
                             )}{' '}
-                            Save Draft
+                            {isSaving ? 'Saving...' : 'Save Draft'}
                         </Button>
                     </div>
                 )}

@@ -1,9 +1,11 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
 import { useAppState } from '@/contexts/AppStateContext';
 import { useToast } from '@/contexts/ToastContext';
 import { SheetData, SheetStatus, Role, StagingItem } from '@/types';
+import { useDebounce } from '@/hooks/useDebounce';
+import { calculateStagingItemTotal } from '@/lib/logic/sheetCalculations';
 
 const EMPTY_ITEM: StagingItem = {
     srNo: 0,
@@ -52,14 +54,29 @@ export const useStagingSheetLogic = () => {
     });
 
     const [loading, setLoading] = useState(false);
+    const [isSaving, setIsSaving] = useState(false); // Track visual save state
     const isDirty = useRef(false);
+    const editRevision = useRef(0);
     const prevId = useRef(id);
 
-    // Reset dirty state if navigating to a different sheet
+    const markDirty = () => {
+        isDirty.current = true;
+        editRevision.current++;
+    };
+
+    // Auto-Save Logic
+    const debouncedFormData = useDebounce(formData, 3000); // 3 seconds debounce
+
+    // Reset dirty state if navigating to a DIFFERENT existing sheet
     useEffect(() => {
         if (id !== prevId.current) {
-            isDirty.current = false;
-            prevId.current = id;
+            // If we are moving from 'new' to an ID, we DON'T reset isDirty
+            // because we want to preserve any typing that happened during the save
+            if (prevId.current !== 'new' && id !== 'new') {
+                isDirty.current = false;
+            }
+            // prevId is updated either here or inside the sync logic
+            if (id !== 'new') prevId.current = id;
         }
     }, [id]);
 
@@ -87,7 +104,9 @@ export const useStagingSheetLogic = () => {
 
             // Existing sheet logic
             // CRITICAL: If we have local unsaved changes, DO NOT let background sync overwrite them
+            // Exception: If we just finished a save that gave us a real ID, we might still be dirty
             if (isDirty.current) {
+                prevId.current = id; // Sync the ID tracking so the next effect doesn't triggger a reset
                 return;
             }
 
@@ -96,71 +115,108 @@ export const useStagingSheetLogic = () => {
             // 1. Try local cache first
             const foundInCache = sheets.find((s) => s.id === id);
             if (foundInCache) {
-                setFormData(foundInCache);
+                // Sanitize items: Ensure they have srNo and are consistent
+                const sanitizedItems = (foundInCache.stagingItems || []).map((item, i) => ({
+                    ...EMPTY_ITEM,
+                    ...item,
+                    srNo: i + 1
+                }));
+                setFormData({ ...foundInCache, stagingItems: sanitizedItems });
                 setLoading(false);
+                prevId.current = id;
                 return;
             }
-
-            // 2. Fallback to direct fetch
-            const fetched = await fetchSheetById(id);
-            if (fetched) {
-                setFormData(fetched);
-            } else if (!dataLoading) {
-                // 3. Last resort
-                await refreshSheets();
+            // 2. Direct fetch
+            try {
+                const data = await fetchSheetById(id);
+                if (data) {
+                    const sanitizedItems = (data.stagingItems || []).map((item, i) => ({
+                        ...EMPTY_ITEM,
+                        ...item,
+                        srNo: i + 1
+                    }));
+                    setFormData({ ...data, stagingItems: sanitizedItems });
+                }
+            } catch (err) {
+                console.error('Fetch failed', err);
             }
             setLoading(false);
+            prevId.current = id;
         };
 
         loadSheet();
     }, [id, sheets, currentUser, dataLoading, refreshSheets, fetchSheetById]);
 
+    // Use a ref for formData to handle reconciliation in handleSave without causing dependency cycles
+    const formDataRef = useRef(formData);
+    useEffect(() => {
+        formDataRef.current = formData;
+    }, [formData]);
+
     const handleHeaderChange = (field: string, value: string | number | boolean) => {
+        markDirty();
         setFormData((prev) => ({ ...prev, [field]: value }));
-        isDirty.current = true;
     };
 
-    const handleSave = async (dataToSave: Partial<SheetData> = formData) => {
+    const handleSave = useCallback(async (dataToSave: Partial<SheetData> = formDataRef.current, quiet = false) => {
         if (loading) return; // Strict lock
         setLoading(true);
-        try {
-            // Determine ID: If previously saved (but nav pending), use that. Else if new, generate. Else existing.
-            const isNew = id === 'new' && !formData.id;
-            const targetId = isNew ? `SH-${Date.now()}` : formData.id || id!;
+        if (!quiet) setIsSaving(true);
 
+        const startRev = editRevision.current;
+
+        try {
+            const isNew = id === 'new' && !formDataRef.current.id;
+            const targetId = isNew ? `SH-${Date.now()}` : formDataRef.current.id || id!;
+
+            // RECONCILIATION: Always start with latest formDataRef, overlay dataToSave
             const sheetToSave: SheetData = {
+                ...formDataRef.current,
                 ...(dataToSave as SheetData),
                 id: targetId,
                 updatedAt: new Date().toISOString(),
-                status: dataToSave.status || SheetStatus.DRAFT
+                status: dataToSave.status || formDataRef.current.status || SheetStatus.DRAFT
             };
 
             // If new, invoke addSheet (which does INSERT)
             if (isNew) {
-                // Optimistically set ID to prevent double-save creating duplicates
                 setFormData((prev) => ({ ...prev, id: targetId }));
-
                 const { error } = await addSheet(sheetToSave);
                 if (error) throw error;
-                addToast('success', 'New sheet created successfully');
-                // Navigate to the newly created sheet URL
+                if (!quiet) addToast('success', 'New sheet created successfully');
                 navigate(`/sheets/staging/${targetId}`, { replace: true });
             } else {
-                // If update, invoke updateSheet (which does UPDATE)
                 const { error } = await updateSheet(sheetToSave);
                 if (error) throw error;
-                // Only show toast if not being called by handleRequestVerification
-                if (formData.status === dataToSave.status) {
+                if (!quiet && formDataRef.current.status === dataToSave.status) {
                     addToast('success', 'Draft saved successfully');
                 }
             }
+
+            if (editRevision.current === startRev) {
+                isDirty.current = false;
+            }
         } catch (err: unknown) {
             console.error(err);
-            addToast('error', 'Failed to save changes');
+            if (!quiet) addToast('error', 'Failed to save changes');
         } finally {
             setLoading(false);
+            setIsSaving(false);
         }
-    };
+    }, [id, addSheet, updateSheet, addToast, navigate, loading]);
+
+    // Effect to trigger Auto-Save - DEPENDENCY STABILITY FIX
+    useEffect(() => {
+        if (
+            formData.id &&
+            isDirty.current &&
+            formData.status !== SheetStatus.LOCKED &&
+            formData.status !== SheetStatus.COMPLETED &&
+            formData.status !== SheetStatus.STAGING_VERIFICATION_PENDING
+        ) {
+            handleSave(undefined, true); // Use absolute latest from formDataRef, quiet save
+        }
+    }, [debouncedFormData, formData.id, formData.status]); // REMOVED handleSave dependency to prevent keystroke-loops
 
     const handleDelete = async () => {
         if (!confirm('Are you sure you want to delete this sheet? This cannot be undone.')) return;
@@ -196,24 +252,25 @@ export const useStagingSheetLogic = () => {
         navigate('/database');
     };
 
-    const updateItem = (index: number, field: keyof StagingItem, value: string | number) => {
+    const updateItem = (srNo: number, field: keyof StagingItem, value: string | number) => {
         if (formData.status === SheetStatus.LOCKED || formData.status === SheetStatus.COMPLETED)
             return;
 
-        const newItems = [...(formData.stagingItems || [])];
-        newItems[index] = { ...newItems[index], [field]: value };
-        isDirty.current = true;
+        markDirty();
+        setFormData((prev) => {
+            const newItems = [...(prev.stagingItems || [])];
+            const idx = newItems.findIndex(i => i.srNo === srNo);
+            if (idx === -1) return prev;
 
-        // Auto-calc Total
-        if (field === 'fullPlt' || field === 'casesPerPlt' || field === 'loose') {
-            const item = newItems[index];
-            const cases = Number(item.casesPerPlt) || 0;
-            const full = Number(item.fullPlt) || 0;
-            const loose = Number(item.loose) || 0;
-            newItems[index].ttlCases = cases * full + loose;
-        }
+            newItems[idx] = { ...newItems[idx], [field]: value };
 
-        setFormData({ ...formData, stagingItems: newItems });
+            // Auto-calc Total
+            if (field === 'fullPlt' || field === 'casesPerPlt' || field === 'loose') {
+                const item = newItems[idx];
+                newItems[idx].ttlCases = calculateStagingItemTotal(item.casesPerPlt, item.fullPlt, item.loose);
+            }
+            return { ...prev, stagingItems: newItems };
+        });
     };
 
     const addItem = (count: number = 1) => {
@@ -221,20 +278,46 @@ export const useStagingSheetLogic = () => {
             formData.status !== SheetStatus.LOCKED &&
             formData.status !== SheetStatus.STAGING_VERIFICATION_PENDING
         ) {
-            const currentLength = formData.stagingItems?.length || 0;
-            const newItems = Array.from({ length: count }, (_, i) => ({
-                ...EMPTY_ITEM,
-                srNo: currentLength + i + 1
-            }));
+            markDirty();
+            setFormData((prev) => {
+                const currentLength = prev.stagingItems?.length || 0;
+                const newItems = Array.from({ length: count }, (_, i) => ({
+                    ...EMPTY_ITEM,
+                    srNo: currentLength + i + 1
+                }));
 
-            setFormData({
-                ...formData,
-                stagingItems: [
-                    ...(formData.stagingItems || []),
-                    ...newItems
-                ]
+                return {
+                    ...prev,
+                    stagingItems: [
+                        ...(prev.stagingItems || []),
+                        ...newItems
+                    ]
+                };
             });
         }
+    };
+
+    const removeItem = (srNo: number) => {
+        if (
+            formData.status === SheetStatus.LOCKED ||
+            formData.status === SheetStatus.COMPLETED ||
+            formData.status === SheetStatus.STAGING_VERIFICATION_PENDING
+        )
+            return;
+
+        markDirty();
+        setFormData((prev) => {
+            const newItems = (prev.stagingItems || []).filter((item) => item.srNo !== srNo);
+            // Re-index
+            const reindexedItems = newItems.map((item, i) => ({
+                ...item,
+                srNo: i + 1
+            }));
+            return {
+                ...prev,
+                stagingItems: reindexedItems
+            };
+        });
     };
 
     const handleVerificationAction = async (approve: boolean, reason?: string) => {
@@ -292,6 +375,7 @@ export const useStagingSheetLogic = () => {
     };
 
     const handleToggleRejection = (srNo: number, reason?: string) => {
+        markDirty();
         setFormData((prev) => {
             const newItems = prev.stagingItems?.map((item) =>
                 item.srNo === srNo
@@ -316,12 +400,14 @@ export const useStagingSheetLogic = () => {
         handleRequestVerification,
         updateItem,
         addItem,
+        removeItem,
         handleVerificationAction,
         handleToggleRejection,
         currentRole,
         navigate, // Exposed for back button
         id,
         dataLoading,
-        refreshSheets
+        refreshSheets,
+        isSaving
     };
 };

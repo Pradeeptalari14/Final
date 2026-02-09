@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
 import { SheetData, SheetStatus, Role } from '@/types';
@@ -6,6 +6,8 @@ import { useToast } from '@/contexts/ToastContext';
 import { useSheetHeader } from './useSheetHeader';
 import { useSheetGrid } from './useSheetGrid';
 import { useSheetSignatures } from './useSheetSignatures';
+import { calculateTotals, generateLists } from '@/lib/logic/sheetCalculations';
+import { validateSheetCompleteness, getSubmissionValidationError } from '@/lib/logic/sheetValidation';
 
 export const useLoadingSheetLogic = () => {
     const { id } = useParams();
@@ -25,23 +27,32 @@ export const useLoadingSheetLogic = () => {
     const [actionLoading, setActionLoading] = useState(false);
     const [errors] = useState<string[]>([]);
     const isDirty = useRef(false);
+    const editRevision = useRef(0);
     const prevId = useRef(id);
 
-    // Reset dirty state if navigating to a different sheet
+    const markDirty = () => {
+        isDirty.current = true;
+        editRevision.current++;
+    };
+
+    // Reset dirty state if navigating to a DIFFERENT existing sheet
     useEffect(() => {
         if (id !== prevId.current) {
-            isDirty.current = false;
+            // Protect dirty state during ID assignments or transitions
+            if (prevId.current && id) {
+                isDirty.current = false;
+            }
             prevId.current = id;
         }
     }, [id]);
 
     // --- Sub-Hooks ---
-    const { headerState, handleHeaderChange } = useSheetHeader(currentSheet, currentUser, users);
+    const { headerState, handleHeaderChange } = useSheetHeader(currentSheet, currentUser, users, markDirty);
 
     // Wrap setCurrentSheet to track dirty state
     const setSheetData = (data: React.SetStateAction<SheetData | null>) => {
         setCurrentSheet(data);
-        isDirty.current = true;
+        markDirty();
     };
 
     const {
@@ -49,7 +60,7 @@ export const useLoadingSheetLogic = () => {
         dismissValidationError,
         handlers: gridHandlers
     } = useSheetGrid(currentSheet, setSheetData);
-    const { signatureState, camera } = useSheetSignatures(currentSheet, currentUser);
+    const { signatureState, camera } = useSheetSignatures(currentSheet, currentUser, markDirty);
 
     const { setEndTime } = headerState; // Exposed setter for submit logic
 
@@ -59,12 +70,14 @@ export const useLoadingSheetLogic = () => {
 
         const loadSheet = async () => {
             // Already loaded this sheet? Don't overwrite to avoid resetting sub-hook states
-            if (currentSheet && currentSheet.id === id) {
+            // 2. Allow background updates IF we don't have local unsaved changes
+            if (currentSheet && currentSheet.id === id && isDirty.current) {
                 return;
             }
 
             // CRITICAL: If we have local unsaved changes, DO NOT let background sync overwrite them
             if (isDirty.current) {
+                prevId.current = id;
                 return;
             }
 
@@ -75,6 +88,7 @@ export const useLoadingSheetLogic = () => {
             if (foundInCache) {
                 setCurrentSheet(foundInCache);
                 setLoading(false);
+                prevId.current = id;
                 return;
             }
 
@@ -89,10 +103,11 @@ export const useLoadingSheetLogic = () => {
                 }
             }
             setLoading(false);
+            prevId.current = id;
         };
 
         loadSheet();
-    }, [id, sheets, dataLoading, refreshSheets, fetchSheetById, currentSheet]);
+    }, [id, sheets, currentUser, dataLoading, refreshSheets, fetchSheetById]);
 
     // --- Role-based Redirect ---
     useEffect(() => {
@@ -123,7 +138,7 @@ export const useLoadingSheetLogic = () => {
     // --- High-Level Actions (Save, Submit, Verify) ---
 
     // Derived Helper: Build Sheet Object from State
-    const buildSheetData = (status: SheetStatus): SheetData => {
+    const buildSheetData = useCallback((status: SheetStatus): SheetData => {
         if (!currentSheet) throw new Error('No sheet');
         return {
             ...currentSheet,
@@ -163,11 +178,12 @@ export const useLoadingSheetLogic = () => {
                 ]
                 : currentSheet.comments || []
         };
-    };
+    }, [currentSheet, headerState, signatureState, currentUser]);
 
-    const handleSaveProgress = async () => {
+    const handleSaveProgress = useCallback(async (quiet = false) => {
         if (!currentSheet || actionLoading) return;
-        setActionLoading(true);
+        if (!quiet) setActionLoading(true);
+        const startRev = editRevision.current;
         try {
             const data = buildSheetData(currentSheet.status);
             const hasStartedLog = currentSheet.history?.some((h) => h.action === 'LOADING_STARTED');
@@ -184,44 +200,42 @@ export const useLoadingSheetLogic = () => {
                 ];
             }
             await updateSheet(data);
-            isDirty.current = false;
-            addToast('success', 'Progress saved successfully');
+            if (editRevision.current === startRev) {
+                isDirty.current = false;
+            }
+            if (!quiet) addToast('success', 'Progress saved successfully');
         } catch (e) {
             console.error(e);
-            addToast('error', 'Failed to save progress');
+            if (!quiet) addToast('error', 'Failed to save progress');
         } finally {
-            setActionLoading(false);
+            if (!quiet) setActionLoading(false);
         }
-    };
+    }, [currentSheet, actionLoading, currentUser, updateSheet, addToast, buildSheetData]); // Added dependencies
+
+    // Auto-Save Interval
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (
+                isDirty.current &&
+                currentSheet?.status === SheetStatus.LOCKED &&
+                !actionLoading
+            ) {
+                handleSaveProgress(true); // Quiet save
+            }
+        }, 5000); // Check every 5 seconds
+
+        return () => clearInterval(interval);
+    }, [handleSaveProgress, currentSheet, actionLoading]);
 
     const handleSubmit = async () => {
         if (!currentSheet || actionLoading) return;
-        if (!signatureState.svName || signatureState.svName.trim() === '') {
-            addToast('error', 'Supervisor Name is required to complete the sheet');
+
+        const validationError = getSubmissionValidationError(currentSheet, signatureState, lists);
+        if (validationError) {
+            addToast('error', validationError);
             return;
         }
 
-        // Strict Photo Validation
-        const images = signatureState.capturedImages || [];
-        const hasEvidence = images.some(img => typeof img !== 'string' && img.caption === 'Evidence');
-        const hasLoose = images.some(img => typeof img !== 'string' && img.caption === 'Loose Returned');
-        const hasExtra = images.some(img => typeof img !== 'string' && img.caption === 'Extra Loaded');
-
-        const needsLoose = lists.returnedItems.length > 0;
-        const needsExtra = lists.overLoadedItems.length > 0 || lists.extraItemsWithQty.length > 0;
-
-        if (!hasEvidence) {
-            addToast('error', 'Missing Evidence Photo for the total sheet');
-            return;
-        }
-        if (needsLoose && !hasLoose) {
-            addToast('error', 'Missing Evidence Photo for Loose Returned items');
-            return;
-        }
-        if (needsExtra && !hasExtra) {
-            addToast('error', 'Missing Evidence Photo for Extra Loaded items');
-            return;
-        }
         setActionLoading(true);
         const timeNow = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
         setEndTime(timeNow); // Update local hook state
@@ -329,62 +343,20 @@ export const useLoadingSheetLogic = () => {
     };
 
     // --- Computed States (Totals, Lists, Access) ---
-    const totals = useMemo(() => {
-        if (!currentSheet)
-            return {
-                totalLoadedMain: 0,
-                totalAdditional: 0,
-                grandTotalLoaded: 0,
-                totalStaging: 0,
-                balance: 0
-            };
-        const totalLoadedMain =
-            currentSheet.loadingItems?.reduce((acc, li) => acc + li.total, 0) || 0;
-        const totalAdditional =
-            currentSheet.additionalItems?.reduce((acc, ai) => acc + ai.total, 0) || 0;
-        const grandTotalLoaded = totalLoadedMain + totalAdditional;
-        const totalStaging = currentSheet.stagingItems.reduce((acc, si) => acc + si.ttlCases, 0);
-        const balance =
-            currentSheet.loadingItems?.reduce((acc, li) => acc + Math.max(0, li.balance), 0) || 0;
-        return { totalLoadedMain, totalAdditional, grandTotalLoaded, totalStaging, balance };
-    }, [currentSheet]);
+    const totals = useMemo(() => calculateTotals(currentSheet), [currentSheet]);
 
-    const lists = useMemo(() => {
-        if (!currentSheet)
-            return {
-                extraItemsWithQty: [],
-                returnedItems: [],
-                overLoadedItems: [],
-                displayedStagingItems: []
-            };
-        const extraItemsWithQty = (currentSheet.additionalItems || []).filter(
-            (item) => item.total > 0 && item.skuName
-        );
-        const returnedItems = (currentSheet.loadingItems || [])
-            .filter((li) => li.balance > 0)
-            .map(li => ({
-                ...li,
-                skuName: currentSheet.stagingItems.find(si => si.srNo === li.skuSrNo)?.skuName || 'Unknown SKU'
-            }));
-        const overLoadedItems = currentSheet.loadingItems?.filter((li) => li.balance < 0) || [];
-        const displayedStagingItems = currentSheet.stagingItems.filter(
-            (i) => i.skuName && i.skuName.trim() !== ''
-        );
-        return { extraItemsWithQty, returnedItems, overLoadedItems, displayedStagingItems };
-    }, [currentSheet]);
+    const lists = useMemo(() => generateLists(currentSheet), [currentSheet]);
 
-    const isDataComplete = useMemo(() => {
-        if (!currentSheet) return false;
-        // Relaxed complete check: As long as something is loaded, we allow submission.
-        // Discrepancies (Returns/Overloads) are warnings, not blockers.
-        return totals.grandTotalLoaded > 0 || currentSheet.stagingItems.length === 0;
-    }, [currentSheet, totals.grandTotalLoaded]);
+    // Strict Verification Logic
+    const isDataComplete = useMemo(() =>
+        validateSheetCompleteness(currentSheet, headerState, signatureState),
+        [currentSheet, headerState, signatureState]);
 
     const states = {
         isCompleted: currentSheet?.status === SheetStatus.COMPLETED,
         isPendingVerification: currentSheet?.status === SheetStatus.LOADING_VERIFICATION_PENDING,
         isDataComplete,
-        isPhotoComplete: true, // Unblock button to allow click-validation feedback
+        isPhotoComplete: true, // Deprecated in favor of isDataComplete handling everything
         isLocked:
             currentSheet?.status === SheetStatus.COMPLETED ||
             (currentSheet?.status === SheetStatus.LOADING_VERIFICATION_PENDING &&

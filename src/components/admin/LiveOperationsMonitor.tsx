@@ -9,9 +9,7 @@ import {
     Clock,
     CheckCircle,
     RefreshCcw,
-    Search,
-    Monitor,
-    Minimize
+    Search
 } from 'lucide-react';
 import { useAppState } from '@/contexts/AppStateContext';
 import { t } from '@/lib/i18n';
@@ -27,8 +25,6 @@ export function LiveOperationsMonitor({ sheets, onRefresh }: LiveOperationsMonit
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
-    const [isTVMode, setIsTVMode] = useState(false);
-
     const handleRefresh = useCallback(async () => {
         setIsRefreshing(true);
         await onRefresh();
@@ -42,15 +38,6 @@ export function LiveOperationsMonitor({ sheets, onRefresh }: LiveOperationsMonit
         }, 30000);
         return () => clearInterval(interval);
     }, [handleRefresh]);
-
-    const toggleTVMode = () => {
-        if (!isTVMode) {
-            document.documentElement.requestFullscreen().catch(() => { });
-        } else {
-            if (document.fullscreenElement) document.exitFullscreen().catch(() => { });
-        }
-        setIsTVMode(!isTVMode);
-    };
 
     // 1. Get Active Sheets
     const activeSheets = sheets.filter((s) => s.status !== SheetStatus.COMPLETED);
@@ -69,9 +56,9 @@ export function LiveOperationsMonitor({ sheets, onRefresh }: LiveOperationsMonit
         })
         .filter(
             (op) =>
-                op.supervisor?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                op.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                op.destination?.toLowerCase().includes(searchQuery.toLowerCase())
+                (op.supervisor || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (op.id || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (op.destination || '').toLowerCase().includes(searchQuery.toLowerCase())
         );
 
     if (activeSheets.length === 0) {
@@ -135,17 +122,6 @@ export function LiveOperationsMonitor({ sheets, onRefresh }: LiveOperationsMonit
                         <RefreshCcw size={isCompact ? 12 : 16} className={isRefreshing ? 'animate-spin' : ''} />
                         <span className="sr-only">{t('refresh', settings.language)}</span>
                     </Button>
-                    <Button
-                        variant={isTVMode ? 'secondary' : 'ghost'}
-                        size="sm"
-                        onClick={toggleTVMode}
-                        className={`${isCompact ? 'h-6' : 'h-8'} gap-2 ${isTVMode ? 'bg-primary text-primary-foreground text-[10px]' : 'text-slate-500 text-[10px]'}`}
-                    >
-                        {isTVMode ? <Minimize size={isCompact ? 12 : 16} /> : <Monitor size={isCompact ? 12 : 16} />}
-                        <span className="hidden md:inline">
-                            {isTVMode ? 'Exit Fullscreen' : 'TV Mode'}
-                        </span>
-                    </Button>
                 </div>
             </CardHeader>
             <CardContent className="p-0">
@@ -155,70 +131,79 @@ export function LiveOperationsMonitor({ sheets, onRefresh }: LiveOperationsMonit
                             {t('no_sheets_found', settings.language)}
                         </div>
                     ) : (
-                        activeOperations.map((op) => (
-                            <div
-                                key={op.id}
-                                className={`${isCompact ? 'p-1.5 px-3' : 'p-4'} flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-muted/50 transition-colors ${isTVMode ? 'py-8 border-b-2' : ''}`}
-                            >
-                                <div className="flex items-start sm:items-center gap-4">
-                                    <div
-                                        className={`${isCompact ? 'p-1.5' : 'p-2'} rounded-full shrink-0 ${isTVMode ? 'p-4' : ''} ${op.type === 'Staging' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/20' : 'bg-orange-100 text-orange-600 dark:bg-orange-900/20'}`}
-                                    >
-                                        <PlayCircle size={isTVMode ? 32 : (isCompact ? 16 : 20)} />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <div
-                                            className={`font-bold flex flex-wrap items-center gap-2 ${isTVMode ? 'text-2xl' : 'text-sm'}`}
-                                        >
-                                            {op.supervisor}
-                                            <Badge
-                                                variant="outline"
-                                                className={`${isTVMode ? 'text-sm py-1 px-3' : (isCompact ? 'text-[8px] h-4 py-0 px-1' : 'text-[10px]')} uppercase font-bold border-emerald-500/30 text-emerald-500 bg-emerald-500/5`}
-                                            >
-                                                {t(
-                                                    op.status.toLowerCase() as string,
-                                                    settings.language
-                                                )}
-                                            </Badge>
-                                        </div>
-                                        <div
-                                            className={`text-muted-foreground flex items-center gap-2 ${isTVMode ? 'text-lg' : 'text-xs'}`}
-                                        >
-                                            <span className="font-mono bg-muted px-1 rounded">
-                                                #{op.id.slice(0, 8)}
-                                            </span>
-                                            <span>•</span>
-                                            <span className="font-medium text-foreground">
-                                                {op.destination ||
-                                                    t('no_activity', settings.language)}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
+                        activeOperations.map((op) => {
+                            const isStale = (new Date().getTime() - new Date(op.timestamp).getTime()) > 1000 * 60 * 60; // 1 Hour
 
+                            return (
                                 <div
-                                    className={`flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 ${isCompact ? 'pt-1 mt-1' : 'pt-2 mt-2'} sm:pt-0 sm:mt-0 ${isTVMode ? 'gap-4' : ''}`}
+                                    key={op.id}
+                                    className={`${isCompact ? 'p-1.5 px-3' : 'p-4'} flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-muted/50 transition-colors ${isStale ? 'bg-amber-50/50 dark:bg-amber-900/10' : ''}`}
                                 >
-                                    <Badge
-                                        className={`mb-0 sm:mb-1 ${isTVMode ? 'text-lg py-2 px-6' : (isCompact ? 'text-[9px] h-4 py-0 px-1' : '')} ${op.type === 'Staging' ? 'bg-blue-500 hover:bg-blue-600' : 'bg-orange-500 hover:bg-orange-600'}`}
-                                    >
-                                        {t(
-                                            op.status.toLowerCase() as string,
-                                            settings.language
-                                        ).replace(/_/g, ' ')}
-                                    </Badge>
+                                    <div className="flex items-start sm:items-center gap-4">
+                                        <div
+                                            className={`${isCompact ? 'p-1.5' : 'p-2'} rounded-full shrink-0 ${op.type === 'Staging' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/20' : 'bg-orange-100 text-orange-600 dark:bg-orange-900/20'}`}
+                                        >
+                                            <PlayCircle size={isCompact ? 16 : 20} />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <div
+                                                className={`font-bold flex flex-wrap items-center gap-2 text-sm`}
+                                            >
+                                                {op.supervisor}
+                                                <Badge
+                                                    variant="outline"
+                                                    className={`${isCompact ? 'text-[8px] h-4 py-0 px-1' : 'text-[10px]'} uppercase font-bold border-emerald-500/30 text-emerald-500 bg-emerald-500/5`}
+                                                >
+                                                    {t(
+                                                        (op.status || '').toLowerCase(),
+                                                        settings.language
+                                                    )}
+                                                </Badge>
+                                                {isStale && (
+                                                    <Badge variant="destructive" className="animate-pulse bg-amber-500 text-white text-[9px] uppercase">
+                                                        Stale (&gt;1h)
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                            <div
+                                                className={`text-muted-foreground flex items-center gap-2 text-xs`}
+                                            >
+                                                <span className="font-mono bg-muted px-1 rounded">
+                                                    #{op.id.slice(0, 8)}
+                                                </span>
+                                                <span>•</span>
+                                                <span className="font-medium text-foreground">
+                                                    {op.destination ||
+                                                        t('no_activity', settings.language)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <div
-                                        className={`text-muted-foreground flex items-center gap-1 ${isTVMode ? 'text-sm font-bold' : (isCompact ? 'text-[9px]' : 'text-[10px]')}`}
+                                        className={`flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 ${isCompact ? 'pt-1 mt-1' : 'pt-2 mt-2'} sm:pt-0 sm:mt-0`}
                                     >
-                                        <Clock size={isTVMode ? 14 : (isCompact ? 9 : 10)} />
-                                        {new Date(op.timestamp).toLocaleTimeString([], {
-                                            hour: '2-digit',
-                                            minute: '2-digit'
-                                        })}
+                                        <Badge
+                                            className={`mb-0 sm:mb-1 ${isCompact ? 'text-[9px] h-4 py-0 px-1' : ''} ${op.type === 'Staging' ? 'bg-blue-500 hover:bg-blue-600' : 'bg-orange-500 hover:bg-orange-600'}`}
+                                        >
+                                            {t(
+                                                (op.status || '').toLowerCase(),
+                                                settings.language
+                                            ).replace(/_/g, ' ')}
+                                        </Badge>
+                                        <div
+                                            className={`text-muted-foreground flex items-center gap-1 ${isCompact ? 'text-[9px]' : 'text-[10px]'} ${isStale ? 'text-amber-600 font-bold' : ''}`}
+                                        >
+                                            <Clock size={isCompact ? 9 : 10} />
+                                            {new Date(op.timestamp).toLocaleTimeString([], {
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            })}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))
+                            );
+                        })
                     )}
                 </div>
             </CardContent>

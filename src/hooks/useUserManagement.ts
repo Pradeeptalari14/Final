@@ -219,10 +219,18 @@ export const useUserManagement = (
                 );
             }
 
-            addToast(
-                'success',
-                `User ${user.username} is now ${updatedUser.isApproved ? t('active', settings.language) : t('inactive', settings.language)} `
-            );
+            if (updatedUser.isApproved) {
+                addToast(
+                    'success',
+                    `✅ ACCOUNT ACTIVATED: ${user.username} has been successfully approved and can now log in.`
+                );
+            } else {
+                addToast(
+                    'info',
+                    `User ${user.username} has been deactivated.`
+                );
+            }
+
             await refreshUsers();
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : 'Unknown Error';

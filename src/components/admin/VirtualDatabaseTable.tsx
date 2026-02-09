@@ -1,7 +1,8 @@
 import { useRef } from 'react';
-import * as ReactWindowNamespace from 'react-window';
-const ReactWindow: any = ReactWindowNamespace;
-const FixedSizeList = ReactWindow.FixedSizeList || ReactWindow.default?.FixedSizeList || ReactWindow;
+import * as ReactWindow from 'react-window';
+// @ts-expect-error - react-window typings can be inconsistent with ESM resolution in some environments
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const FixedSizeList = ReactWindow.FixedSizeList || (ReactWindow as any).default?.FixedSizeList;
 import { AutoSizer } from 'react-virtualized-auto-sizer';
 import { SheetData, SheetStatus, Role, User, AppSettings } from '@/types';
 import { Badge } from '@/components/ui/badge';
@@ -57,7 +58,7 @@ export function VirtualDatabaseTable({
 
         const hours = Math.floor(diffMs / (1000 * 60 * 60));
         const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-        return `${hours}h ${minutes}m`;
+        return `${hours}h ${minutes} m`;
     };
 
     const StatusBadge = ({ sheet }: { sheet: SheetData }) => {
@@ -65,11 +66,12 @@ export function VirtualDatabaseTable({
             ? 'text-emerald-600 dark:text-emerald-400 border-emerald-500/30 bg-emerald-500/10'
             : isRejected(sheet)
                 ? 'text-red-600 dark:text-red-400 border-red-500/30 bg-red-500/10'
-                : sheet.status.includes('PENDING') || sheet.status === SheetStatus.LOCKED
+                : (sheet.status || '').includes('PENDING') || sheet.status === SheetStatus.LOCKED
                     ? 'text-blue-600 dark:text-blue-400 border-blue-500/30 bg-blue-500/10'
                     : 'text-muted-foreground border-border';
 
         let label = '';
+        const status = (sheet.status || '').toLowerCase();
         if (
             sheet.status === SheetStatus.LOCKED &&
             (currentUser?.role === Role.LOADING_SUPERVISOR ||
@@ -78,12 +80,11 @@ export function VirtualDatabaseTable({
         ) {
             label = t('ready_to_load', settings.language);
         } else {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            label = t(sheet.status.toLowerCase() as any, settings.language).replace(/_/g, ' ');
+            label = t(status as string, settings.language).replace(/_/g, ' ');
         }
 
         return (
-            <Badge variant="outline" className={`${variantClass} ${isCompact ? 'text-[8px] px-1 py-0 h-4' : 'text-[10px]'}`}>
+            <Badge variant="outline" className={`${variantClass} ${isCompact ? 'text-[8px] px-1 py-0 h-4' : 'text-[10px]'} `}>
                 {label}
             </Badge>
         );
@@ -100,8 +101,8 @@ export function VirtualDatabaseTable({
                 onClick={() => onRowClick(sheet)}
             >
                 {/* ID */}
-                <div className={`pl-6 px-4 font-mono ${isCompact ? 'text-[9px]' : 'text-[10px]'} truncate text-blue-600 dark:text-blue-400 w-[14.28%] shrink-0`}>
-                    #{sheet.id.slice(-8)}
+                <div className={`pl-6 px-4 font-mono ${isCompact ? 'text-[11px]' : 'text-[12px]'} truncate text-blue-600 dark:text-blue-400 w-[14.28%] shrink-0`}>
+                    #{sheet.id ? sheet.id.slice(-8) : '---'}
                 </div>
 
                 {/* Supervisor */}
@@ -109,29 +110,29 @@ export function VirtualDatabaseTable({
                     <div className={`truncate font-medium text-foreground ${isCompact ? 'text-[11px]' : 'text-sm'} leading-tight`}>
                         {sheet.supervisorName}
                     </div>
-                    <div className={`${isCompact ? 'text-[8px]' : 'text-[10px]'} text-muted-foreground truncate opacity-70`}>
+                    <div className={`${isCompact ? 'text-[10px]' : 'text-[11px]'} text-muted-foreground truncate opacity-70`}>
                         {sheet.empCode}
                     </div>
                 </div>
 
                 {/* Shift / Dest */}
                 <div className="px-4 w-[14.28%] truncate">
-                    <div className={`text-foreground/80 font-medium truncate ${isCompact ? 'text-[10px]' : 'text-xs'} leading-tight`}>
+                    <div className={`text-foreground/80 font-medium truncate ${isCompact ? 'text-[11px]' : 'text-xs'} leading-tight`}>
                         {sheet.shift}
                     </div>
-                    <div className={`${isCompact ? 'text-[8px]' : 'text-[10px]'} text-muted-foreground truncate opacity-70`}>
+                    <div className={`${isCompact ? 'text-[10px]' : 'text-[11px]'} text-muted-foreground truncate opacity-70`}>
                         {sheet.destination || sheet.loadingDoc || '-'}
                     </div>
                 </div>
 
                 {/* Duration */}
-                <div className={`px-4 font-mono truncate ${isCompact ? 'text-[9px]' : 'text-[10px]'} text-slate-600 dark:text-slate-400 w-[14.28%] shrink-0`}>
+                <div className={`px-4 font-mono truncate ${isCompact ? 'text-[11px]' : 'text-[12px]'} text-slate-600 dark:text-slate-400 w-[14.28%] shrink-0`}>
                     {getDuration(sheet)}
                 </div>
 
                 {/* Date */}
-                <div className={`px-4 truncate ${isCompact ? 'text-[9px]' : 'text-[10.5px]'} text-slate-600 dark:text-slate-400 w-[14.28%] shrink-0`}>
-                    {new Date(sheet.date).toLocaleDateString()}
+                <div className={`px-4 truncate ${isCompact ? 'text-[11px]' : 'text-[12px]'} text-slate-600 dark:text-slate-400 w-[14.28%] shrink-0`}>
+                    {sheet.date ? new Date(sheet.date).toLocaleDateString() : '-'}
                 </div>
 
                 {/* Status */}
@@ -226,11 +227,11 @@ export function VirtualDatabaseTable({
 
     return (
         <div className="rounded-xl border border-slate-200 dark:border-white/5 overflow-hidden bg-white dark:bg-slate-900/50 shadow-sm flex flex-col h-full min-h-[500px]">
-            {/* Header */}
-            <div className={`flex items-center bg-muted/30 text-muted-foreground border-b border-border sticky top-0 z-10 backdrop-blur-md ${isCompact ? 'h-8 text-[9px]' : 'h-11 text-[10px]'} uppercase tracking-[0.15em] font-black shrink-0`}>
+            {/* Header (No Blur for sharpness) */}
+            <div className={`flex items-center bg-slate-50 dark:bg-slate-800 text-slate-500 border-b border-slate-200 dark:border-white/10 sticky top-0 z-10 ${isCompact ? 'h-10 text-[10px]' : 'h-12 text-[11px]'} uppercase tracking-wider font-extrabold shrink-0`}>
                 <div className="pl-6 px-4 w-[14.28%] flex items-center gap-2">
                     {t('sheet_id', settings.language)}
-                    <Badge variant="secondary" className={`${isCompact ? 'scale-65' : 'scale-75'} origin-left opacity-70 px-1 font-black`}>{data.length}</Badge>
+                    <Badge variant="secondary" className={`${isCompact ? 'scale-65' : 'scale-75'} origin - left opacity - 70 px - 1 font - black`}>{data.length}</Badge>
                 </div>
                 <div className="w-[14.28%] px-4 text-left font-black">{t('supervisor', settings.language)}</div>
                 <div className="w-[14.28%] px-4 text-left font-black">{t('shift_dest', settings.language)}</div>
@@ -242,7 +243,7 @@ export function VirtualDatabaseTable({
 
             {/* List */}
             <div className="flex-1 relative min-h-[500px] w-full bg-white dark:bg-slate-900/50">
-                {data.length < 15 ? (
+                {data.length < 50 ? (
                     <div className="flex flex-col w-full h-full min-h-[400px]">
                         {data.map((sheet, index) => renderRow(sheet, index, {
                             height: rowHeight,

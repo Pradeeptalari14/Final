@@ -42,7 +42,7 @@ export function StatsCards({ currentUser, activeSection, onNavigate, stats, dens
                                 onClick={() => onNavigate('staging_db', 'VIEW_STAGING_DRAFT')}
                             >
                                 <div
-                                    className={`${isCompact ? 'p-1.5' : 'p-3'} rounded-xl backdrop-blur-sm ${activeSection === 'staging_db' ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-600'}`}
+                                    className={`${isCompact ? 'p-1.5' : 'p-3'} rounded-xl ${activeSection === 'staging_db' ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-600 shadow-sm'}`}
                                 >
                                     <FileText size={isCompact ? 16 : 24} />
                                 </div>
@@ -122,7 +122,7 @@ export function StatsCards({ currentUser, activeSection, onNavigate, stats, dens
                                 onClick={() => onNavigate('loading_db', 'VIEW_LOADING_READY')}
                             >
                                 <div
-                                    className={`${isCompact ? 'p-1.5' : 'p-3'} rounded-xl backdrop-blur-sm ${activeSection === 'loading_db' ? 'bg-white/20 text-white' : 'bg-orange-50 text-orange-600'}`}
+                                    className={`${isCompact ? 'p-1.5' : 'p-3'} rounded-xl ${activeSection === 'loading_db' ? 'bg-white/20 text-white' : 'bg-orange-50 text-orange-600 shadow-sm'}`}
                                 >
                                     <Truck size={isCompact ? 16 : 24} />
                                 </div>
@@ -202,7 +202,7 @@ export function StatsCards({ currentUser, activeSection, onNavigate, stats, dens
                         >
                             <div className={`flex justify-between items-start ${isCompact ? 'mb-1' : 'mb-4'}`}>
                                 <div
-                                    className={`${isCompact ? 'p-1.5' : 'p-3'} rounded-xl backdrop-blur-sm ${activeSection === 'shift_lead_db' ? 'bg-white/20 text-white' : 'bg-purple-50 text-purple-600'}`}
+                                    className={`${isCompact ? 'p-1.5' : 'p-3'} rounded-xl ${activeSection === 'shift_lead_db' ? 'bg-white/20 text-white' : 'bg-purple-50 text-purple-600 shadow-sm'}`}
                                 >
                                     <ShieldCheck size={isCompact ? 16 : 24} />
                                 </div>
@@ -280,7 +280,7 @@ export function StatsCards({ currentUser, activeSection, onNavigate, stats, dens
                 <CardContent className={`${isCompact ? 'p-2.5' : 'p-6'} relative z-10`}>
                     <div className={`flex justify-between items-start ${isCompact ? 'mb-1' : 'mb-4'}`}>
                         <div
-                            className={`${isCompact ? 'p-1.5' : 'p-3'} rounded-xl backdrop-blur-sm ${activeSection === 'database' ? 'bg-white/20 text-white' : 'bg-indigo-50 text-indigo-600'}`}
+                            className={`${isCompact ? 'p-1.5' : 'p-3'} rounded-xl ${activeSection === 'database' ? 'bg-white/20 text-white' : 'bg-indigo-50 text-indigo-600 shadow-sm'}`}
                         >
                             <Database size={isCompact ? 16 : 24} />
                         </div>

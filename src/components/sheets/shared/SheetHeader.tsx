@@ -10,6 +10,8 @@ import {
     Container
 } from 'lucide-react';
 import { SheetData } from '@/types';
+import { useData } from '@/contexts/DataContext';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface SheetHeaderProps {
     data: Partial<SheetData>;
@@ -62,6 +64,9 @@ export const SheetHeader: React.FC<SheetHeaderProps> = ({
     errors = [],
     type
 }) => {
+    const { users } = useData();
+    const findUserByName = (name: string) => users.find(u => (u.fullName || u.username) === name);
+
     const isStaging = type === 'staging';
 
     return (
@@ -95,14 +100,24 @@ export const SheetHeader: React.FC<SheetHeaderProps> = ({
             {/* Supervisor Name - Only for Staging (Loading uses Picking By) */}
             {isStaging && (
                 <FieldWrapper label="Supervisor Name" icon={User}>
-                    <input
-                        type="text"
-                        value={data.supervisorName || ''}
-                        onChange={(e) => onChange('supervisorName', e.target.value)}
-                        disabled={true}
-                        className="w-full bg-transparent text-sm font-medium text-slate-500 outline-none"
-                        placeholder="Auto-filled"
-                    />
+                    <div className="flex items-center gap-2">
+                        {data.supervisorName && (
+                            <Avatar className="h-6 w-6 border border-slate-200">
+                                <AvatarImage src={findUserByName(data.supervisorName)?.photoURL} />
+                                <AvatarFallback className="text-[8px] bg-slate-100 text-slate-400 font-bold">
+                                    {data.supervisorName.slice(0, 2).toUpperCase()}
+                                </AvatarFallback>
+                            </Avatar>
+                        )}
+                        <input
+                            type="text"
+                            value={data.supervisorName || ''}
+                            onChange={(e) => onChange('supervisorName', e.target.value)}
+                            disabled={true}
+                            className="w-full bg-transparent text-sm font-bold text-slate-500 outline-none"
+                            placeholder="Auto-filled"
+                        />
+                    </div>
                 </FieldWrapper>
             )}
 
@@ -142,14 +157,24 @@ export const SheetHeader: React.FC<SheetHeaderProps> = ({
                         icon={User}
                         hasError={errors.includes('pickingBy')}
                     >
-                        <input
-                            type="text"
-                            value={data.pickingBy || ''}
-                            onChange={(e) => onChange('pickingBy', e.target.value)}
-                            disabled={true}
-                            className="w-full bg-transparent text-sm font-medium text-slate-500 outline-none"
-                            placeholder="Auto-filled"
-                        />
+                        <div className="flex items-center gap-2">
+                            {data.pickingBy && (
+                                <Avatar className="h-6 w-6 border border-slate-200">
+                                    <AvatarImage src={findUserByName(data.pickingBy)?.photoURL} />
+                                    <AvatarFallback className="text-[8px] bg-slate-100 text-slate-400 font-bold">
+                                        {data.pickingBy.slice(0, 2).toUpperCase()}
+                                    </AvatarFallback>
+                                </Avatar>
+                            )}
+                            <input
+                                type="text"
+                                value={data.pickingBy || ''}
+                                onChange={(e) => onChange('pickingBy', e.target.value)}
+                                disabled={true}
+                                className="w-full bg-transparent text-sm font-bold text-slate-500 outline-none"
+                                placeholder="Auto-filled"
+                            />
+                        </div>
                     </FieldWrapper>
 
                     {/* Picking Crosschecked By */}

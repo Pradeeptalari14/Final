@@ -3,8 +3,8 @@ import { SheetData, Role, User } from '@/types';
 import { Search, History, Download, Calendar, Clock } from 'lucide-react';
 import { exportToExcelGeneric } from '@/lib/excelExport';
 import { Button } from '@/components/ui/button';
-import { useData } from '@/contexts/DataContext';
 import { useAppState } from '@/contexts/AppStateContext';
+import { useAuditLogs } from '@/hooks/useAuditLogs';
 import { t } from '@/lib/i18n';
 
 interface AuditLogViewProps {
@@ -25,10 +25,10 @@ interface UnifiedLog {
 }
 
 export function AuditLogView({ sheets, currentUser }: AuditLogViewProps) {
-    const { securityLogs, activityLogs } = useData();
+    const [logType, setLogType] = useState<'operational' | 'security' | 'activity'>('operational');
+    const { securityLogs, activityLogs, isLoading: logsLoading } = useAuditLogs(logType);
     const { settings } = useAppState();
     const [searchQuery, setSearchQuery] = useState('');
-    const [logType, setLogType] = useState<'operational' | 'security' | 'activity'>('operational');
     const [categoryFilter, setCategoryFilter] = useState<
         'ALL' | 'STAGING' | 'LOADING' | 'USERS' | 'SHIFTLEAD'
     >('ALL');
@@ -131,7 +131,8 @@ export function AuditLogView({ sheets, currentUser }: AuditLogViewProps) {
             );
         }
 
-        return baseLogs;
+        // 6. Limit Results for Performance
+        return baseLogs.slice(0, 100);
     }, [
         sheets,
         currentUser,
@@ -343,10 +344,22 @@ export function AuditLogView({ sheets, currentUser }: AuditLogViewProps) {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {logs.length === 0 ? (
+                            {logsLoading ? (
                                 <tr>
                                     <td
-                                        colSpan={5}
+                                        colSpan={6}
+                                        className="px-6 py-12 text-center"
+                                    >
+                                        <div className="flex flex-col items-center justify-center gap-2">
+                                            <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                                            <span className="text-xs text-slate-400 animate-pulse font-medium">Fetching secure records...</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : logs.length === 0 ? (
+                                <tr>
+                                    <td
+                                        colSpan={6}
                                         className="px-6 py-8 text-center text-slate-400"
                                     >
                                         {t('no_logs_found', settings.language)}
@@ -382,7 +395,7 @@ export function AuditLogView({ sheets, currentUser }: AuditLogViewProps) {
                                                 {log.action.includes('CLICK')
                                                     ? log.action
                                                     : t(
-                                                        log.action.toLowerCase() as any,
+                                                        log.action.toLowerCase() as string,
                                                         settings.language
                                                     ).replace(/_/g, ' ')}
                                             </span>

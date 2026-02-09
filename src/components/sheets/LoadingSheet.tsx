@@ -1,10 +1,9 @@
-import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { SheetStatus, Role, Comment } from '@/types';
+import { SheetStatus, Role } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { SheetHeader } from './shared/SheetHeader';
 import { VerificationFooter as SharedVerificationFooter } from './shared/VerificationFooter';
-import { Printer, ArrowLeft, Save, CheckCircle, AlertTriangle, X, Clock, RefreshCw, Loader2 } from 'lucide-react';
+import { Printer, ArrowLeft, Save, CheckCircle, RefreshCw, Loader2, AlertTriangle } from 'lucide-react';
 import { useLoadingSheetLogic } from '@/hooks/useLoadingSheetLogic';
 
 // Sub-components
@@ -26,63 +25,9 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
-const LiveClock = () => {
-    const [t, setT] = useState(new Date());
-    useEffect(() => {
-        const timer = setInterval(() => setT(new Date()), 1000);
-        return () => clearInterval(timer);
-    }, []);
-    return (
-        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-lg text-slate-600 font-mono text-xs font-bold border border-slate-200 shadow-sm">
-            <Clock size={14} className="text-indigo-500" />
-            {t.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-        </div>
-    );
-};
-
-const DismissibleAlert = ({ comments }: { comments: Comment[] }) => {
-    const [isVisible, setIsVisible] = useState(true);
-    if (!isVisible) return null;
-    return (
-        <div className="bg-white border-l-4 border-red-500 rounded-lg shadow-sm p-4 flex gap-4 animate-in fade-in slide-in-from-top-2 relative mb-4 print:hidden">
-            <button
-                onClick={() => setIsVisible(false)}
-                className="absolute top-3 right-3 text-slate-400 hover:text-slate-600 transition-colors"
-            >
-                <X size={16} />
-            </button>
-            <div className="bg-red-50 p-2.5 rounded-full h-fit text-red-500 shrink-0">
-                <AlertTriangle size={20} />
-            </div>
-            <div className="flex-1">
-                <h3 className="font-bold text-slate-800 text-sm mb-2 flex items-center gap-2">
-                    Shift Lead Feedback
-                    <span className="text-[10px] font-normal uppercase tracking-wider bg-red-50 text-red-600 px-2 py-0.5 rounded-sm border border-red-100">
-                        Review Required
-                    </span>
-                </h3>
-                <div className="space-y-3">
-                    {comments.map((comment, i) => (
-                        <div
-                            key={i}
-                            className="text-sm text-slate-600 bg-slate-50 p-3 rounded-md border border-slate-100"
-                        >
-                            <div className="flex justify-between items-start mb-1">
-                                <span className="font-bold text-slate-900 text-xs uppercase tracking-wide">
-                                    {comment.author}
-                                </span>
-                                <span className="text-slate-400 text-[10px]">
-                                    {new Date(comment.timestamp).toLocaleString()}
-                                </span>
-                            </div>
-                            <p className="leading-relaxed text-slate-700">{comment.text}</p>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </div>
-    );
-};
+import { LiveClock } from '@/components/shared/LiveClock';
+import { DismissibleAlert } from '@/components/shared/DismissibleAlert';
+import { Skeleton, SkeletonPatterns } from '@/components/ui/SkeletonLoader';
 
 export default function LoadingSheet() {
     const navigate = useNavigate();
@@ -124,8 +69,19 @@ export default function LoadingSheet() {
         startCamera(fullCaption);
     };
 
-    if (loading || !currentSheet)
-        return <div className="p-8 text-center text-slate-500">Loading Sheet Data...</div>;
+    if (loading || !currentSheet) {
+        return (
+            <div className="flex flex-col gap-4 w-full px-4 pb-24 animate-in fade-in duration-500">
+                <Skeleton className="h-20 w-full rounded-xl border border-slate-200" />
+                <div className="bg-white shadow-xl shadow-slate-200 rounded-xl overflow-hidden border border-slate-200">
+                    <SkeletonPatterns.SheetHeader />
+                    <div className="p-8">
+                        <SkeletonPatterns.TableRows rows={10} />
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     const { isLocked, isCompleted, isPendingVerification } = states;
 
@@ -133,6 +89,28 @@ export default function LoadingSheet() {
     const cameraOptions = ['Evidence'];
     if (lists.returnedItems.length > 0) cameraOptions.push('Loose Returned');
     if (lists.overLoadedItems.length > 0 || lists.extraItemsWithQty.length > 0) cameraOptions.push('Extra Loaded');
+
+    const getNextPhotoType = () => {
+        const images = currentSheet?.capturedImages || [];
+        // 1. Evidence is always P0
+        const hasEvidence = images.some(img => typeof img !== 'string' && img.caption === 'Evidence');
+        if (!hasEvidence) return 'Evidence';
+
+        // 2. Loose Returned if applicable
+        if (lists.returnedItems.length > 0) {
+            const hasLoose = images.some(img => typeof img !== 'string' && img.caption.includes('Loose Returned'));
+            if (!hasLoose) return 'Loose Returned';
+        }
+
+        // 3. Extra Loaded if applicable
+        if (lists.overLoadedItems.length > 0 || lists.extraItemsWithQty.length > 0) {
+            const hasExtra = images.some(img => typeof img !== 'string' && img.caption.includes('Extra Loaded'));
+            if (!hasExtra) return 'Extra Loaded';
+        }
+
+        // Default (or just open modal to let them pick)
+        return 'Evidence';
+    };
 
     return (
         <div className="flex flex-col gap-4 w-full px-4 pb-24 print:w-full print:max-w-none print:pb-0 print:gap-1">
@@ -192,7 +170,7 @@ export default function LoadingSheet() {
                     {!isLocked && (
                         <button
                             type="button"
-                            onClick={handleSaveProgress}
+                            onClick={() => handleSaveProgress()}
                             disabled={actionLoading}
                             className="bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
@@ -364,7 +342,7 @@ export default function LoadingSheet() {
                     <div className="fixed bottom-0 left-0 w-full p-4 bg-white/90 backdrop-blur-md border-t border-slate-200 shadow flex justify-center gap-4 z-50 lg:pl-64 no-print text-xs">
                         <button
                             type="button"
-                            onClick={handleSaveProgress}
+                            onClick={() => handleSaveProgress()}
                             disabled={actionLoading}
                             className="px-6 py-2.5 bg-white text-slate-700 border border-slate-300 rounded-lg flex items-center gap-2 cursor-pointer hover:bg-slate-50 transition-colors font-bold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                         >
@@ -373,13 +351,10 @@ export default function LoadingSheet() {
                         </button>
                         <button
                             type="button"
-                            onClick={() => startCamera('Evidence')}
-                            disabled={!states.isDataComplete}
+                            onClick={() => startCamera(getNextPhotoType())}
                             className={cn(
                                 "px-6 py-2.5 border rounded-lg flex items-center gap-2 cursor-pointer transition-colors font-bold",
-                                states.isDataComplete
-                                    ? "bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200"
-                                    : "bg-slate-50 text-slate-300 border-slate-200 cursor-not-allowed"
+                                "bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200"
                             )}
                         >
                             {states.isPhotoComplete ? "Add More Photos" : "Add Photo"}

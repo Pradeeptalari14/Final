@@ -8,9 +8,12 @@ import { LoadingFallback } from './components/ui/LoadingFallback';
 import { LazyErrorBoundary } from './components/ui/LazyErrorBoundary';
 import RootLayout from './layouts/RootLayout';
 import ErrorPage from './pages/ErrorPage';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { Role } from './types';
 
 // Helper to retry lazy imports or force refresh on failure (common during deployments)
-const lazyWithRetry = (componentImport: () => Promise<any>) =>
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const lazyWithRetry = (componentImport: () => Promise<{ default: React.ComponentType<any> }>) =>
     lazy(async () => {
         const pageHasAlreadyBeenForceRefreshed = JSON.parse(
             window.sessionStorage.getItem('page-has-been-force-refreshed') || 'false'
@@ -36,21 +39,11 @@ const ReportsPage = lazyWithRetry(() => import('./pages/Reports'));
 const DatabasePage = lazyWithRetry(() => import('./pages/Database'));
 const DashboardOverview = lazyWithRetry(() => import('./pages/Dashboard'));
 const SettingsPage = lazyWithRetry(() => import('./pages/Settings'));
+const TVModePerformance = lazyWithRetry(() => import('./components/admin/analytics/TVModePerformance'));
 const StagingSheet = lazyWithRetry(() => import('./components/sheets/StagingSheet'));
 const LoadingSheet = lazyWithRetry(() => import('./components/sheets/LoadingSheet'));
-const TVModePerformance = lazyWithRetry(() => import('./components/admin/analytics/TVModePerformance'));
 
 export const router = createBrowserRouter([
-    {
-        path: '/tv-mode',
-        element: (
-            <LazyErrorBoundary>
-                <Suspense fallback={<LoadingFallback />}>
-                    <TVModePerformance />
-                </Suspense>
-            </LazyErrorBoundary>
-        )
-    },
     {
         path: '/login',
         element: <LoginPage />,
@@ -63,7 +56,11 @@ export const router = createBrowserRouter([
     },
     {
         path: '/',
-        element: <RootLayout />,
+        element: (
+            <ProtectedRoute>
+                <RootLayout />
+            </ProtectedRoute>
+        ),
         errorElement: <ErrorPage />,
         children: [
             {
@@ -126,6 +123,18 @@ export const router = createBrowserRouter([
                         <Suspense fallback={<LoadingFallback />}>
                             <SettingsPage />
                         </Suspense>
+                    </LazyErrorBoundary>
+                )
+            },
+            {
+                path: 'tv-mode',
+                element: (
+                    <LazyErrorBoundary>
+                        <ProtectedRoute allowedRoles={[Role.SUPER_ADMIN, Role.ADMIN, Role.STAGING_SUPERVISOR, Role.LOADING_SUPERVISOR, Role.SHIFT_LEAD]}>
+                            <Suspense fallback={<LoadingFallback />}>
+                                <TVModePerformance />
+                            </Suspense>
+                        </ProtectedRoute>
                     </LazyErrorBoundary>
                 )
             },

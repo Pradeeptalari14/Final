@@ -22,7 +22,8 @@ import {
     X,
     Check,
     Play,
-    Pause
+    Pause,
+    LucideIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AnalyticsCharts } from '../AnalyticsCharts';
@@ -32,7 +33,7 @@ import { cn } from '@/lib/utils';
 
 type Category = 'STAGING' | 'LOADING' | 'SHIFT_LEAD' | 'DATABASE';
 
-const CATEGORIES: { id: Category; label: string; icon: any; color: string }[] = [
+const CATEGORIES: { id: Category; label: string; icon: LucideIcon; color: string }[] = [
     { id: 'STAGING', label: 'Staging Specialists', icon: LayoutGrid, color: 'text-emerald-500 bg-emerald-500/10' },
     { id: 'LOADING', label: 'Loading Experts', icon: Truck, color: 'text-blue-500 bg-blue-500/10' },
     { id: 'SHIFT_LEAD', label: 'Operation Masters', icon: ShieldCheck, color: 'text-purple-500 bg-purple-500/10' },
@@ -134,16 +135,15 @@ export default function TVModePerformance() {
     }, [activeIdx, enabledCategories, cycleDuration, isPaused, showSettings]);
 
     // Ensure we are viewing an enabled category if config changes
-    useEffect(() => {
-        const currentId = CATEGORIES[activeIdx].id;
-        if (!enabledCategories.includes(currentId) && enabledCategories.length > 0) {
-            const firstEnabled = CATEGORIES.find(c => enabledCategories.includes(c.id));
-            if (firstEnabled) {
-                setActiveIdx(CATEGORIES.indexOf(firstEnabled));
-                setProgress(0);
-            }
+    // Synchronize state during render if current category becomes disabled
+    const currentId = CATEGORIES[activeIdx].id;
+    if (!enabledCategories.includes(currentId) && enabledCategories.length > 0) {
+        const firstEnabled = CATEGORIES.find(c => enabledCategories.includes(c.id));
+        if (firstEnabled) {
+            setActiveIdx(CATEGORIES.indexOf(firstEnabled));
+            setProgress(0);
         }
-    }, [enabledCategories, activeIdx]);
+    }
 
     const toggleFullscreen = () => {
         if (!document.fullscreenElement) {
@@ -334,7 +334,7 @@ export default function TVModePerformance() {
                 {/* Right Side: The Podium (Visual Highlight) */}
                 {activeCategory.id !== 'DATABASE' && (
                     <div className="hidden lg:flex flex-col w-[500px] shrink-0">
-                        <div className="flex-1 bg-gradient-to-b from-indigo-500/5 to-transparent rounded-[2.5rem] border border-white/5 flex flex-col items-center justify-center shadow-2xl relative overflow-hidden p-8">
+                        <div className="flex-1 bg-gradient-to-b from-indigo-500/5 to-transparent rounded-[2.5rem] border border-white/5 flex flex-col items-center justify-center shadow-2xl relative p-8">
                             <div className="absolute top-0 left-0 right-0 h-40 bg-gradient-to-b from-indigo-500/10 to-transparent pointer-events-none" />
 
                             <div className="mb-auto text-center relative z-10">

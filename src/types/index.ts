@@ -1,4 +1,5 @@
 export enum Role {
+    SUPER_ADMIN = 'SUPER_ADMIN',
     ADMIN = 'ADMIN',
     STAGING_SUPERVISOR = 'STAGING_SUPERVISOR',
     LOADING_SUPERVISOR = 'LOADING_SUPERVISOR',
@@ -182,4 +183,17 @@ export interface AppSettings {
     fontSize: FontSize;
     defaultTab: string;
     language: Language;
+}
+
+export interface ShiftUser {
+    id: string;
+    name: string;
+    role: string;
+    sheetsCompleted: number;
+    casesHandled: number;
+    avgTime: number;
+    slaCompliance: number;
+    status: 'Active' | 'Break' | 'Offline';
+    lastActive: string;
+    avatar?: string;
 }

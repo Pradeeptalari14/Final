@@ -17,6 +17,7 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import { DeleteUserAlert } from './DeleteUserAlert';
 import React from 'react';
+import { useData } from '@/contexts/DataContext';
 
 interface UserDetailsSlideOverProps {
     user: User | null;
@@ -42,13 +43,53 @@ export function UserDetailsSlideOver({
     onDelete
 }: UserDetailsSlideOverProps) {
     const [isDeleteAlertOpen, setIsDeleteAlertOpen] = React.useState(false);
+    const { currentUser } = useData();
 
     if (!user) return null;
 
     const isActive = user.isApproved && !user.isLocked;
     const isLocked = user.isLocked;
 
+    // Security Guards
+    const isTargetSuperAdmin = user.role === Role.SUPER_ADMIN;
+    const isTargetAdmin = user.role === Role.ADMIN;
+    const isSelf = currentUser?.id === user.id;
+
+    // 1. Protection: Super Admins AND Admins cannot be deleted
+    const canDelete = !isTargetSuperAdmin && !isTargetAdmin;
+
+    // 2. Protection: Super Admins AND Admins cannot be deactivated
+    const canDeactivate = !isTargetSuperAdmin && !isTargetAdmin;
+
+    // 3. Edit Rules:
+    // - Super Admin: Only Self can edit
+    // - Admin: Only Super Admin or Self can edit
+    // - Others: Admins and Super Admins can edit
+    const amISuperAdmin = currentUser?.role === Role.SUPER_ADMIN;
+
+    let canEdit = true;
+    let canReset = true;
+    let canUnlock = true;
+
+    if (isTargetSuperAdmin) {
+        // Strict Super Admin Self-Only
+        canEdit = isSelf;
+        canReset = isSelf;
+        canUnlock = false;
+    } else if (isTargetAdmin) {
+        // Admin: Protected from peers, but mutable by Super Admin
+        canEdit = isSelf || amISuperAdmin;
+        canReset = isSelf || amISuperAdmin;
+        canUnlock = amISuperAdmin;
+    } else {
+        // Regular Users: Open season for Admins/SuperAdmins
+        canEdit = true;
+        canReset = true;
+        canUnlock = true;
+    }
+
     const roleColors = {
+        [Role.SUPER_ADMIN]: 'bg-slate-900 text-white border-slate-700',
         [Role.ADMIN]: 'bg-indigo-100 text-indigo-700 border-indigo-200',
         [Role.STAGING_SUPERVISOR]: 'bg-blue-100 text-blue-700 border-blue-200',
         [Role.LOADING_SUPERVISOR]: 'bg-orange-100 text-orange-700 border-orange-200',
@@ -62,8 +103,12 @@ export function UserDetailsSlideOver({
                     {/* Header Profile Section */}
                     <div className="flex flex-col items-center justify-center p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
                         <div className="relative">
-                            <div className="w-24 h-24 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center text-3xl font-black text-slate-300 border-4 border-slate-100 dark:border-slate-700 shadow-xl uppercase">
-                                {user.fullName.substring(0, 2)}
+                            <div className="w-24 h-24 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center text-3xl font-black text-slate-300 border-4 border-slate-100 dark:border-slate-700 shadow-xl uppercase overflow-hidden">
+                                {user.photoURL ? (
+                                    <img src={user.photoURL} alt={user.fullName} className="w-full h-full object-cover" />
+                                ) : (
+                                    user.fullName.substring(0, 2)
+                                )}
                             </div>
                             <div
                                 className={`absolute bottom-1 right-1 w-6 h-6 rounded-full border-4 border-white dark:border-slate-800 ${isActive ? 'bg-emerald-500' : isLocked ? 'bg-red-500' : 'bg-amber-500'
@@ -144,44 +189,50 @@ export function UserDetailsSlideOver({
                             Quick Actions
                         </h3>
                         <div className="grid grid-cols-1 gap-2">
-                            <Button
-                                variant="outline"
-                                onClick={() => {
-                                    onEdit(user);
-                                    onClose();
-                                }}
-                                className="justify-start h-12 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200"
-                            >
-                                <FileText size={16} className="mr-3" />
-                                Edit Profile Details
-                            </Button>
+                            {canEdit && (
+                                <Button
+                                    variant="outline"
+                                    onClick={() => {
+                                        onEdit(user);
+                                        onClose();
+                                    }}
+                                    className="justify-start h-12 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200"
+                                >
+                                    <FileText size={16} className="mr-3" />
+                                    Edit Profile Details
+                                </Button>
+                            )}
 
-                            <Button
-                                variant="outline"
-                                onClick={() => onResetPassword(user)}
-                                className="justify-start h-12 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200"
-                            >
-                                <KeyRound size={16} className="mr-3" />
-                                Reset Password & Credentials
-                            </Button>
+                            {canReset && (
+                                <Button
+                                    variant="outline"
+                                    onClick={() => onResetPassword(user)}
+                                    className="justify-start h-12 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200"
+                                >
+                                    <KeyRound size={16} className="mr-3" />
+                                    Reset Password & Credentials
+                                </Button>
+                            )}
 
-                            <Button
-                                variant="outline"
-                                onClick={() => onToggleStatus(user)}
-                                className={`justify-start h-12 hover:bg-slate-50 ${user.isApproved ? 'text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-200' : 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 hover:border-emerald-200'}`}
-                            >
-                                {user.isApproved ? (
-                                    <>
-                                        <XCircle size={16} className="mr-3" /> Deactivate Account
-                                    </>
-                                ) : (
-                                    <>
-                                        <CheckCircle size={16} className="mr-3" /> Approve & Activate Account
-                                    </>
-                                )}
-                            </Button>
+                            {canDeactivate && (
+                                <Button
+                                    variant="outline"
+                                    onClick={() => onToggleStatus(user)}
+                                    className={`justify-start h-12 hover:bg-slate-50 ${user.isApproved ? 'text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-200' : 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 hover:border-emerald-200'}`}
+                                >
+                                    {user.isApproved ? (
+                                        <>
+                                            <XCircle size={16} className="mr-3" /> Deactivate Account
+                                        </>
+                                    ) : (
+                                        <>
+                                            <CheckCircle size={16} className="mr-3" /> Approve & Activate Account
+                                        </>
+                                    )}
+                                </Button>
+                            )}
 
-                            {user.isLocked && (
+                            {user.isLocked && canUnlock && (
                                 <Button
                                     variant="outline"
                                     onClick={() => onUnlock(user)}
@@ -192,16 +243,18 @@ export function UserDetailsSlideOver({
                             )}
                         </div>
 
-                        <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800">
-                            <Button
-                                variant="ghost"
-                                onClick={() => setIsDeleteAlertOpen(true)}
-                                className="w-full justify-start h-12 text-red-500 hover:text-red-600 hover:bg-red-50"
-                            >
-                                <Trash2 size={16} className="mr-3" />
-                                Delete Permanent Record
-                            </Button>
-                        </div>
+                        {canDelete && (
+                            <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800">
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => setIsDeleteAlertOpen(true)}
+                                    className="w-full justify-start h-12 text-red-500 hover:text-red-600 hover:bg-red-50"
+                                >
+                                    <Trash2 size={16} className="mr-3" />
+                                    Delete Permanent Record
+                                </Button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </SlideOver>

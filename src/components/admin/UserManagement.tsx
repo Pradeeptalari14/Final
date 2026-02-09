@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Role, User, SheetData } from '@/types';
 import { Button } from '@/components/ui/button';
 import {
@@ -41,12 +41,13 @@ interface UserManagementProps {
     users: User[];
     refreshUsers: () => Promise<void>;
     sheets: SheetData[];
+    isLoading?: boolean;
 }
 
 type SortKey = 'name' | 'role' | 'lastActive' | 'status';
 type SortDirection = 'asc' | 'desc';
 
-export function UserManagement({ users, refreshUsers, sheets }: UserManagementProps) {
+export function UserManagement({ users, refreshUsers, sheets, isLoading }: UserManagementProps) {
     const { currentUser } = useData();
     const { settings } = useAppState();
     const isCompact = settings?.density === 'compact';
@@ -69,7 +70,20 @@ export function UserManagement({ users, refreshUsers, sheets }: UserManagementPr
         handleUnlockUser
     } = useUserManagement(users, refreshUsers, sheets);
 
-    const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+
+    // Derive the selected user from the live `users` prop to ensure UI updates immediately
+    const selectedUser = useMemo(() => {
+        if (!selectedUserId) return null;
+        return users.find(u => u.id === selectedUserId) || null;
+    }, [users, selectedUserId]);
+
+    // Handle case where selected user might be deleted while viewing
+    useEffect(() => {
+        if (selectedUserId && !selectedUser) {
+            setSelectedUserId(null);
+        }
+    }, [selectedUserId, selectedUser]);
 
     // --- NEW: Local Sort & Filter State ---
     const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'LOCKED'>('ALL');
@@ -99,10 +113,10 @@ export function UserManagement({ users, refreshUsers, sheets }: UserManagementPr
             let comparison = 0;
             switch (sortConfig.key) {
                 case 'name':
-                    comparison = a.fullName.localeCompare(b.fullName);
+                    comparison = (a.fullName || '').localeCompare(b.fullName || '');
                     break;
                 case 'role':
-                    comparison = a.role.localeCompare(b.role);
+                    comparison = (a.role || '').localeCompare(b.role || '');
                     break;
                 case 'status': {
                     // Sort order: Locked > Active > Pending
@@ -123,8 +137,8 @@ export function UserManagement({ users, refreshUsers, sheets }: UserManagementPr
         return result;
     }, [filteredUsers, statusFilter, sortConfig, lastActiveMap]);
 
-    // STRICT GUARD: Admin only
-    if (currentUser?.role !== Role.ADMIN) {
+    // STRICT GUARD: Admin & Super Admin only
+    if (currentUser?.role !== Role.ADMIN && currentUser?.role !== Role.SUPER_ADMIN) {
         return (
             <div className="p-8 text-center text-red-500 font-bold uppercase tracking-widest">
                 {t('access_denied', settings.language)}
@@ -172,7 +186,7 @@ export function UserManagement({ users, refreshUsers, sheets }: UserManagementPr
             id: Role.ADMIN,
             label: 'Administrators',
             icon: Shield,
-            count: users.filter((u) => u.role === Role.ADMIN).length,
+            count: users.filter((u) => u.role === Role.ADMIN || u.role === Role.SUPER_ADMIN).length,
             color: 'text-indigo-600'
         },
         {
@@ -307,8 +321,8 @@ export function UserManagement({ users, refreshUsers, sheets }: UserManagementPr
 
                     {/* MAIN CONTENT - DATA GRID */}
                     <div className="flex-1 flex flex-col bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden min-w-0">
-                        {/* TOOLBAR */}
-                        <div className={`${isCompact ? 'p-2' : 'p-4'} border-b border-slate-100 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl sticky top-0 z-30 transition-all`}>
+                        {/* TOOLBAR (No Blur for sharpness) */}
+                        <div className={`${isCompact ? 'p-3' : 'p-5'} border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-30 transition-all`}>
                             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                                 <div className="flex items-center gap-3 w-full flex-1">
                                     <Button
@@ -412,13 +426,14 @@ export function UserManagement({ users, refreshUsers, sheets }: UserManagementPr
                         <div className="flex-1 overflow-auto bg-slate-50/50 dark:bg-slate-900/50 relative">
                             <UserTable
                                 users={processedUsers}
+                                loading={isLoading}
                                 lastActiveMap={lastActiveMap}
                                 onToggleStatus={toggleUserStatus}
                                 onUnlock={handleUnlockUser}
                                 onEdit={setEditingUser}
                                 onDelete={handleDeleteUser}
                                 onResetPassword={setPasswordResetUser}
-                                onRowClick={(user) => setSelectedUser(user)}
+                                onRowClick={(user) => setSelectedUserId(user.id)}
                                 density={settings?.density}
                             />
                         </div>
@@ -456,7 +471,7 @@ export function UserManagement({ users, refreshUsers, sheets }: UserManagementPr
             <UserDetailsSlideOver
                 user={selectedUser}
                 isOpen={!!selectedUser}
-                onClose={() => setSelectedUser(null)}
+                onClose={() => setSelectedUserId(null)}
                 lastActive={selectedUser ? lastActiveMap.get(selectedUser.username) : undefined}
                 onEdit={setEditingUser}
                 onToggleStatus={toggleUserStatus}

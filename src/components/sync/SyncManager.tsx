@@ -67,7 +67,7 @@ export function SyncManager() {
 
                 if (failed.length > 0) {
                     // Extract unique error messages if possible
-                    const errorMsg = (failed[0] as any).error?.message || (failed[0] as any).error?.details || 'Unknown Error';
+                    const errorMsg = 'Sync error occurred';
 
                     toast.error('Sync Retry Scheduled', {
                         description: `${failed.length} items failed. Last error: ${errorMsg}`

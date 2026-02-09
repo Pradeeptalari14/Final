@@ -1,18 +1,27 @@
 import { useMemo } from 'react';
+import { SheetData, Role, User } from '@/types';
 import { useData } from '@/contexts/DataContext';
 import { calculateUserStats } from '@/lib/performanceUtils';
 import { Clock, CheckSquare, Target, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export function UserPerformanceSummary({ collapsed }: { collapsed?: boolean }) {
-    const { currentUser, sheets } = useData();
+interface UserPerformanceSummaryProps {
+    collapsed?: boolean;
+    user?: User | null;
+    sheets?: SheetData[];
+}
+
+export function UserPerformanceSummary({ collapsed, user: propUser, sheets: propSheets }: UserPerformanceSummaryProps) {
+    const { currentUser: authUser, sheets: allSheets } = useData();
+    const targetUser = propUser || authUser;
+    const targetSheets = propSheets || allSheets;
 
     const stats = useMemo(() => {
-        if (!currentUser) return null;
-        return calculateUserStats(currentUser.fullName || currentUser.username, sheets);
-    }, [currentUser, sheets]);
+        if (!targetUser) return null;
+        return calculateUserStats(targetUser.fullName || targetUser.username, targetSheets);
+    }, [targetUser, targetSheets]);
 
-    if (!stats || !currentUser || currentUser.role === 'ADMIN') return null;
+    if (!stats || !targetUser || (targetUser.role === Role.ADMIN && !propUser)) return null;
 
     if (collapsed) {
         return (
@@ -63,7 +72,7 @@ export function UserPerformanceSummary({ collapsed }: { collapsed?: boolean }) {
     );
 }
 
-function StatBox({ icon: Icon, label, value, color }: { icon: any, label: string, value: string | number, color: string }) {
+function StatBox({ icon: Icon, label, value, color }: { icon: React.ElementType, label: string, value: string | number, color: string }) {
     return (
         <div className="flex flex-col p-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-white/5 shadow-sm">
             <div className={cn("p-1.5 rounded-lg w-fit mb-2", color)}>

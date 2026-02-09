@@ -5,12 +5,14 @@ import { Role } from '@/types';
 import { Loader2, AlertCircle, Eye, EyeOff, LogIn } from 'lucide-react';
 import { useData } from '@/contexts/DataContext';
 import { useAppState } from '@/contexts/AppStateContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { motion } from 'framer-motion';
 import RegisterModal from '@/components/auth/RegisterModal';
 
 export default function LoginPage() {
     const navigate = useNavigate();
     const { users, setCurrentUser, logSecurityEvent, updateUser } = useData();
+    const { manualLogin } = useAuth();
     const { setDevRole } = useAppState();
 
     const [loading, setLoading] = useState(false);
@@ -37,6 +39,8 @@ export default function LoginPage() {
                 return 'SHIFT LEAD';
             case Role.ADMIN:
                 return 'ADMIN';
+            case Role.SUPER_ADMIN:
+                return 'SUPER ADMIN';
             default:
                 return role;
         }
@@ -149,6 +153,7 @@ export default function LoginPage() {
                 setLockoutTime(null);
                 setDevRole(finalRole);
                 setCurrentUser(foundUser);
+                manualLogin(foundUser); // Update AuthContext state
                 navigate('/');
             }, 500);
         } else {
@@ -461,6 +466,7 @@ export default function LoginPage() {
                                             </span>
                                         </button>
                                     </div>
+
                                 </div>
                             </div>
                         </motion.div>

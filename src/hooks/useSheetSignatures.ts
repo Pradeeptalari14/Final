@@ -3,7 +3,8 @@ import { SheetData, User } from '@/types';
 
 export const useSheetSignatures = (
     currentSheet: SheetData | null,
-    currentUser: User | null
+    currentUser: User | null,
+    onDirty?: () => void
 ) => {
     // Signatures & Remarks
     const [svName, setSvName] = useState('');
@@ -54,13 +55,13 @@ export const useSheetSignatures = (
     }, [cameraActive, mediaStream]);
 
     const startCamera = async (defaultCaption: string = 'Evidence') => {
+        onDirty?.();
         try {
             setInitialCaption(defaultCaption);
             setCameraActive(true);
             const stream = await navigator.mediaDevices.getUserMedia({ video: true });
             setMediaStream(stream);
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Camera error:', err);
             alert('Check permissions. Camera access is required.');
             setCameraActive(false);
@@ -74,13 +75,16 @@ export const useSheetSignatures = (
                 canvasRef.current.width = videoRef.current.videoWidth;
                 canvasRef.current.height = videoRef.current.videoHeight;
                 context.drawImage(videoRef.current, 0, 0);
-                const newDataUrl = canvasRef.current.toDataURL('image/png');
-                const newImage = {
-                    url: newDataUrl,
-                    caption,
-                    timestamp: new Date().toISOString()
-                };
-                setCapturedImages(prev => [...prev, newImage]);
+                const newDataUrl = canvasRef.current.toDataURL('image/jpeg');
+                setCapturedImages(prev => {
+                    const newImage = {
+                        url: newDataUrl,
+                        caption,
+                        timestamp: new Date().toISOString()
+                    };
+                    return [...prev, newImage];
+                });
+                onDirty?.();
                 stopCamera();
             }
         }
@@ -94,13 +98,16 @@ export const useSheetSignatures = (
 
     return {
         signatureState: {
-            svName, setSvName,
-            svSign, setSvSign,
-            slSign, setSlSign,
-            deoSign, setDeoSign,
-            remarks, setRemarks,
+            svName, setSvName: (val: string) => { setSvName(val); onDirty?.(); },
+            svSign, setSvSign: (val: string) => { setSvSign(val); onDirty?.(); },
+            slSign, setSlSign: (val: string) => { setSlSign(val); onDirty?.(); },
+            deoSign, setDeoSign: (val: string) => { setDeoSign(val); onDirty?.(); },
+            remarks, setRemarks: (val: string) => { setRemarks(val); onDirty?.(); },
             capturedImages,
-            setCapturedImages
+            setCapturedImages: (val: React.SetStateAction<(string | { url: string; caption: string; timestamp: string })[]>) => {
+                setCapturedImages(val);
+                onDirty?.();
+            }
         },
         camera: {
             videoRef,

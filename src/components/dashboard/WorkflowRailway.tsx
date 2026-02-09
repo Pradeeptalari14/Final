@@ -284,6 +284,7 @@ export function WorkflowRailway({ sheets }: WorkflowRailwayProps) {
                         <div className="flex gap-2">
                             {zone.stations.map((station) => {
                                 const isNonZero = station.count > 0;
+                                const isStuck = station.id !== 'done' && station.count > 5; // Bottleneck - exclude finished
                                 // Simplified color logic for demo - in production map to strict tailwind classes or safelist
                                 let activeColorClass =
                                     'border-slate-500 text-slate-400 bg-slate-900';
@@ -302,6 +303,8 @@ export function WorkflowRailway({ sheets }: WorkflowRailwayProps) {
                                 if (zone.color === 'emerald')
                                     activeColorClass =
                                         'border-emerald-500/50 text-emerald-400 bg-emerald-900/20';
+
+                                if (isStuck) activeColorClass = 'border-red-500 text-red-500 bg-red-900/30';
 
                                 const inactiveColorClass =
                                     'border-slate-700 text-slate-600 bg-slate-800/50';

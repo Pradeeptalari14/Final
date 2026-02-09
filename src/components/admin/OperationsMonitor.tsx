@@ -178,7 +178,7 @@ export function OperationsMonitor({ sheets, onRefresh }: OperationsMonitorProps)
         <div className="space-y-6">
             {/* Header Dashboard Section */}
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-                <div className="lg:col-span-3 bg-card/40 backdrop-blur-xl border border-white/10 p-6 rounded-2xl shadow-xl flex flex-col md:flex-row gap-6 items-center justify-between">
+                <div className="lg:col-span-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-6 rounded-2xl shadow-lg flex flex-col md:flex-row gap-6 items-center justify-between">
                     <div className="space-y-1">
                         <h2 className="text-2xl font-black bg-gradient-to-br from-foreground to-foreground/50 bg-clip-text text-transparent flex items-center gap-2">
                             <TrendingUp className="text-primary" />{' '}
@@ -224,8 +224,8 @@ export function OperationsMonitor({ sheets, onRefresh }: OperationsMonitorProps)
                 </Button>
             </div>
 
-            {/* Filter Bar */}
-            <div className="flex flex-wrap items-center gap-3 p-3 bg-muted/30 backdrop-blur-md rounded-2xl border border-white/5 shadow-inner">
+            {/* Filter Bar (No Blur for sharpness) */}
+            <div className="flex flex-wrap items-center gap-3 p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-white/10 shadow-sm">
                 <div className="relative flex-1 min-w-[200px]">
                     <Search
                         className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
@@ -372,7 +372,7 @@ export function OperationsMonitor({ sheets, onRefresh }: OperationsMonitorProps)
                                 className="group"
                             >
                                 <Card
-                                    className="relative overflow-hidden bg-card/50 hover:bg-card/80 border-white/5 hover:border-white/10 transition-all duration-300 shadow-lg cursor-pointer"
+                                    className="relative overflow-hidden bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border-slate-100 dark:border-white/5 hover:border-slate-200 dark:hover:border-white/10 transition-all duration-300 shadow-md cursor-pointer"
                                     onClick={() => {
                                         const isStaging = [
                                             SheetStatus.DRAFT,

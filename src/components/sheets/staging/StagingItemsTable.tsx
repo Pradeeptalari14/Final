@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ClipboardList, AlertTriangle, Filter } from 'lucide-react';
+import { ClipboardList, AlertTriangle, Filter, Trash2 } from 'lucide-react';
 import { StagingItem, SheetStatus, Role } from '@/types';
 import { SkuSelector } from '../shared/SkuSelector';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ interface StagingItemsTableProps {
     items: StagingItem[];
     status: SheetStatus;
     onUpdateItem: (index: number, field: keyof StagingItem, value: string | number) => void;
+    onRemoveItem: (index: number) => void;
     currentRole?: Role;
     onToggleRejection?: (srNo: number, reason?: string) => void;
 }
@@ -19,6 +20,7 @@ export const StagingItemsTable: React.FC<StagingItemsTableProps> = ({
     items,
     status,
     onUpdateItem,
+    onRemoveItem,
     currentRole,
     onToggleRejection
 }) => {
@@ -121,6 +123,11 @@ export const StagingItemsTable: React.FC<StagingItemsTableProps> = ({
                                     Act
                                 </th>
                             )}
+                            {!isReadOnly && (
+                                <th className="py-4 px-3 w-12 text-center font-bold text-[11px] uppercase tracking-wider">
+                                    Del
+                                </th>
+                            )}
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 bg-white">
@@ -141,7 +148,7 @@ export const StagingItemsTable: React.FC<StagingItemsTableProps> = ({
                                                 : 'bg-slate-100 text-slate-500'
                                         )}
                                     >
-                                        {isReadOnly ? index + 1 : item.srNo}
+                                        {index + 1}
                                     </div>
                                 </td>
                                 <td className="p-2 border-r border-slate-100 relative">
@@ -149,7 +156,7 @@ export const StagingItemsTable: React.FC<StagingItemsTableProps> = ({
                                         value={item.skuName}
                                         onChange={(val) =>
                                             onUpdateItem(
-                                                isReadOnly ? index : item.srNo - 1,
+                                                item.srNo,
                                                 'skuName',
                                                 val
                                             )
@@ -177,7 +184,7 @@ export const StagingItemsTable: React.FC<StagingItemsTableProps> = ({
                                         value={item.casesPerPlt || ''}
                                         onChange={(e) =>
                                             onUpdateItem(
-                                                isReadOnly ? index : item.srNo - 1,
+                                                item.srNo,
                                                 'casesPerPlt',
                                                 e.target.value
                                             )
@@ -192,7 +199,7 @@ export const StagingItemsTable: React.FC<StagingItemsTableProps> = ({
                                         value={item.fullPlt || ''}
                                         onChange={(e) =>
                                             onUpdateItem(
-                                                isReadOnly ? index : item.srNo - 1,
+                                                item.srNo,
                                                 'fullPlt',
                                                 e.target.value
                                             )
@@ -207,7 +214,7 @@ export const StagingItemsTable: React.FC<StagingItemsTableProps> = ({
                                         value={item.loose || ''}
                                         onChange={(e) =>
                                             onUpdateItem(
-                                                isReadOnly ? index : item.srNo - 1,
+                                                item.srNo,
                                                 'loose',
                                                 e.target.value
                                             )
@@ -246,6 +253,23 @@ export const StagingItemsTable: React.FC<StagingItemsTableProps> = ({
                                         </Button>
                                     </td>
                                 )}
+                                {!isReadOnly && (
+                                    <td className="p-2 text-center border-l border-slate-100">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => {
+                                                if (confirm('Delete this row?')) {
+                                                    onRemoveItem(item.srNo);
+                                                }
+                                            }}
+                                            className="h-8 w-8 p-0 rounded-full text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all"
+                                            title="Delete Row"
+                                        >
+                                            <Trash2 size={15} />
+                                        </Button>
+                                    </td>
+                                )}
                             </tr>
                         ))}
                     </tbody>
@@ -261,6 +285,7 @@ export const StagingItemsTable: React.FC<StagingItemsTableProps> = ({
                                 {items?.reduce((sum, i) => sum + (Number(i.ttlCases) || 0), 0)}
                             </td>
                             {canReject && <td />}
+                            {!isReadOnly && <td />}
                         </tr>
                     </tfoot>
                 </table>
@@ -269,6 +294,6 @@ export const StagingItemsTable: React.FC<StagingItemsTableProps> = ({
             {/* Mobile Cards Placeholder - To be rendered by parent or handled here? 
                 Design Choice: The parent used to render both. Let's make this component JUST the table and have another for mobile to keep clean. 
             */}
-        </div>
+        </div >
     );
 };

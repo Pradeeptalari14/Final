@@ -288,15 +288,17 @@ export default function RegisterModal({ isOpen, onClose, initialRole }: Register
                                             <option value="" disabled>
                                                 Select Role
                                             </option>
-                                            {Object.values(Role).map((role) => (
-                                                <option
-                                                    key={role}
-                                                    value={role}
-                                                    className="font-bold"
-                                                >
-                                                    {role}
-                                                </option>
-                                            ))}
+                                            {Object.values(Role)
+                                                .filter(r => r !== Role.SUPER_ADMIN && r !== Role.ADMIN)
+                                                .map((role) => (
+                                                    <option
+                                                        key={role}
+                                                        value={role}
+                                                        className="font-bold"
+                                                    >
+                                                        {role.replace(/_/g, ' ')}
+                                                    </option>
+                                                ))}
                                         </select>
                                     </div>
 

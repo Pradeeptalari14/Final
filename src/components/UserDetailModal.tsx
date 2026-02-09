@@ -1,432 +1,218 @@
-import { Activity, TrendingUp, FileText, Clock3, X } from 'lucide-react';
-import { useData } from '@/contexts/DataContext';
-
 import {
     Dialog,
     DialogContent,
     DialogHeader,
-    DialogTitle,
-    DialogDescription
+    DialogTitle
 } from '@/components/ui/dialog';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import {
-    Table,
-    TableHeader,
-    TableRow,
-    TableHead,
-    TableBody,
-    TableCell
-} from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { useData } from '@/contexts/DataContext';
+import { SheetStatus, Role, ShiftUser } from '@/types';
+import { useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
-import {
-    ComposedChart,
-    Bar,
-    Line,
-    Area,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    ResponsiveContainer
-} from 'recharts';
+import { Clock, ShieldCheck, Mail, User as UserIcon } from 'lucide-react';
+import { UserKPIs } from './user-details/UserKPIs';
+import { UserPerformanceChart } from './user-details/UserPerformanceChart';
+import { UserHistoryTable } from './user-details/UserHistoryTable';
+import { UserActivityLog } from './user-details/UserActivityLog';
 
-// Duplicate interface to avoid circular dependency or complex exports for now.
-// Ideally should be in types/index.ts
-export interface ShiftUser {
-    id: string;
-    name: string;
-    role: string;
-    sheetsCompleted: number;
-    casesHandled: number;
-    avgTime: number;
-    slaCompliance: number;
-    status: 'Active' | 'Break' | 'Offline';
-    lastActive: string;
-    avatar?: string;
+interface UserDetailModalProps {
+    user: ShiftUser | null;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
 }
 
 export function UserDetailModal({
     user,
-    isOpen,
-    onClose
-}: {
-    user: ShiftUser | null;
-    isOpen: boolean;
-    onClose: () => void;
-}) {
-    const { sheets, activityLogs, users } = useData();
-    if (!user) return null;
+    open,
+    onOpenChange
+}: UserDetailModalProps) {
+    const { sheets, securityLogs } = useData();
 
-    // Find full user object to get flexible matching name/username
-    const fullUser = users.find((u) => u.id === user.id);
-    const namesToCheck = [user.name, fullUser?.username, fullUser?.fullName].filter(
-        Boolean
-    ) as string[];
+    // 1. Filter sheets for this user
+    const userSheets = useMemo(() => {
+        if (!user) return [];
+        return sheets
+            .filter(
+                (s) =>
+                    // Check various fields where user might be recorded
+                    s.supervisorName === user.name ||
+                    s.loadingSvName === user.name ||
+                    s.verifiedBy === user.name ||
+                    s.completedBy === user.name ||
+                    s.pickingBy === user.name
+            )
+            .sort(
+                (a, b) =>
+                    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            );
+    }, [sheets, user]);
 
-    // Filter Real Data for this User (Matches ANY of their names)
-    const userSheets = sheets.filter(
-        (s) =>
-            namesToCheck.includes(s.loadingSvName || '') ||
-            namesToCheck.includes(s.supervisorName || '') ||
-            namesToCheck.includes(s.pickingBy || '') ||
-            namesToCheck.includes(s.pickingByEmpCode || '')
-    );
+    // 2. Filter logs for this user
+    const userLogs = useMemo(() => {
+        if (!user) return [];
+        return securityLogs
+            .filter((log) => log.actor === user.name || log.details.includes(user.name))
+            .sort(
+                (a, b) =>
+                    new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+            )
+            .slice(0, 20); // Last 20 logs
+    }, [securityLogs, user]);
 
-    const userLogs = activityLogs.filter(
-        (l) => namesToCheck.includes(l.actor) || namesToCheck.some((n) => l.details.includes(n))
-    );
+    // 3. Calculate Performance Metrics
+    const metrics = useMemo(() => {
+        const completedSheets = userSheets.filter(
+            (s) => s.status === SheetStatus.COMPLETED
+        );
+        const totalCases = userSheets.reduce(
+            (acc, s) => acc + (s.loadingItems || []).reduce((a, i) => a + i.total, 0),
+            0
+        );
 
-    // Prepare Chart Data (Time vs Target)
-    const chartData = userSheets
-        .map((s) => {
-            let duration = 0;
+        // Calculate average time
+        let totalMinutes = 0;
+        let sheetsWithTime = 0;
+        completedSheets.forEach((s) => {
             if (s.loadingStartTime && s.loadingEndTime) {
-                const d1 = new Date(`1970-01-01T${s.loadingStartTime}`);
-                const d2 = new Date(`1970-01-01T${s.loadingEndTime}`);
-                if (!isNaN(d1.getTime()) && !isNaN(d2.getTime())) {
-                    let diff = (d2.getTime() - d1.getTime()) / 1000 / 60;
-                    if (diff < 0) diff += 24 * 60; // Handle midnight crossover
-                    duration = Math.round(diff);
+                const start = new Date(`1970-01-01T${s.loadingStartTime}`);
+                const end = new Date(`1970-01-01T${s.loadingEndTime}`);
+                if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+                    let diff = (end.getTime() - start.getTime()) / 1000 / 60;
+                    if (diff < 0) diff += 24 * 60;
+                    totalMinutes += diff;
+                    sheetsWithTime++;
                 }
             }
-            return {
-                name: `Sheet #${s.id.slice(-4)}`, // Short ID
-                duration: duration,
-                cases: (s.loadingItems || []).reduce((acc, i) => acc + i.total, 0),
-                target: 40 // SLA Target
-            };
-        })
-        .filter((d) => d.duration > 0 || d.cases > 0)
-        .slice(0, 10); // Last 10 sheets
+        });
+        const avgTime =
+            sheetsWithTime > 0 ? Math.round(totalMinutes / sheetsWithTime) : 0;
+
+        // SLA Compliance (Target: < 45 mins per sheet)
+        const compliantSheets = completedSheets.filter((s) => {
+            if (s.loadingStartTime && s.loadingEndTime) {
+                const start = new Date(`1970-01-01T${s.loadingStartTime}`);
+                const end = new Date(`1970-01-01T${s.loadingEndTime}`);
+                if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+                    let diff = (end.getTime() - start.getTime()) / 1000 / 60;
+                    if (diff < 0) diff += 24 * 60;
+                    return diff <= 45;
+                }
+            }
+            return false;
+        }).length;
+
+        const slaCompliance =
+            completedSheets.length > 0
+                ? Math.round((compliantSheets / completedSheets.length) * 100)
+                : 100;
+
+        return {
+            totalCases,
+            avgTime,
+            slaCompliance
+        };
+    }, [userSheets]);
+
+    if (!user) return null;
+
+    // Merge calculated metrics with user object for display
+    const displayUser: ShiftUser = {
+        ...user,
+        casesHandled: metrics.totalCases,
+        avgTime: metrics.avgTime,
+        slaCompliance: metrics.slaCompliance
+    };
 
     return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 gap-0">
-                {/* Visual Header */}
-                <DialogHeader className="p-6 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-t-lg relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-4 opacity-10">
-                        <Activity size={120} />
-                    </div>
-                    <div className="flex items-center gap-5 relative z-10">
-                        <Avatar className="h-20 w-20 border-4 border-white/20 shadow-lg">
-                            <AvatarImage src={user.avatar} />
-                            <AvatarFallback className="text-2xl font-bold bg-white text-blue-700">
-                                {user.name
-                                    .split(' ')
-                                    .map((n) => n[0])
-                                    .join('')}
-                            </AvatarFallback>
-                        </Avatar>
-                        <div>
-                            <DialogTitle className="text-3xl font-bold text-white mb-1">
-                                {user.name}
-                            </DialogTitle>
-                            <DialogDescription className="text-blue-100 text-lg flex items-center gap-2">
-                                {user.role}
-                                <span className="w-1.5 h-1.5 rounded-full bg-blue-300 fill-current" />
-                                <span
-                                    className={cn(
-                                        'px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider border',
-                                        user.status === 'Active'
-                                            ? 'bg-green-400/20 text-green-100 border-green-400/30'
-                                            : 'bg-slate-400/20 text-slate-200 border-slate-400/30'
-                                    )}
-                                >
-                                    {user.status}
-                                </span>
-                            </DialogDescription>
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 gap-0 bg-slate-50/50 dark:bg-slate-950 backdrop-blur-xl border-slate-200 dark:border-white/10">
+                <DialogHeader className="p-6 pb-4 border-b border-slate-100 dark:border-white/5 bg-white dark:bg-slate-900 sticky top-0 z-10">
+                    <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-blue-500/20 ring-4 ring-white dark:ring-slate-800">
+                                {user.avatar ? (
+                                    <img
+                                        src={user.avatar}
+                                        alt={user.name}
+                                        className="h-full w-full rounded-full object-cover"
+                                    />
+                                ) : (
+                                    user.name.charAt(0)
+                                )}
+                            </div>
+                            <div>
+                                <DialogTitle className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-3">
+                                    {user.name}
+                                    <Badge
+                                        variant="outline"
+                                        className={`
+                                        ml-2 px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider
+                                        ${user.role === Role.ADMIN
+                                                ? 'bg-purple-50 text-purple-600 border-purple-200'
+                                                : 'bg-blue-50 text-blue-600 border-blue-200'
+                                            }
+                                    `}
+                                    >
+                                        {user.role.replace('_', ' ')}
+                                    </Badge>
+                                </DialogTitle>
+                                <div className="flex items-center gap-4 mt-2 text-sm text-slate-500 font-medium">
+                                    <div className="flex items-center gap-1.5 hover:text-blue-600 transition-colors cursor-pointer">
+                                        <Mail size={14} />
+                                        {user.name.toLowerCase().replace(' ', '.')}@unicharm.com
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                        <UserIcon size={14} />
+                                        ID: {user.id.slice(0, 8)}
+                                    </div>
+                                    <div className="flex items-center gap-1.5 ml-2">
+                                        <Badge
+                                            variant="secondary"
+                                            className="h-5 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 gap-1 pl-1 pr-2"
+                                        >
+                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                            Active Now
+                                        </Badge>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors"
-                    >
-                        <X size={24} />
-                    </button>
                 </DialogHeader>
 
-                <div className="p-6 space-y-8 bg-white">
-                    {/* KPI Cards */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="p-4 bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow group">
-                            <div className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-2 group-hover:text-blue-600 transition-colors">
-                                Total Sheets
-                            </div>
-                            <div className="text-3xl font-black text-slate-800">
-                                {userSheets.length}
-                            </div>
-                            <div className="text-xs text-slate-400 mt-1">Assignments</div>
+                <div className="p-6 space-y-8">
+                    {/* 1. Key Performance Indicators */}
+                    <UserKPIs user={displayUser} userSheetsCount={userSheets.length} />
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* 2. Main Performance Chart */}
+                        <div className="lg:col-span-2">
+                            <UserPerformanceChart userSheets={userSheets} />
                         </div>
-                        <div className="p-4 bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow group">
-                            <div className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-2 group-hover:text-blue-600 transition-colors">
-                                Total Cases
-                            </div>
-                            <div className="text-3xl font-black text-slate-800">
-                                {user.casesHandled.toLocaleString()}
-                            </div>
-                            <div className="text-xs text-slate-400 mt-1">Items Loaded</div>
-                        </div>
-                        <div className="p-4 bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow group">
-                            <div className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-2 group-hover:text-blue-600 transition-colors">
-                                Avg Speed
-                            </div>
-                            <div className="text-3xl font-black text-blue-600">
-                                {user.avgTime}
-                                <span className="text-base font-normal text-slate-400 ml-1">
-                                    min
-                                </span>
-                            </div>
-                            <div className="text-xs text-slate-400 mt-1">per sheet</div>
-                        </div>
-                        <div className="p-4 bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow group">
-                            <div className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-2 group-hover:text-blue-600 transition-colors">
-                                SLA Score
-                            </div>
-                            <div
-                                className={cn(
-                                    'text-3xl font-black',
-                                    user.slaCompliance >= 90 ? 'text-emerald-600' : 'text-amber-500'
-                                )}
-                            >
-                                {user.slaCompliance}%
-                            </div>
-                            <div className="text-xs text-slate-400 mt-1">Target: &gt;90%</div>
+
+                        {/* 3. Recent Activity Log */}
+                        <div className="bg-white rounded-xl p-6 border border-slate-100 shadow-sm h-full">
+                            <h3 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                <ShieldCheck className="text-indigo-500" size={18} />
+                                Recent Activity
+                            </h3>
+                            <UserActivityLog logs={userLogs} />
                         </div>
                     </div>
 
-                    {/* Graphs Section */}
-                    {chartData.length > 0 && (
-                        <div className="bg-slate-50 rounded-xl p-6 border border-slate-100">
-                            <div className="flex justify-between items-center mb-6">
-                                <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
-                                    <TrendingUp className="text-blue-600" size={18} />
-                                    Performance Trend (Last 10 Sheets)
-                                </h3>
-                                <div className="text-xs text-slate-500 flex gap-4">
-                                    <div className="flex items-center gap-1">
-                                        <div className="w-3 h-3 bg-blue-500 rounded-sm"></div> Time
-                                        Taken
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                        <div className="w-3 h-3 bg-emerald-500 rounded-sm"></div>{' '}
-                                        Cases Loaded
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="h-[250px] w-full">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <ComposedChart
-                                        data={chartData}
-                                        margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                                    >
-                                        <CartesianGrid
-                                            strokeDasharray="3 3"
-                                            vertical={false}
-                                            stroke="#e2e8f0"
-                                        />
-                                        <XAxis
-                                            dataKey="name"
-                                            fontSize={10}
-                                            tickLine={false}
-                                            axisLine={false}
-                                            stroke="#94a3b8"
-                                        />
-                                        <YAxis
-                                            yAxisId="left"
-                                            fontSize={10}
-                                            tickLine={false}
-                                            axisLine={false}
-                                            stroke="#94a3b8"
-                                        />
-                                        <YAxis
-                                            yAxisId="right"
-                                            orientation="right"
-                                            fontSize={10}
-                                            tickLine={false}
-                                            axisLine={false}
-                                            stroke="#94a3b8"
-                                        />
-                                        <Tooltip
-                                            contentStyle={{
-                                                backgroundColor: '#fff',
-                                                borderRadius: '8px',
-                                                border: '1px solid #e2e8f0',
-                                                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
-                                            }}
-                                            labelStyle={{
-                                                color: '#64748b',
-                                                fontSize: '12px',
-                                                marginBottom: '4px'
-                                            }}
-                                        />
-                                        <Bar
-                                            yAxisId="left"
-                                            dataKey="duration"
-                                            name="Time (min)"
-                                            fill="#3b82f6"
-                                            radius={[4, 4, 0, 0]}
-                                            barSize={20}
-                                            fillOpacity={0.8}
-                                        />
-                                        <Line
-                                            yAxisId="left"
-                                            type="monotone"
-                                            dataKey="target"
-                                            name="SLA Target (40m)"
-                                            stroke="#ef4444"
-                                            strokeDasharray="3 3"
-                                            strokeWidth={2}
-                                            dot={false}
-                                        />
-                                        <Area
-                                            yAxisId="right"
-                                            type="monotone"
-                                            dataKey="cases"
-                                            name="Cases"
-                                            fill="#10b981"
-                                            stroke="#10b981"
-                                            fillOpacity={0.1}
-                                            strokeWidth={2}
-                                        />
-                                    </ComposedChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {/* Table Section */}
-                        <div>
-                            <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
-                                <FileText size={16} className="text-slate-400" /> Recent Sheet
-                                History
+                    {/* 4. Detailed History Table */}
+                    <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+                        <div className="px-6 py-4 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
+                            <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                                <Clock className="text-slate-400" size={18} />
+                                Recent Sheet History
                             </h3>
-                            {userSheets.length > 0 ? (
-                                <div className="border border-slate-100 rounded-lg overflow-hidden shadow-sm">
-                                    <Table>
-                                        <TableHeader className="bg-slate-50/50">
-                                            <TableRow>
-                                                <TableHead className="h-9 text-xs font-semibold">
-                                                    Sheet ID
-                                                </TableHead>
-                                                <TableHead className="h-9 text-xs font-semibold text-right">
-                                                    Cases
-                                                </TableHead>
-                                                <TableHead className="h-9 text-xs font-semibold text-right">
-                                                    Time
-                                                </TableHead>
-                                                <TableHead className="h-9 text-xs font-semibold text-right">
-                                                    SLA
-                                                </TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {userSheets.slice(0, 5).map((s) => {
-                                                // Calculate duration inline for SLA check
-                                                let duration = 0;
-                                                let slaMet = false;
-                                                if (s.loadingStartTime && s.loadingEndTime) {
-                                                    const d1 = new Date(
-                                                        `1970-01-01T${s.loadingStartTime}`
-                                                    );
-                                                    const d2 = new Date(
-                                                        `1970-01-01T${s.loadingEndTime}`
-                                                    );
-                                                    if (
-                                                        !isNaN(d1.getTime()) &&
-                                                        !isNaN(d2.getTime())
-                                                    ) {
-                                                        let diff = Math.round(
-                                                            (d2.getTime() - d1.getTime()) /
-                                                                1000 /
-                                                                60
-                                                        );
-                                                        if (diff < 0) diff += 1440;
-                                                        duration = diff;
-                                                        slaMet = duration <= 40;
-                                                    }
-                                                }
-
-                                                return (
-                                                    <TableRow
-                                                        key={s.id}
-                                                        className="hover:bg-slate-50/50"
-                                                    >
-                                                        <TableCell className="font-mono text-xs font-medium text-slate-600">
-                                                            {s.id}
-                                                        </TableCell>
-                                                        <TableCell className="text-right text-xs font-medium text-slate-700">
-                                                            {(s.loadingItems || []).reduce(
-                                                                (acc, i) => acc + i.total,
-                                                                0
-                                                            ) || 0}
-                                                        </TableCell>
-                                                        <TableCell className="text-right text-xs text-slate-500">
-                                                            {duration > 0 ? `${duration}m` : '-'}
-                                                        </TableCell>
-                                                        <TableCell className="text-right">
-                                                            {duration > 0 ? (
-                                                                <Badge
-                                                                    variant="outline"
-                                                                    className={cn(
-                                                                        'text-[10px] px-1 h-5',
-                                                                        slaMet
-                                                                            ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
-                                                                            : 'text-amber-700 bg-amber-50 border-amber-200'
-                                                                    )}
-                                                                >
-                                                                    {slaMet ? 'HIT' : 'MISS'}
-                                                                </Badge>
-                                                            ) : (
-                                                                <span className="text-slate-300">
-                                                                    -
-                                                                </span>
-                                                            )}
-                                                        </TableCell>
-                                                    </TableRow>
-                                                );
-                                            })}
-                                        </TableBody>
-                                    </Table>
-                                </div>
-                            ) : (
-                                <div className="text-sm text-slate-400 italic p-4 text-center bg-slate-50 rounded-lg dashed border border-slate-200">
-                                    No activity recorded recently.
-                                </div>
-                            )}
+                            <Button variant="ghost" size="sm" className="h-8 text-xs font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                                View All History
+                            </Button>
                         </div>
-
-                        {/* Logs Section */}
-                        <div>
-                            <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
-                                <Clock3 size={16} className="text-slate-400" /> Recent Activity Log
-                            </h3>
-                            <div className="space-y-3 pl-2 border-l-2 border-slate-100 max-h-[300px] overflow-y-auto">
-                                {userLogs.length > 0 ? (
-                                    userLogs.slice(0, 8).map((log) => (
-                                        <div key={log.id} className="relative pl-4 pb-2">
-                                            <div className="absolute -left-[2.5px] top-1.5 w-2 h-2 rounded-full bg-slate-300 ring-4 ring-white"></div>
-                                            <div className="text-xs text-slate-400 mb-0.5 font-mono">
-                                                {new Date(log.timestamp).toLocaleTimeString([], {
-                                                    hour: '2-digit',
-                                                    minute: '2-digit'
-                                                })}
-                                            </div>
-                                            <div className="text-sm font-medium text-slate-700">
-                                                {log.action}
-                                            </div>
-                                            <div className="text-xs text-slate-500 mt-0.5 line-clamp-1">
-                                                {log.details}
-                                            </div>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="text-sm text-slate-400 italic p-2">
-                                        No system logs found.
-                                    </div>
-                                )}
-                            </div>
+                        <div className="p-2">
+                            <UserHistoryTable userSheets={userSheets} />
                         </div>
                     </div>
                 </div>

@@ -11,12 +11,12 @@ export interface OfflineMutation {
 
 const QUEUE_KEY = 'offline_mutation_queue';
 
-export function useOfflineMutation<TData, TError, TVariables>(
+export function useOfflineMutation<TData, TError, TVariables, TContext = unknown>(
     mutationKey: string,
-    options?: UseMutationOptions<TData, TError, TVariables>
+    options?: UseMutationOptions<TData, TError, TVariables, TContext>
 ) {
 
-    return useMutation<TData, TError, TVariables>({
+    return useMutation<TData, TError, TVariables, TContext>({
         ...options,
         mutationFn: async (variables) => {
             // OPTIMIZED BACKGROUND SYNC STRATEGY:

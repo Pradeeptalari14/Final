@@ -6,15 +6,15 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 export interface RosterEntry {
-    date: string;       // YYYY-MM-DD
+    date: string;       // Normalized YYYY-MM-DD for logic
     shift: string;
     staffName: string;
     role: string;
-    vehicleNo?: string; // Optional
+    [key: string]: unknown; // Allow dynamic columns
 }
 
 interface RosterUploaderProps {
-    onUploadSuccess: (data: RosterEntry[]) => void;
+    onUploadSuccess: (data: RosterEntry[], headers: string[]) => void;
 }
 
 export function RosterUploader({ onUploadSuccess }: RosterUploaderProps) {
@@ -36,53 +36,119 @@ export function RosterUploader({ onUploadSuccess }: RosterUploaderProps) {
             const worksheet = workbook.worksheets[0]; // Assume first sheet
             if (!worksheet) throw new Error('No worksheet found in file.');
 
-            const parsedData: RosterEntry[] = [];
+            let bestHeaderRowIndex = 1;
+            let maxColumns = 0;
 
-            // Skip header row (1)
+            // Intelligent Header Detection (Scan first 10 rows)
             worksheet.eachRow((row, rowNumber) => {
-                if (rowNumber === 1) return; // Skip Header
+                if (rowNumber > 10) return;
+                let colCount = 0;
+                row.eachCell((cell) => {
+                    if (cell.value) colCount++;
+                });
+                if (colCount > maxColumns) {
+                    maxColumns = colCount;
+                    bestHeaderRowIndex = rowNumber;
+                }
+            });
 
-                // Expected Columns: A=Date, B=Shift, C=Staff Name, D=Role, E=Vehicle (Optional)
-                const dateVal = row.getCell(1).value;
-                const shiftVal = row.getCell(2).text;
-                const nameVal = row.getCell(3).text;
-                const roleVal = row.getCell(4).text;
-                const vehicleVal = row.getCell(5).text;
+            const parsedData: RosterEntry[] = [];
+            const headers: string[] = [];
 
-                if (!dateVal || !nameVal) return; // Skip invalid rows
+            // 2. Extract Headers from Detected Row
+            const headerRow = worksheet.getRow(bestHeaderRowIndex);
+            headerRow.eachCell((cell, colNumber) => {
+                let headerText = cell.text?.trim();
+                // Special handling for Date headers to keep them short like Excel (e.g. "1-Jan")
+                if (cell.value instanceof Date) {
+                    headerText = cell.value.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                } else if (cell.numFmt && (cell.numFmt.includes('mmm') || cell.numFmt.includes('MMM'))) {
+                    // Try to catch numeric dates formatted as custom strings if ExcelJS parses them as numbers
+                    if (typeof cell.value === 'number') {
+                        const d = new Date(Math.round((cell.value - 25569) * 86400 * 1000));
+                        if (!isNaN(d.getTime())) {
+                            headerText = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                        }
+                    }
+                }
 
-                // Simple date parsing
+                headers[colNumber] = headerText || `Col ${colNumber}`;
+            });
+
+            // Filter sparse headers
+            const validHeaders = headers.filter(h => h);
+            if (validHeaders.length === 0) throw new Error('No valid headers found.');
+
+            // 3. Identify Key Logic Columns (Best Effort)
+            const findColIndex = (keywords: string[]) => {
+                return headers.findIndex(h => h && keywords.some(k => h.toLowerCase().includes(k)));
+            };
+
+            const dateIdx = findColIndex(['date', 'day']);
+            const shiftIdx = findColIndex(['shift', 'time']);
+            const nameIdx = findColIndex(['name', 'staff', 'employee', 'person']);
+            const roleIdx = findColIndex(['role', 'duty', 'position', 'job']);
+
+            // 4. Parse Data Rows (After Header Row)
+            worksheet.eachRow((row, rowNumber) => {
+                if (rowNumber <= bestHeaderRowIndex) return; // Skip Header & Pre-header
+
+                const rowData: Record<string, string> = {};
+                let hasData = false;
+
+                // Capture ALL columns mapping to headers
+                headers.forEach((header, index) => {
+                    if (!header) return;
+                    const cell = row.getCell(index);
+
+                    // Value Formatting
+                    let cellValue = cell.text || '';
+                    if (cell.value instanceof Date) {
+                        cellValue = cell.value.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                    } else if (typeof cell.value === 'object' && cell.value && 'text' in (cell.value as object)) {
+                        cellValue = (cell.value as { text: string }).text;
+                    }
+
+                    rowData[header] = cellValue;
+                    if (cellValue) hasData = true;
+                });
+
+                if (!hasData) return;
+
+                // Internal Logic Normalization (Safe Fallbacks)
                 let dateStr = '';
-                if (dateVal instanceof Date) {
-                    dateStr = dateVal.toISOString().split('T')[0];
-                } else {
-                    // Try parsing string date
-                    const d = new Date(String(dateVal));
-                    if (!isNaN(d.getTime())) {
-                        dateStr = d.toISOString().split('T')[0];
+                if (dateIdx > -1) {
+                    const rawDate = row.getCell(dateIdx).value;
+                    if (rawDate instanceof Date) {
+                        dateStr = rawDate.toISOString().split('T')[0];
+                    } else {
+                        const d = new Date(String(rawDate));
+                        if (!isNaN(d.getTime())) dateStr = d.toISOString().split('T')[0];
                     }
                 }
 
                 parsedData.push({
+                    ...rowData,
+                    // valid normalized fields for filtering, fallbacks to empty if not found
                     date: dateStr,
-                    shift: shiftVal || 'First',
-                    staffName: nameVal,
-                    role: roleVal || 'Staff',
-                    vehicleNo: vehicleVal
+                    shift: shiftIdx > -1 ? (row.getCell(shiftIdx).text || '') : '',
+                    staffName: nameIdx > -1 ? (row.getCell(nameIdx).text || '') : '',
+                    role: roleIdx > -1 ? (row.getCell(roleIdx).text || '') : ''
                 });
             });
 
             if (parsedData.length === 0) {
-                throw new Error('No valid roster data found.');
+                throw new Error('No valid roster data found after header row.');
             }
 
-            toast.success(`Successfully parsed ${parsedData.length} roster entries!`);
-            onUploadSuccess(parsedData);
+            toast.success(`Parsed ${parsedData.length} rows. Header detected at Row ${bestHeaderRowIndex}.`);
+            onUploadSuccess(parsedData, validHeaders);
 
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Excel Parse Error:', err);
-            setError(err.message || 'Failed to parse Excel file.');
-            toast.error('Upload failed. Please check file format.');
+            const message = err instanceof Error ? err.message : 'Failed to parse Excel file.';
+            setError(message);
+            toast.error('Upload failed. Check file format.');
         } finally {
             setIsParsing(false);
         }
@@ -119,10 +185,10 @@ export function RosterUploader({ onUploadSuccess }: RosterUploaderProps) {
 
                 <div className="space-y-1">
                     <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                        {isParsing ? 'Parsing Roster File...' : 'Click to Upload Roster or Drag & Drop'}
+                        {isParsing ? 'Smart Scanning...' : 'Click to Upload Roster or Drag & Drop'}
                     </p>
                     <p className="text-xs text-slate-400">
-                        Support for .xlsx, .xls (Max 5MB)
+                        Auto-detects Headers & Data (Scans first 10 rows)
                     </p>
                 </div>
 
@@ -135,8 +201,8 @@ export function RosterUploader({ onUploadSuccess }: RosterUploaderProps) {
             </div>
 
             <div className="mt-4 flex items-center justify-between text-[10px] text-slate-400 uppercase font-bold tracking-wider">
-                <span>Required format</span>
-                <span>Date | Shift | Name | Role | Vehicle</span>
+                <span>Smart Parse Active</span>
+                <span>Any Excel Format</span>
             </div>
         </div>
     );

@@ -1,12 +1,14 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { Session, User, AuthChangeEvent } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
+import { Session, User as SupabaseUser } from '@supabase/supabase-js';
+import { authService } from '@/services/authService';
+import { User as AppUser } from '@/types';
 
 interface AuthContextType {
     session: Session | null;
-    user: User | null;
+    user: SupabaseUser | null; // Keep as SupabaseUser for compatibility
     loading: boolean;
     signOut: () => Promise<void>;
+    manualLogin: (user: AppUser) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,9 +36,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         // Fallback to Supabase (Global) Check if not already loaded from local
         if (!session) {
-            supabase.auth
-                .getSession()
-                .then(({ data, error }: { data: { session: Session | null }; error: { message: string } | null }) => {
+            authService.getSession()
+                .then(({ data, error }) => {
                     if (error) {
                         console.error('AuthCheck Failed:', error.message);
                     }
@@ -51,7 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const {
             data: { subscription }
-        } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
+        } = authService.onAuthStateChange((_event, session) => {
             // Only update if we don't have a forced local session override
             if (!sessionStorage.getItem('currentUser')) {
                 setSession(session);
@@ -62,12 +63,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return () => subscription.unsubscribe();
     }, [session]);
 
+    const manualLogin = async (user: AppUser) => {
+        const fakeSession = {
+            user: user as unknown as SupabaseUser, // Cast AppUser to SupabaseUser for session compatibility
+            access_token: 'local-session',
+            refresh_token: '',
+            expires_in: 3600,
+            token_type: 'bearer'
+        } as unknown as Session;
+        setSession(fakeSession);
+        sessionStorage.setItem('currentUser', JSON.stringify(user));
+    };
+
     const signOut = async () => {
-        await supabase.auth.signOut();
+        await authService.signOut();
+        setSession(null);
+        sessionStorage.removeItem('currentUser');
     };
 
     return (
-        <AuthContext.Provider value={{ session, user: session?.user ?? null, loading, signOut }}>
+        <AuthContext.Provider value={{ session, user: session?.user ?? null, loading, signOut, manualLogin }}>
             {children}
         </AuthContext.Provider>
     );

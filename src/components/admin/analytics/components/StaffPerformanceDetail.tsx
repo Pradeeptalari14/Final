@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useData } from '@/contexts/DataContext';
-import { getAllUsersStats } from '@/lib/performanceUtils';
+import { getAllUsersStats, UserStats } from '@/lib/performanceUtils';
+import { User } from '@/types';
 import {
     Users,
     Search,
@@ -21,7 +22,7 @@ export function StaffPerformanceDetail() {
     }, [users, sheets]);
 
     const filteredStats = useMemo(() => {
-        return staffStats.filter((s: any) => {
+        return staffStats.filter((s: User & { stats: UserStats }) => {
             const matchesSearch =
                 s.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 s.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -68,7 +69,7 @@ export function StaffPerformanceDetail() {
 
             {/* Performance Grid */}
             <div className="grid grid-cols-1 gap-4">
-                {filteredStats.map((user: any) => (
+                {filteredStats.map((user: User & { stats: UserStats }) => (
                     <UserRow key={user.id} user={user} />
                 ))}
 
@@ -83,7 +84,7 @@ export function StaffPerformanceDetail() {
     );
 }
 
-function UserRow({ user }: { user: any }) {
+function UserRow({ user }: { user: User & { stats: UserStats } }) {
     const { stats } = user;
 
     return (
@@ -162,7 +163,7 @@ function UserRow({ user }: { user: any }) {
     );
 }
 
-function MetricCard({ icon: Icon, label, value, sub, color }: { icon: any, label: string, value: string, sub: string, color: string }) {
+function MetricCard({ icon: Icon, label, value, sub, color }: { icon: React.ElementType, label: string, value: string, sub: string, color: string }) {
     return (
         <div className="flex items-start gap-3">
             <div className={cn("p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50", color)}>

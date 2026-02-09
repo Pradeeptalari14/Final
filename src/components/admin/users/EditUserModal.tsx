@@ -21,10 +21,35 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
 }) => {
     const { addToast } = useToast();
     const [editingUser, setEditingUser] = useState<User | null>(null);
+    const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+    const { currentUser } = useData();
+
+    // Filter Roles: Only SUPER_ADMIN can assign SUPER_ADMIN role
+    const availableRoles = Object.values(Role).filter(r => {
+        if (currentUser?.role !== Role.SUPER_ADMIN && r === Role.SUPER_ADMIN) {
+            return false;
+        }
+        return true;
+    });
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setEditingUser(user);
+        setAvatarPreview(user?.photoURL || null);
     }, [user]);
+
+    const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64String = reader.result as string;
+                setAvatarPreview(base64String);
+                setEditingUser(prev => prev ? ({ ...prev, photoURL: base64String }) : null);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
 
     const { updateUser } = useData();
 
@@ -62,6 +87,42 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
                     </button>
                 </div>
                 <form onSubmit={handleUpdateUser} className="p-6 space-y-5 overflow-y-auto">
+                    {/* Avatar Upload */}
+                    {/* Avatar Upload */}
+                    <div className="flex flex-col items-center justify-center mb-4 relative w-fit mx-auto group">
+                        <div className="w-24 h-24 rounded-full border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden hover:border-indigo-500 transition-colors cursor-pointer bg-slate-50 relative">
+                            {avatarPreview ? (
+                                <img src={avatarPreview} alt="Preview" className="w-full h-full object-cover" />
+                            ) : (
+                                <div className="text-center p-2">
+                                    <span className="text-[10px] text-slate-400 font-bold uppercase block">Change Photo</span>
+                                </div>
+                            )}
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleAvatarChange}
+                                className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                            />
+                        </div>
+
+                        {/* Remove Button - Outside the circular container */}
+                        {avatarPreview && (
+                            <button
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    setAvatarPreview(null);
+                                    setEditingUser(prev => prev ? ({ ...prev, photoURL: undefined }) : null);
+                                }}
+                                className="absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 bg-red-500 text-white p-1.5 rounded-full shadow-lg hover:bg-red-600 transition-colors z-20"
+                                title="Remove Photo"
+                                type="button"
+                            >
+                                <X size={14} />
+                            </button>
+                        )}
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1.5">
                             <label className="text-xs font-bold uppercase text-muted-foreground tracking-wider">
@@ -100,7 +161,7 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
                             }
                             className="w-full bg-background border border-border p-1.5 rounded-lg text-xs focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all appearance-none font-bold"
                         >
-                            {Object.values(Role).map((r) => (
+                            {availableRoles.map((r) => (
                                 <option key={r} value={r} className="font-bold">
                                     {r}
                                 </option>
@@ -152,8 +213,8 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
                             {t('save_changes', settings.language)}
                         </Button>
                     </div>
-                </form>
-            </div>
-        </div>
+                </form >
+            </div >
+        </div >
     );
 };

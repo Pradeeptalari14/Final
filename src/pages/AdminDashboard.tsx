@@ -25,7 +25,7 @@ export default function AdminDashboard() {
     const navigate = useNavigate();
     const { signOut } = useAuth();
     const [searchParams, setSearchParams] = useSearchParams();
-    const { users, sheets, loading, refreshUsers, refreshSheets, currentUser } = useData();
+    const { users = [], sheets = [], loading, refreshUsers, refreshSheets, currentUser } = useData();
     const { settings } = useAppState();
 
     const handleLogout = async () => {
@@ -35,10 +35,11 @@ export default function AdminDashboard() {
 
     // Derived State (Role-Aware)
     const relevantSheets = useMemo(() => {
-        if (!currentUser) return [];
+        if (!currentUser || !sheets) return [];
         if (currentUser.role === Role.ADMIN) return sheets;
 
         return sheets.filter((sheet) => {
+            if (!sheet) return false;
             if (currentUser.role === Role.STAGING_SUPERVISOR) {
                 const sName = (sheet.supervisorName || '').toLowerCase().trim();
                 const uName = (currentUser.username || '').toLowerCase().trim();
@@ -129,7 +130,20 @@ export default function AdminDashboard() {
 
     const isCompact = settings?.density === 'compact';
 
-    if (loading) return <div>{t('loading_dots', settings?.language || 'en')}</div>;
+    // Critical Barrier: If settings are missing (context fail), don't render
+    if (!settings) return null;
+
+    // Optional: If completely loading and no user, show minimal loader to prevent flash of empty content
+    if (loading && !currentUser) {
+        return (
+            <div className="flex h-screen w-full items-center justify-center bg-slate-50 dark:bg-slate-950">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="w-12 h-12 border-4 border-slate-200 border-t-primary rounded-full animate-spin" />
+                    <p className="text-slate-500 font-medium animate-pulse">{t('loading_dots', settings.language)}</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="h-full flex flex-col bg-slate-50/50 dark:bg-slate-950 overflow-hidden relative">
@@ -236,7 +250,7 @@ export default function AdminDashboard() {
                                             <button
                                                 onClick={handleLogout}
                                                 className={`rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-400 hover:text-red-500 transition-colors ${isCompact ? 'p-1' : 'p-1.5'}`}
-                                                title={t('sign_out', settings.language)}
+                                                title={t('sign_out', settings?.language)}
                                             >
                                                 <LogOut size={isCompact ? 12 : 14} />
                                             </button>
@@ -270,6 +284,7 @@ export default function AdminDashboard() {
                         users={users}
                         refreshUsers={refreshUsers}
                         sheets={relevantSheets}
+                        isLoading={loading}
                     />
                 )}
 
@@ -279,6 +294,7 @@ export default function AdminDashboard() {
                         sheets={relevantSheets}
                         currentUser={currentUser}
                         refreshSheets={refreshSheets}
+                        isLoading={loading}
                     />
                 )}
 
@@ -294,6 +310,7 @@ export default function AdminDashboard() {
                             onViewModeChange={handleViewModeChange}
                             currentUser={currentUser}
                             refreshSheets={refreshSheets}
+                            isLoading={loading}
                         />
                     )}
 

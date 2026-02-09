@@ -59,11 +59,11 @@ export default function RootLayout() {
 
     return (
         <div className="flex h-screen w-full bg-slate-50 dark:bg-background text-foreground overflow-hidden font-sans selection:bg-primary/30 print:h-auto print:overflow-visible transition-colors duration-300">
-            {/* DESKTOP SIDEBAR (Hidden on mobile) */}
+            {/* DESKTOP SIDEBAR (Connected to edges) */}
             <aside
                 className={cn(
-                    'hidden md:flex relative z-20 flex-col bg-white dark:bg-slate-900/80 backdrop-blur-xl transition-all duration-300 print:hidden border border-slate-200 dark:border-white/5 m-3 rounded-[32px] shadow-2xl',
-                    collapsed ? 'w-20' : 'w-64'
+                    'hidden md:flex relative z-20 flex-col bg-white dark:bg-slate-900 transition-all duration-300 print:hidden border-r border-slate-200 dark:border-white/5 shadow-xl',
+                    collapsed ? 'w-20' : 'w-72'
                 )}
             >
                 <SidebarContent
@@ -111,8 +111,8 @@ export default function RootLayout() {
                         </span>
                     </div>
                 )}
-                {/* Header */}
-                <header className="h-16 bg-background/50 backdrop-blur flex items-center justify-between px-4 print:hidden shrink-0">
+                {/* Header (No Blur for sharpness) */}
+                <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-white/5 flex items-center justify-between px-6 print:hidden shrink-0 z-10">
                     {/* Mobile Menu Toggle */}
                     <button
                         onClick={() => setMobileOpen(true)}
@@ -132,11 +132,13 @@ export default function RootLayout() {
                     <div className="flex items-center gap-4">
                         <NotificationBell />
                         <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center overflow-hidden border border-border">
-                            <img
-                                src="/unicharm-logo.png"
-                                alt="Profile"
-                                className="w-full h-full object-contain p-1"
-                            />
+                            {currentUser?.photoURL ? (
+                                <img src={currentUser.photoURL} alt="Profile" className="w-full h-full object-cover" />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-indigo-100 text-indigo-700 font-bold text-xs uppercase">
+                                    {currentUser?.username?.substring(0, 2) || 'U'}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </header>
@@ -173,9 +175,9 @@ function SidebarContent({
 }: SidebarContentProps) {
     return (
         <>
-            <div className="h-16 flex items-center px-6">
+            <div className="h-16 flex items-center px-4 md:px-6 bg-slate-50 dark:bg-slate-950/20 border-b border-slate-100 dark:border-white/5 mb-2">
                 <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 flex items-center justify-center">
+                    <div className="h-9 w-9 flex items-center justify-center p-1 bg-white rounded-lg shadow-sm">
                         <img
                             src="/unicharm-logo.png"
                             alt="Logo"
@@ -289,33 +291,46 @@ function SidebarContent({
             <div className="p-4 mt-auto">
                 <div className={cn(
                     "flex items-center gap-0 p-1.5 rounded-full transition-all duration-500 group relative bg-white dark:bg-slate-900 border border-transparent",
-                    collapsed && !isMobile ? "justify-center" : "hover:bg-slate-50 dark:hover:bg-slate-800/40 hover:border-slate-100 dark:hover:border-white/5 hover:shadow-sm hover:w-full w-12 overflow-hidden mx-auto lg:mx-0"
+                    collapsed && !isMobile
+                        ? "justify-center"
+                        : cn(
+                            "mx-auto lg:mx-0 overflow-hidden",
+                            isMobile
+                                ? "w-full justify-start px-2 gap-3 bg-slate-50 dark:bg-slate-800/40 border-slate-100 dark:border-white/5 shadow-sm"
+                                : "hover:bg-slate-50 dark:hover:bg-slate-800/40 hover:border-slate-100 dark:hover:border-white/5 hover:shadow-sm hover:w-full w-12"
+                        )
                 )}>
                     {/* Circle Initials */}
                     <div
-                        className="h-9 w-9 rounded-full bg-indigo-600 flex items-center justify-center text-white shrink-0 font-black text-xs shadow-lg shadow-indigo-500/20 z-10"
+                        className="h-9 w-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-white shrink-0 font-black text-xs shadow-lg shadow-indigo-500/20 z-10 overflow-hidden"
                     >
-                        {currentUser?.fullName?.charAt(0) || currentUser?.username?.charAt(0) || 'U'}
+                        {currentUser?.photoURL ? (
+                            <img src={currentUser.photoURL} alt="Profile" className="w-full h-full object-cover" />
+                        ) : (
+                            <div className="w-full h-full bg-indigo-600 flex items-center justify-center">
+                                {currentUser?.fullName?.charAt(0) || currentUser?.username?.charAt(0) || 'U'}
+                            </div>
+                        )}
                     </div>
 
-                    {/* Revealable Info & Logout (Only in expanded sidebar) */}
+                    {/* Always visible info for improved UX when expanded */}
                     {(!collapsed || isMobile) && (
-                        <div className="flex items-center justify-between min-w-0 opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none group-hover:pointer-events-auto ml-3 w-0 group-hover:w-full transform group-hover:translate-x-0 -translate-x-4">
+                        <div className="flex items-center justify-between min-w-0 flex-1 ml-3 group-hover:translate-x-1 transition-transform duration-300">
                             <div className="min-w-0 pr-2">
-                                <p className="text-[11px] font-black text-slate-900 dark:text-white truncate tracking-tight">
+                                <p className="text-[12px] font-extrabold text-slate-900 dark:text-white truncate tracking-tight">
                                     {currentUser?.fullName || currentUser?.username}
                                 </p>
-                                <p className="text-[8px] text-indigo-500 dark:text-indigo-400 font-black uppercase tracking-widest truncate">
+                                <p className="text-[9px] text-primary font-bold uppercase tracking-widest truncate">
                                     {currentUser?.role?.replace('_', ' ') || 'User'}
                                 </p>
                             </div>
 
                             <button
                                 onClick={handleSignOut}
-                                className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all shrink-0 ml-auto"
+                                className="h-8 w-8 rounded-full flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all shrink-0 ml-auto"
                                 title={t('sign_out', settings.language)}
                             >
-                                <LogOut size={14} />
+                                <LogOut size={16} />
                             </button>
                         </div>
                     )}

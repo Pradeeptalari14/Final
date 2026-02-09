@@ -4,7 +4,8 @@ import { SheetData, User } from '@/types';
 export const useSheetHeader = (
     currentSheet: SheetData | null,
     currentUser: User | null,
-    users: User[] = []
+    users: User[] = [],
+    onDirty?: () => void
 ) => {
     // Header inputs
     const [transporter, setTransporter] = useState('');
@@ -108,6 +109,7 @@ export const useSheetHeader = (
     }, [currentSheet, currentUser, users]);
 
     const handleHeaderChange = (field: string, value: string | number | boolean) => {
+        onDirty?.();
         const valStr = String(value);
         switch (field) {
             case 'shift': setShift(valStr); break;

@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -19,8 +19,7 @@ const createMockClient = () => ({
     }),
     channel: () => ({
         on: () => ({
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            subscribe: (cb: any) => {
+            subscribe: (cb: (status: string) => void) => {
                 if (typeof cb === 'function') cb('SUBSCRIBED'); // Fake success
                 return { unsubscribe: () => { } };
             }
@@ -43,5 +42,4 @@ const createMockClient = () => ({
 
 export const supabase = (supabaseUrl && supabaseAnonKey)
     ? createClient(supabaseUrl, supabaseAnonKey)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    : createMockClient() as any;
+    : createMockClient() as unknown as SupabaseClient;
