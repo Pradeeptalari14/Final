@@ -339,7 +339,7 @@ export default function LoadingSheet() {
                 />
 
                 {!isLocked && !isCompleted && !cameraActive && !isPendingVerification && (
-                    <div className="fixed bottom-0 left-0 w-full p-4 bg-white/90 backdrop-blur-md border-t border-slate-200 shadow flex justify-center gap-4 z-50 lg:pl-64 no-print text-xs">
+                    <div className="fixed bottom-0 left-0 w-full p-4 bg-white/90 backdrop-blur-md border-t border-slate-200 shadow flex justify-center gap-4 z-30 lg:pl-64 no-print text-xs">
                         <button
                             type="button"
                             onClick={() => handleSaveProgress()}
@@ -362,12 +362,12 @@ export default function LoadingSheet() {
                         <button
                             type="button"
                             onClick={handleSubmit}
-                            disabled={!states.isDataComplete || !states.isPhotoComplete || actionLoading}
+                            disabled={actionLoading}
                             className={cn(
                                 "px-8 py-2.5 rounded-lg flex items-center gap-2 font-bold shadow-lg transition-colors",
-                                (states.isDataComplete && states.isPhotoComplete && !actionLoading)
+                                (states.isDataComplete && !actionLoading)
                                     ? "bg-green-600 text-white hover:bg-green-700"
-                                    : "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
+                                    : "bg-slate-300 text-slate-600 hover:bg-slate-400"
                             )}
                         >
                             {actionLoading ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle size={18} />}

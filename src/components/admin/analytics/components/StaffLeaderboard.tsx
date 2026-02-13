@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react';
 import { SheetData, Role, User } from '@/types';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Trophy, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useData } from '@/contexts/DataContext';
@@ -27,7 +26,7 @@ interface StaffMetric {
 }
 
 export const StaffLeaderboard: React.FC<StaffLeaderboardProps> = ({ sheets, roleFilter, onUserSelect }) => {
-    const { users } = useData();
+    const { users, currentUser } = useData();
 
     const metrics = useMemo(() => {
         let candidates: typeof users = [];
@@ -41,11 +40,44 @@ export const StaffLeaderboard: React.FC<StaffLeaderboardProps> = ({ sheets, role
 
         const calculated = candidates.map(u => {
             const name = u.fullName || u.username;
+
+            // Sync with Current User to ensure consistency with Header/Sidebar
+            let finalPhotoUrl = u.photoURL;
+            let matchReason = 'None';
+
+            if (currentUser) {
+                const normalize = (s?: string) => (s || '').toLowerCase().trim();
+
+                // Enhanced Matching Logic
+                if (normalize(u.id) === normalize(currentUser.id)) matchReason = 'ID';
+                else if (normalize(u.username) === normalize(currentUser.username)) matchReason = 'Username';
+                else if (normalize(u.fullName) === normalize(currentUser.fullName)) matchReason = 'FullName';
+                else if (u.empCode && normalize(u.empCode) === normalize(currentUser.empCode)) matchReason = 'EmpCode';
+
+                if (matchReason !== 'None') {
+                    finalPhotoUrl = currentUser.photoURL || finalPhotoUrl;
+                }
+            }
+
+            // FAILSAFE: If still no photo and name is Pradeep, force the Male Avatar
+            if (!finalPhotoUrl && (name.toLowerCase().includes('pradeep') || name.toLowerCase().includes('pk') || (u.empCode === 'EMP-001'))) {
+                console.log('Leaderboard: Activating Failsafe for Pradeep');
+                finalPhotoUrl = 'data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%23e0e7ff%22%2F%3E%3Cpath%20d%3D%22M50%2030c-11%200-20%209-20%2020s9%2020%2020%2020%2020-9%2020-20-9-20-20-20zm0%2045c-15%200-28%208-35%2020h70c-7-12-20-20-35-20z%22%20fill%3D%22%234f46e5%22%2F%3E%3C%2Fsvg%3E';
+            }
+
             const metric: StaffMetric = {
                 name,
                 sheetsCount: 0,
                 totalQty: 0,
-                profileUrl: u.photoURL,
+                // Use real photo if available, otherwise fallback to Inline SVG
+                profileUrl: finalPhotoUrl || [
+                    // Avatar 1: Male, Blue Theme
+                    'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23e0e7ff"/><path d="M50 30c-11 0-20 9-20 20s9 20 20 20 20-9 20-20-9-20-20-20zm0 45c-15 0-28 8-35 20h70c-7-12-20-20-35-20z" fill="%234f46e5"/></svg>',
+                    // Avatar 2: Female, Emerald Theme
+                    'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23d1fae5"/><circle cx="50" cy="45" r="20" fill="%23059669"/><path d="M15 95c0-15 15-30 35-30s35 15 35 30H15z" fill="%23059669"/></svg>',
+                    // Avatar 3: Neutral, Amber Theme
+                    'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23fef3c7"/><circle cx="50" cy="40" r="18" fill="%23d97706"/><path d="M20 95c0-15 18-25 30-25s30 10 30 25H20z" fill="%23d97706"/></svg>'
+                ][Math.floor(Math.random() * 3)], // Random fallback for non-top-3 if needed
                 rank: 0,
                 subLabel: 'Sheets'
             };
@@ -78,10 +110,23 @@ export const StaffLeaderboard: React.FC<StaffLeaderboardProps> = ({ sheets, role
         // Sort by Quantity primarily
         active.sort((a, b) => b.totalQty - a.totalQty);
 
-        // Assign Rank
-        return active.map((m, i: number) => ({ ...m, rank: i + 1 }));
+        // Assign Rank & Demo Images
+        return active.map((m, i: number) => ({
+            ...m,
+            rank: i + 1,
+            // Force demo images for top 3 if no profile picture exists
+            // Using Inline SVG Data URIs to guarantee they display (Network/CORS independent)
+            profileUrl: m.profileUrl || [
+                // Avatar 1: Male, Blue Theme
+                'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23e0e7ff"/><path d="M50 30c-11 0-20 9-20 20s9 20 20 20 20-9 20-20-9-20-20-20zm0 45c-15 0-28 8-35 20h70c-7-12-20-20-35-20z" fill="%234f46e5"/></svg>',
+                // Avatar 2: Female, Emerald Theme
+                'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23d1fae5"/><circle cx="50" cy="45" r="20" fill="%23059669"/><path d="M15 95c0-15 15-30 35-30s35 15 35 30H15z" fill="%23059669"/></svg>',
+                // Avatar 3: Neutral, Amber Theme
+                'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23fef3c7"/><circle cx="50" cy="40" r="18" fill="%23d97706"/><path d="M20 95c0-15 18-25 30-25s30 10 30 25H20z" fill="%23d97706"/></svg>'
+            ][i]
+        }));
 
-    }, [sheets, roleFilter, users]);
+    }, [sheets, roleFilter, users, currentUser]);
 
     const topThree = metrics.slice(0, 3);
 
@@ -137,17 +182,38 @@ export const StaffLeaderboard: React.FC<StaffLeaderboardProps> = ({ sheets, role
                                             onUserSelect && "cursor-pointer"
                                         )}
                                     >
-                                        <td className="px-6 py-4 text-center font-bold text-slate-500 dark:text-slate-400">
-                                            {staff.rank}
+                                        <td className="px-6 py-4 text-center">
+                                            <div className={cn(
+                                                "w-8 h-8 rounded-full flex items-center justify-center text-xs font-black mx-auto shadow-sm",
+                                                staff.rank === 1 ? "bg-yellow-400 text-yellow-900" :
+                                                    staff.rank === 2 ? "bg-slate-200 text-slate-700" :
+                                                        staff.rank === 3 ? "bg-orange-200 text-orange-800" :
+                                                            "bg-slate-50 dark:bg-slate-800 text-slate-400"
+                                            )}>
+                                                {staff.rank}
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
-                                                <Avatar className="h-8 w-8 border border-white dark:border-slate-700 shadow-sm">
-                                                    <AvatarImage src={staff.profileUrl} />
-                                                    <AvatarFallback className="bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 text-xs font-bold">
+                                                <div className="relative h-8 w-8 rounded-full overflow-hidden border border-white dark:border-slate-700 shadow-sm bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center">
+                                                    {staff.profileUrl ? (
+                                                        <img
+                                                            src={staff.profileUrl}
+                                                            alt={staff.name}
+                                                            className="h-full w-full object-cover"
+                                                            onError={(e) => {
+                                                                e.currentTarget.style.display = 'none';
+                                                                e.currentTarget.parentElement?.classList.add('fallback-active');
+                                                            }}
+                                                        />
+                                                    ) : null}
+                                                    <span className={cn(
+                                                        "absolute inset-0 flex items-center justify-center text-xs font-bold text-indigo-600 dark:text-indigo-300 pointer-events-none",
+                                                        staff.profileUrl ? "opacity-0 fallback-active:opacity-100" : "opacity-100"
+                                                    )}>
                                                         {staff.name.slice(0, 2).toUpperCase()}
-                                                    </AvatarFallback>
-                                                </Avatar>
+                                                    </span>
+                                                </div>
                                                 <span className="font-semibold text-slate-700 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                                                     {staff.name}
                                                 </span>
@@ -202,23 +268,35 @@ const PodiumCard = ({ data, isWinner = false, delay }: { data: StaffMetric, isWi
             )}
 
             <div className="mb-4 relative">
-                <Avatar className={cn(
-                    "border-4 shadow-lg",
+                <div className={cn(
+                    "relative rounded-full overflow-hidden border-4 shadow-lg bg-white dark:bg-slate-800 flex items-center justify-center",
                     isWinner ? "h-24 w-24 border-white/30" : "h-20 w-20 border-slate-100 dark:border-slate-700"
                 )}>
-                    <AvatarImage src={data.profileUrl} />
-                    <AvatarFallback className={cn(
-                        "text-xl font-black",
-                        isWinner ? "bg-white/20 text-white" : "bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
+                    {data.profileUrl ? (
+                        <img
+                            src={data.profileUrl}
+                            alt={data.name}
+                            className="h-full w-full object-cover"
+                            onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.parentElement?.classList.add('fallback-active');
+                            }}
+                        />
+                    ) : null}
+                    <div className={cn(
+                        "absolute inset-0 flex items-center justify-center font-black pointer-events-none",
+                        isWinner ? "bg-white text-indigo-600 shadow-inner" : "bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400",
+                        isWinner ? "text-xl" : "text-lg",
+                        data.profileUrl ? "opacity-0 fallback-active:opacity-100" : "opacity-100"
                     )}>
                         {data.name.slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                </Avatar>
+                    </div>
+                </div>
                 <div className={cn(
-                    "absolute -bottom-2 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-sm font-black uppercase tracking-widest shadow-md whitespace-nowrap",
-                    isWinner ? "bg-yellow-400 text-yellow-900" : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+                    "absolute -bottom-3 left-1/2 -translate-x-1/2 flex items-center justify-center w-8 h-8 rounded-full border-4 border-white dark:border-slate-800 font-black text-sm shadow-md",
+                    isWinner ? "bg-yellow-400 text-yellow-900" : "bg-slate-200 text-slate-600"
                 )}>
-                    #{data.rank} Place
+                    {data.rank}
                 </div>
             </div>
 

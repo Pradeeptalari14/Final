@@ -408,6 +408,7 @@ export const useStagingSheetLogic = () => {
         id,
         dataLoading,
         refreshSheets,
-        isSaving
+        isSaving,
+        addToast
     };
 };

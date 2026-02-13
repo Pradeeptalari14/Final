@@ -148,18 +148,25 @@ export function AnalyticsHub({ sheets: allSheets, currentUser, onRefresh: _onRef
     return (
         <>
             <div className="flex flex-col lg:flex-row h-[calc(100vh-64px)] overflow-hidden bg-slate-50 dark:bg-slate-950">
-                {/* SIDEBAR */}
                 <div className={cn(
                     "bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-white/5 transition-all duration-300 flex flex-col shrink-0 relative",
-                    isSidebarOpen ? "w-80" : "w-16"
+                    isSidebarOpen ? "w-80" : "w-20 items-center py-6"
                 )}>
-                    {isSidebarOpen && (
+                    {isSidebarOpen ? (
                         <div className="p-6 flex-1 overflow-y-auto custom-scrollbar">
-                            <div className="flex items-center gap-3 mb-8">
-                                <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200">
-                                    <LayoutGrid size={20} />
+                            <div className="flex items-center justify-between mb-8">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+                                        <LayoutGrid size={20} />
+                                    </div>
+                                    <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Report Center</h2>
                                 </div>
-                                <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Report Center</h2>
+                                <button
+                                    onClick={() => setIsSidebarOpen(false)}
+                                    className="w-8 h-8 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                                >
+                                    <PanelLeft size={16} />
+                                </button>
                             </div>
 
                             <nav className="space-y-1">
@@ -189,38 +196,50 @@ export function AnalyticsHub({ sheets: allSheets, currentUser, onRefresh: _onRef
                                 ))}
                             </nav>
                         </div>
+                    ) : (
+                        // Collapsed Icon-Only View
+                        <div className="flex flex-col items-center w-full gap-4">
+                            <button
+                                onClick={() => setIsSidebarOpen(true)}
+                                className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-4 hover:shadow-md transition-all"
+                            >
+                                <PanelLeft size={20} />
+                            </button>
+
+                            <nav className="flex flex-col gap-3">
+                                {reportTypes.map((type) => (
+                                    <button
+                                        key={type.id}
+                                        onClick={() => setActiveReport(type.id)}
+                                        className={cn(
+                                            "w-10 h-10 rounded-xl flex items-center justify-center transition-all relative group",
+                                            activeReport === type.id
+                                                ? `bg-${type.color}-50 text-${type.color}-600 shadow-sm`
+                                                : "text-slate-400 hover:bg-slate-50 hover:text-slate-600"
+                                        )}
+                                        title={type.label}
+                                    >
+                                        <type.icon size={20} />
+                                        {activeReport === type.id && (
+                                            <div className={cn("absolute -right-2 top-1/2 -translate-y-1/2 w-1 h-4 rounded-full", `bg-${type.color}-600`)} />
+                                        )}
+                                    </button>
+                                ))}
+                            </nav>
+                        </div>
                     )}
-                    <div className="p-4 border-t border-slate-100 dark:border-white/5">
-                        <button
-                            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                            className="w-full h-10 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
-                        >
-                            <PanelLeft className={cn("h-5 w-5 transition-transform", !isSidebarOpen && "rotate-180")} />
-                        </button>
-                    </div>
                 </div>
 
                 {/* MAIN CONTENT AREA (No Blur for sharpness) */}
                 <div className="flex-1 flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden relative">
-                    <div className="absolute top-4 left-4 z-50">
-                        <button
-                            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                            className={cn(
-                                "w-10 h-10 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/5 flex items-center justify-center text-slate-500 hover:text-slate-700 shadow-xl transition-all",
-                                isSidebarOpen ? "opacity-0 scale-50 pointer-events-none" : "opacity-100 scale-100"
-                            )}
-                        >
-                            <PanelLeft size={18} />
-                        </button>
-                    </div>
 
                     <div className="h-full flex flex-col relative">
                         <div className="flex-1 overflow-y-auto p-4 lg:p-8 custom-scrollbar">
                             <div className="space-y-8 max-w-[1600px] mx-auto">
                                 {/* TOOLBAR */}
                                 <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-white/5 shadow-xl shadow-slate-200/20">
-                                    <div className="flex items-center gap-4 w-full md:w-auto">
-                                        <div className="relative flex-1 md:w-80">
+                                    <div className="flex items-center gap-4 w-full md:w-auto flex-1">
+                                        <div className="relative flex-1 md:max-w-md">
                                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                                             <Input
                                                 placeholder="Search Sheets, Vehicles..."

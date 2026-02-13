@@ -230,7 +230,7 @@ export const useLoadingSheetLogic = () => {
     const handleSubmit = async () => {
         if (!currentSheet || actionLoading) return;
 
-        const validationError = getSubmissionValidationError(currentSheet, signatureState, lists);
+        const validationError = getSubmissionValidationError(currentSheet, headerState, signatureState, lists);
         if (validationError) {
             addToast('error', validationError);
             return;

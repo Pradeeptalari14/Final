@@ -16,7 +16,7 @@ import { OperationalTableView } from '@/components/admin/OperationalTableView';
 import { DatabaseView } from '@/components/admin/DatabaseView';
 import { UserManagement } from '@/components/admin/UserManagement';
 import { AuditLogView } from '@/components/admin/AuditLogView';
-import { LiveOperationsMonitor } from '@/components/admin/LiveOperationsMonitor';
+
 import { SecurityScanner } from '@/components/admin/SecurityScanner';
 import { AnalyticsHub } from '@/components/admin/AnalyticsHub';
 import { t } from '@/lib/i18n';
@@ -319,13 +319,7 @@ export default function AdminDashboard() {
                     <AuditLogView sheets={relevantSheets} currentUser={currentUser} />
                 )}
 
-                {/* 5. DASHBOARD VIEW (Live Monitor) */}
-                {activeSection === 'dashboard' && (
-                    <div className={isCompact ? 'space-y-3' : 'space-y-6'}>
-                        {/* Analytics Charts moved to Report Center */}
-                        <LiveOperationsMonitor sheets={relevantSheets} onRefresh={refreshSheets} />
-                    </div>
-                )}
+
 
                 {/* 5a. CUSTOM ANALYTICS HUB (Power BI Alternative) */}
                 {activeSection === 'reports' && <AnalyticsHub sheets={relevantSheets} currentUser={currentUser} />}

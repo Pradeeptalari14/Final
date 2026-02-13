@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { getStagingValidationError } from '@/lib/logic/sheetValidation';
 import {
     Plus,
     Printer,
@@ -51,7 +52,8 @@ export default function StagingSheet() {
         id,
         dataLoading,
         refreshSheets,
-        isSaving
+        isSaving,
+        addToast
     } = useStagingSheetLogic();
 
     const handlePrint = () => {
@@ -72,15 +74,10 @@ export default function StagingSheet() {
     </Button>
 
     const onRequestVerification = () => {
-        const errors: string[] = [];
-        if (!formData.shift) errors.push('Shift');
-        if (!formData.destination) errors.push('Destination');
-        if (!formData.loadingDockNo) errors.push('Loading Dock');
+        const error = getStagingValidationError(formData);
 
-        if (errors.length > 0) {
-            alert(
-                `Please fill in the following mandatory fields before requesting verification:\n- ${errors.join('\n- ')}`
-            );
+        if (error) {
+            addToast('error', error);
             return;
         }
 
@@ -290,7 +287,7 @@ export default function StagingSheet() {
             {formData.status !== SheetStatus.LOCKED &&
                 formData.status !== SheetStatus.STAGING_VERIFICATION_PENDING &&
                 formData.status !== SheetStatus.COMPLETED && (
-                    <div className="sticky bottom-0 w-full p-4 glass border-t border-slate-200 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)] flex justify-center gap-4 z-40 print:hidden animate-in slide-in-from-bottom-2">
+                    <div className="sticky bottom-0 w-full p-4 glass border-t border-slate-200 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)] flex justify-center gap-4 z-30 print:hidden animate-in slide-in-from-bottom-2">
                         <Button
                             variant="outline"
                             onClick={() => navigate(-1)}

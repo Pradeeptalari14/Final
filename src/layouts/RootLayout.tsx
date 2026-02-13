@@ -62,7 +62,7 @@ export default function RootLayout() {
             {/* DESKTOP SIDEBAR (Connected to edges) */}
             <aside
                 className={cn(
-                    'hidden md:flex relative z-20 flex-col bg-white dark:bg-slate-900 transition-all duration-300 print:hidden border-r border-slate-200 dark:border-white/5 shadow-xl',
+                    'hidden md:flex relative z-50 flex-col bg-white dark:bg-slate-900 transition-all duration-300 print:hidden border-r border-slate-200 dark:border-white/5 shadow-xl',
                     collapsed ? 'w-20' : 'w-72'
                 )}
             >
@@ -78,7 +78,7 @@ export default function RootLayout() {
 
             {/* MOBILE SIDEBAR (Drawer) */}
             {mobileOpen && (
-                <div className="fixed inset-0 z-50 md:hidden">
+                <div className="fixed inset-0 z-[100] md:hidden">
                     {/* Backdrop */}
                     <div
                         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -176,16 +176,16 @@ function SidebarContent({
     return (
         <>
             <div className="h-16 flex items-center px-4 md:px-6 bg-slate-50 dark:bg-slate-950/20 border-b border-slate-100 dark:border-white/5 mb-2">
-                <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 flex items-center justify-center p-1 bg-white rounded-lg shadow-sm">
+                <div className="flex items-center gap-3 pl-2">
+                    <div className="h-10 w-10 flex items-center justify-center transition-transform hover:scale-110 duration-300">
                         <img
                             src="/unicharm-logo.png"
                             alt="Logo"
-                            className="w-full h-full object-contain"
+                            className="w-full h-full object-contain filter drop-shadow-sm"
                         />
                     </div>
                     {(!collapsed || isMobile) && (
-                        <span className="font-bold text-lg tracking-tight text-slate-900 dark:text-white uppercase">
+                        <span className="font-black text-xl tracking-tight bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent uppercase">
                             Unicharm
                         </span>
                     )}
