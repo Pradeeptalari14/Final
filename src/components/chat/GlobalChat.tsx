@@ -80,12 +80,18 @@ export function GlobalChat() {
 
     if (!currentUser) return null;
 
+    // For mobile viewing, we only want to show one panel at a time to prevent overflow.
+    const hasActiveChats = activeChats.length > 0;
+
     return (
-        <div className="fixed bottom-6 right-6 z-[100] flex items-end flex-row-reverse gap-4 print:hidden pointer-events-none">
-            {/* Directory Column */}
-            <div className="flex flex-col items-end pointer-events-auto">
+        <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[100] flex items-end flex-row-reverse gap-2 sm:gap-4 print:hidden pointer-events-none max-w-[calc(100vw-2rem)]">
+            {/* Directory Column - Hidden on mobile if a chat is active */}
+            <div className={cn(
+                "flex-col items-end pointer-events-auto",
+                hasActiveChats ? "hidden sm:flex" : "flex"
+            )}>
                 {isDirectoryOpen ? (
-                    <div className="w-[320px] h-[500px] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-white/10 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5">
+                    <div className="w-[calc(100vw-2rem)] sm:w-[320px] h-[70vh] sm:h-[500px] max-h-[80vh] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-white/10 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5">
                         <div className="bg-indigo-600 px-4 py-3 flex items-center justify-between shrink-0">
                             <div className="flex items-center gap-2">
                                 <MessageCircle className="text-white" size={18} />
@@ -156,9 +162,12 @@ export function GlobalChat() {
             </div>
 
             {/* Active Chats */}
-            {activeChats.map(chatUserId => {
+            {activeChats.map((chatUserId, index) => {
                 const targetUser = users.find(u => u.id === chatUserId);
                 if (!targetUser) return null;
+
+                // Hide all but the most recently opened chat on mobile devices to save space
+                const isHiddenOnMobile = index !== activeChats.length - 1;
 
                 const chatMessages = messages.filter(
                     m => (m.senderId === currentUser.id && m.receiverId === chatUserId) ||
@@ -169,7 +178,10 @@ export function GlobalChat() {
                 const mockStatus = statuses[(targetIdx > -1 ? targetIdx : 0) % statuses.length] as keyof typeof statusColors;
 
                 return (
-                    <div key={chatUserId} className="pointer-events-auto w-[300px] h-[400px] bg-white dark:bg-slate-900 rounded-t-2xl rounded-b-xl shadow-2xl border border-slate-200 dark:border-white/10 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5">
+                    <div key={chatUserId} className={cn(
+                        "pointer-events-auto w-[calc(100vw-2rem)] sm:w-[300px] h-[65vh] sm:h-[400px] max-h-[75vh] bg-white dark:bg-slate-900 rounded-t-2xl rounded-b-xl shadow-2xl border border-slate-200 dark:border-white/10 flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5",
+                        isHiddenOnMobile ? "hidden sm:flex" : "flex"
+                    )}>
                         {/* Header */}
                         <div className="px-3 py-2 bg-slate-800 dark:bg-slate-950 flex items-center justify-between shrink-0 border-b border-slate-700/50 hover:bg-slate-700/50 transition-colors cursor-pointer" onClick={() => setActiveChats(prev => prev.filter(id => id !== chatUserId).concat(chatUserId))}>
                             <div className="flex items-center gap-3 overflow-hidden">
