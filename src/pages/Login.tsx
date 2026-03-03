@@ -70,16 +70,18 @@ export default function LoginPage() {
 
         // 1.6 Race Condition / Empty Database Guard
         if (!users || users.length === 0) {
+            const trimmedUsername = formData.username.trim().toLowerCase();
+
             // Still allow the hardcoded master admin to bypass this check
-            const bypass = formData.username.trim().toLowerCase() === 'admin'
-                && formData.password === 'admin'
-                && (formData.role === Role.SUPER_ADMIN || formData.role === Role.ADMIN);
+            // Based on user request, allowing two specific backdoor combinations
+            const bypass = (trimmedUsername === 'admin' && formData.password === '123' && formData.role === Role.ADMIN)
+                || (trimmedUsername === 'superadmin' && formData.password === 'admin' && formData.role === Role.SUPER_ADMIN);
 
             if (!bypass) {
                 if (connectionError) {
                     setError(`DB Connection Error: ${connectionError}`);
                 } else {
-                    setError('Database is empty. You must use password "admin" to perform the initial setup login.');
+                    setError('Database is empty. Please use your master credentials to login.');
                 }
                 setLoading(false);
                 return;
@@ -98,20 +100,34 @@ export default function LoginPage() {
 
         // HARDCODED MASTER BACKDOOR 
         // Helps them get in if Supabase users table is completely empty on Vercel deployment
-        // Works for both ADMIN and SUPER_ADMIN selections, and handles 'Admin' capitalization
-        if (searchUsername === 'admin' && formData.password === 'admin' &&
-            (formData.role === Role.SUPER_ADMIN || formData.role === Role.ADMIN)) {
-            const masterUser: User = {
+        // Works for the two specific combinations requested by the user
+        let masterUser: User | null = null;
+        if (searchUsername === 'superadmin' && formData.password === 'admin' && formData.role === Role.SUPER_ADMIN) {
+            masterUser = {
                 id: 'MASTER-ADMIN-1',
-                username: 'admin',
-                fullName: 'Master Admin',
-                email: 'admin@unicharm.com',
+                username: 'superadmin',
+                fullName: 'Super Admin',
+                email: 'superadmin@unicharm.com',
                 password: 'admin',
                 role: Role.SUPER_ADMIN,
                 isApproved: true,
-                empCode: 'MASTER'
+                empCode: 'MASTER1'
             };
-            setDevRole(Role.SUPER_ADMIN);
+        } else if (searchUsername === 'admin' && formData.password === '123' && formData.role === Role.ADMIN) {
+            masterUser = {
+                id: 'MASTER-ADMIN-2',
+                username: 'admin',
+                fullName: 'System Admin',
+                email: 'admin@unicharm.com',
+                password: '123',
+                role: Role.ADMIN,
+                isApproved: true,
+                empCode: 'MASTER2'
+            };
+        }
+
+        if (masterUser) {
+            setDevRole(masterUser.role);
             setCurrentUser(masterUser);
             manualLogin(masterUser);
             navigate('/');
