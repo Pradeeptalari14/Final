@@ -8,6 +8,8 @@ import { useAppState } from '@/contexts/AppStateContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { motion } from 'framer-motion';
 import RegisterModal from '@/components/auth/RegisterModal';
+import { dataService } from '@/services/dataService';
+import { getDeviceOs, getDeviceType, getBrowserName } from '@/lib/deviceDetect';
 
 export default function LoginPage() {
     const navigate = useNavigate();
@@ -95,7 +97,7 @@ export default function LoginPage() {
         );
 
         if (foundUser) {
-            // 4. Check Persistent Lock
+            // ... strict checks ...
             if (foundUser.isLocked) {
                 setError(
                     'Account is permanently locked due to security risks. Contact Administrator.'
@@ -170,7 +172,28 @@ export default function LoginPage() {
 
             const finalRole = foundUser.role;
 
-            setTimeout(() => {
+            setTimeout(async () => {
+                // Record Device Session
+                const sessionId = crypto.randomUUID();
+                const session = {
+                    id: sessionId,
+                    userId: foundUser.id,
+                    username: foundUser.username,
+                    deviceOs: getDeviceOs(),
+                    deviceType: getDeviceType(),
+                    browser: getBrowserName(),
+                    loginTime: new Date().toISOString(),
+                    lastActive: new Date().toISOString()
+                };
+
+                try {
+                    await dataService.logSession(session);
+                    // Store locally so this device knows its session ID
+                    sessionStorage.setItem('unicharm_session_id', sessionId);
+                } catch (e) {
+                    console.error("Failed to log session", e);
+                }
+
                 setLoading(false);
                 setFailedAttempts(0);
                 setLockoutTime(null);

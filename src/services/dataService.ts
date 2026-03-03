@@ -101,6 +101,34 @@ export const dataService = {
         return { error: null };
     },
 
+    // --- SESSIONS ---
+    async logSession(session: import('@/types').LoginSession) {
+        // We use "sessions" table. Upsert based on ID
+        const { error } = await supabase.from('sessions').upsert({ id: session.id, data: session });
+        if (error) throw error;
+        return { error: null };
+    },
+
+    async getActiveSessions() {
+        const { data, error } = await supabase.from('sessions').select('*');
+        if (error) throw error;
+        // Clean up old sessions (> 24 hours inactive)
+        const now = Date.now();
+        const activeSessions = data
+            .map((row: { data: unknown }) => row.data as import('@/types').LoginSession)
+            .filter(session => {
+                const lastActive = new Date(session.lastActive).getTime();
+                return (now - lastActive) < 24 * 60 * 60 * 1000;
+            });
+        return activeSessions;
+    },
+
+    async killSession(sessionId: string) {
+        const { error } = await supabase.from('sessions').delete().eq('id', sessionId);
+        if (error) throw error;
+        return { error: null };
+    },
+
     // --- NUCLEAR --
     async resetAllData() {
         // Delete all rows from tables.

@@ -28,6 +28,17 @@ export interface User {
     photoURL?: string;
 }
 
+export interface LoginSession {
+    id: string;
+    userId: string;
+    username: string;
+    deviceOs: string;
+    deviceType: string;
+    browser: string;
+    loginTime: string;
+    lastActive: string;
+}
+
 export interface StagingItem {
     srNo: number;
     skuName: string;

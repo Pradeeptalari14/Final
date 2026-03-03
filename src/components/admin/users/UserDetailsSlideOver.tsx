@@ -18,6 +18,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { DeleteUserAlert } from './DeleteUserAlert';
 import React from 'react';
 import { useData } from '@/contexts/DataContext';
+import { UserSessionsList } from './UserSessionsList';
 
 interface UserDetailsSlideOverProps {
     user: User | null;
@@ -181,6 +182,11 @@ export function UserDetailsSlideOver({
                                 )}
                             </div>
                         </div>
+                    </div>
+
+                    {/* Concurrent Sessions Grid */}
+                    <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+                        <UserSessionsList userId={user.id} />
                     </div>
 
                     {/* Actions Hub */}
