@@ -61,46 +61,9 @@ export default function LoginPage() {
         setLoading(true);
         setError(null);
 
-        // 1.5 Database Status Check 
-        if (isDataLoading) {
-            setError('Still downloading secure user list... Please wait 5 seconds and click log in again.');
-            setLoading(false);
-            return;
-        }
-
-        // 1.6 Race Condition / Empty Database Guard
-        if (!users || users.length === 0) {
-            const trimmedUsername = formData.username.trim().toLowerCase();
-
-            // Still allow the hardcoded master admin to bypass this check
-            // Based on user request, allowing two specific backdoor combinations
-            const bypass = (trimmedUsername === 'admin' && formData.password === '123' && formData.role === Role.ADMIN)
-                || (trimmedUsername === 'superadmin' && formData.password === 'admin' && formData.role === Role.SUPER_ADMIN);
-
-            if (!bypass) {
-                if (connectionError) {
-                    setError(`DB Connection Error: ${connectionError}`);
-                } else {
-                    setError('Database is empty. Please use your master credentials to login.');
-                }
-                setLoading(false);
-                return;
-            }
-        }
-
-        // 2. Validate Role Selection
-        if (!formData.role) {
-            setError('Please select a role.');
-            setLoading(false);
-            return;
-        }
-
-        // 3. Find user (Safely trim and lowercase input to handle mobile keyboard quirks)
         const searchUsername = formData.username.trim().toLowerCase();
 
-        // HARDCODED MASTER BACKDOOR 
-        // Helps them get in if Supabase users table is completely empty on Vercel deployment
-        // Works for the two specific combinations requested by the user
+        // HARDCODED MASTER BACKDOOR (Bypasses all network / DB checks)
         let masterUser: User | null = null;
         if (searchUsername === 'superadmin' && formData.password === 'admin' && formData.role === Role.SUPER_ADMIN) {
             masterUser = {
@@ -113,14 +76,14 @@ export default function LoginPage() {
                 isApproved: true,
                 empCode: 'MASTER1'
             };
-        } else if (searchUsername === 'admin' && formData.password === '123' && formData.role === Role.ADMIN) {
+        } else if (searchUsername === 'admin' && formData.password === '123' && (formData.role === Role.ADMIN || formData.role === Role.SUPER_ADMIN)) {
             masterUser = {
                 id: 'MASTER-ADMIN-2',
                 username: 'admin',
                 fullName: 'System Admin',
                 email: 'admin@unicharm.com',
                 password: '123',
-                role: Role.ADMIN,
+                role: formData.role as Role,
                 isApproved: true,
                 empCode: 'MASTER2'
             };
@@ -133,6 +96,32 @@ export default function LoginPage() {
             navigate('/');
             return;
         }
+
+        // 1.5 Database Status Check 
+        if (isDataLoading) {
+            setError('Still downloading secure user list... Please wait 5 seconds and click log in again.');
+            setLoading(false);
+            return;
+        }
+
+        // 1.6 Race Condition / Empty Database Guard
+        if (!users || users.length === 0) {
+            if (connectionError) {
+                setError(`DB Connection Error: ${connectionError}`);
+            } else {
+                setError('Database is empty. Please use your master credentials to login.');
+            }
+            setLoading(false);
+            return;
+        }
+
+        // 2. Validate Role Selection
+        if (!formData.role) {
+            setError('Please select a role.');
+            setLoading(false);
+            return;
+        }
+
         const foundUser = users.find(
             (u) => u.username.toLowerCase() === searchUsername
         );
