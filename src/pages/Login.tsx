@@ -487,7 +487,8 @@ export default function LoginPage() {
                                                         Role.STAGING_SUPERVISOR,
                                                         Role.LOADING_SUPERVISOR,
                                                         Role.SHIFT_LEAD,
-                                                        Role.ADMIN
+                                                        Role.ADMIN,
+                                                        Role.SUPER_ADMIN
                                                     ].map((role) => (
                                                         <button
                                                             key={role}
