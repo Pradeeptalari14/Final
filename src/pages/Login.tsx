@@ -61,6 +61,21 @@ export default function LoginPage() {
         setLoading(true);
         setError(null);
 
+        // 1.5 Race Condition Guard: Mobile connections can be slow. 
+        // If users array is empty, we must ensure it isn't just still fetching.
+        if (!users || users.length === 0) {
+            // Still allow the hardcoded master admin to bypass this check
+            const bypass = formData.username.trim().toLowerCase() === 'admin'
+                && formData.password === 'admin'
+                && (formData.role === Role.SUPER_ADMIN || formData.role === Role.ADMIN);
+
+            if (!bypass) {
+                setError('Still connecting to database. Please wait a moment and try again.');
+                setLoading(false);
+                return;
+            }
+        }
+
         // 2. Validate Role Selection
         if (!formData.role) {
             setError('Please select a role.');
