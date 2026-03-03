@@ -1,6 +1,6 @@
 import { SecurityLog } from '@/types';
 import { format } from 'date-fns';
-import { cn } from '@/lib/utils';;
+import { cn } from '@/lib/utils';
 
 interface UserActivityLogProps {
     logs: SecurityLog[];

@@ -1,0 +1,35 @@
+
+> unicharm-operations_v8@0.0.0 lint
+> eslint src --ext .ts,.tsx
+
+
+C:\Users\makso\Downloads\unicharm-operations_v8\src\components\admin\analytics\components\StaffLeaderboard.tsx
+  64:17  warning  Unexpected console statement  no-console
+
+C:\Users\makso\Downloads\unicharm-operations_v8\src\components\admin\settings\NuclearButton.tsx
+  82:34  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  82:41  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+
+C:\Users\makso\Downloads\unicharm-operations_v8\src\components\chat\GlobalChat.tsx
+  40:17  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\makso\Downloads\unicharm-operations_v8\src\components\chat\GlobalChat.tsx:40:17
+  38 |         if (storedMessages) {
+  39 |             try {
+> 40 |                 setMessages(JSON.parse(storedMessages));
+     |                 ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  41 |             } catch (e) {
+  42 |                 console.error("Failed to load chat history", e);
+  43 |             }  react-hooks/set-state-in-effect
+
+C:\Users\makso\Downloads\unicharm-operations_v8\src\hooks\useStagingSheetLogic.ts
+  219:8  warning  React Hook useEffect has a missing dependency: 'handleSave'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+✖ 5 problems (3 errors, 2 warnings)
+

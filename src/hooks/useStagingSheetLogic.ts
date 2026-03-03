@@ -216,7 +216,7 @@ export const useStagingSheetLogic = () => {
         ) {
             handleSave(undefined, true); // Use absolute latest from formDataRef, quiet save
         }
-    }, [debouncedFormData, formData.id, formData.status]); // REMOVED handleSave dependency to prevent keystroke-loops
+    }, [debouncedFormData, formData.id, formData.status, handleSave]); // REMOVED handleSave dependency to prevent keystroke-loops
 
     const handleDelete = async () => {
         if (!confirm('Are you sure you want to delete this sheet? This cannot be undone.')) return;

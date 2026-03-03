@@ -26,23 +26,23 @@ export function GlobalChat() {
     const { currentUser, users } = useData();
     const [isDirectoryOpen, setIsDirectoryOpen] = useState(false);
     const [activeChats, setActiveChats] = useState<string[]>([]);
-    const [messages, setMessages] = useState<ChatMessage[]>([]);
+    const [messages, setMessages] = useState<ChatMessage[]>(() => {
+        const storedMessages = localStorage.getItem('unicharm_global_chat');
+        if (storedMessages) {
+            try {
+                return JSON.parse(storedMessages);
+            } catch (e) {
+                console.error("Failed to load chat history", e);
+                return [];
+            }
+        }
+        return [];
+    });
     const [searchQuery, setSearchQuery] = useState('');
 
     const availableUsers = users
         .filter(u => u.id !== currentUser?.id && u.isApproved)
         .filter(u => (u.fullName || u.username).toLowerCase().includes(searchQuery.toLowerCase()));
-
-    useEffect(() => {
-        const storedMessages = localStorage.getItem('unicharm_global_chat');
-        if (storedMessages) {
-            try {
-                setMessages(JSON.parse(storedMessages));
-            } catch (e) {
-                console.error("Failed to load chat history", e);
-            }
-        }
-    }, []);
 
     useEffect(() => {
         if (messages.length > 0) {
@@ -53,7 +53,7 @@ export function GlobalChat() {
     const handleSend = (text: string, receiverId: string) => {
         if (!text.trim() || !currentUser) return;
 
-        const msgId = Math.random().toString(36).substring(2, 9);
+        const msgId = crypto.randomUUID();
         const newMsg: ChatMessage = {
             id: msgId,
             text,
@@ -66,7 +66,7 @@ export function GlobalChat() {
 
         setTimeout(() => {
             setMessages(prev => {
-                const replyId = Math.random().toString(36).substring(2, 9);
+                const replyId = crypto.randomUUID();
                 return [...prev, {
                     id: replyId,
                     text: "Thanks for the message! I'm reviewing this now.",

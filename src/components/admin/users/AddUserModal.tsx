@@ -16,6 +16,16 @@ interface AddUserModalProps {
 
 import { useData } from '@/contexts/DataContext';
 
+const initialUserState = {
+    username: '',
+    fullName: '',
+    empCode: '',
+    email: '',
+    password: '',
+    role: '' as Role,
+    photoURL: ''
+};
+
 export const AddUserModal: React.FC<AddUserModalProps> = ({
     isOpen,
     onClose,
@@ -38,16 +48,6 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({
         }
         return true;
     });
-
-    const initialUserState = {
-        username: '',
-        fullName: '',
-        empCode: '',
-        email: '',
-        password: '',
-        role: '' as Role,
-        photoURL: ''
-    };
 
     const [newUser, setNewUser] = useState(initialUserState);
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);

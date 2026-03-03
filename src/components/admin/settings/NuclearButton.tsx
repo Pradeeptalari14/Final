@@ -79,7 +79,7 @@ export const NuclearButton = () => {
                     </ul>
                     <div className="pt-2">
                         <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
-                            Type "DELETE" to confirm
+                            Type &quot;DELETE&quot; to confirm
                         </label>
                         <Input
                             value={confirmText}

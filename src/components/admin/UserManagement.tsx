@@ -81,7 +81,7 @@ export function UserManagement({ users, refreshUsers, sheets, isLoading }: UserM
     // Handle case where selected user might be deleted while viewing
     useEffect(() => {
         if (selectedUserId && !selectedUser) {
-            setSelectedUserId(null);
+            queueMicrotask(() => setSelectedUserId(null));
         }
     }, [selectedUserId, selectedUser]);
 

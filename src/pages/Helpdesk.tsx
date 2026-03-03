@@ -9,7 +9,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 
 export default function Helpdesk() {
     const { currentUser, users } = useData();
-    const [tickets, setTickets] = useState<Ticket[]>([]);
+    const [tickets, setTickets] = useState<Ticket[]>(() => {
+        const stored = localStorage.getItem('unicharm_tickets');
+        if (stored) {
+            try {
+                return JSON.parse(stored);
+            } catch (e) {
+                console.error("Failed to parse tickets", e);
+                return [];
+            }
+        }
+        return [];
+    });
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<TicketStatus | 'ALL'>('ALL');
     const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -18,18 +29,6 @@ export default function Helpdesk() {
     const [newTitle, setNewTitle] = useState('');
     const [newDesc, setNewDesc] = useState('');
     const [newPriority, setNewPriority] = useState<TicketPriority>('MEDIUM');
-
-    // Simulate DB fetch
-    useEffect(() => {
-        const stored = localStorage.getItem('unicharm_tickets');
-        if (stored) {
-            try {
-                setTickets(JSON.parse(stored));
-            } catch (e) {
-                console.error("Failed to parse tickets", e);
-            }
-        }
-    }, []);
 
     // Simulate DB save
     useEffect(() => {

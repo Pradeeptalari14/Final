@@ -1,5 +1,5 @@
 import { ShiftUser } from '@/types';
-import { cn } from '@/lib/utils';;
+import { cn } from '@/lib/utils';
 
 interface UserKPIsProps {
     user: ShiftUser;

@@ -77,7 +77,7 @@ export const StaffLeaderboard: React.FC<StaffLeaderboardProps> = ({ sheets, role
                     'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23d1fae5"/><circle cx="50" cy="45" r="20" fill="%23059669"/><path d="M15 95c0-15 15-30 35-30s35 15 35 30H15z" fill="%23059669"/></svg>',
                     // Avatar 3: Neutral, Amber Theme
                     'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23fef3c7"/><circle cx="50" cy="40" r="18" fill="%23d97706"/><path d="M20 95c0-15 18-25 30-25s30 10 30 25H20z" fill="%23d97706"/></svg>'
-                ][Math.floor(Math.random() * 3)], // Random fallback for non-top-3 if needed
+                ][name.length % 3], // Deterministic fallback
                 rank: 0,
                 subLabel: 'Sheets'
             };
