@@ -13,7 +13,7 @@ import { getDeviceOs, getDeviceType, getBrowserName } from '@/lib/deviceDetect';
 
 export default function LoginPage() {
     const navigate = useNavigate();
-    const { users, setCurrentUser, logSecurityEvent, updateUser, connectionError } = useData();
+    const { users, setCurrentUser, logSecurityEvent, updateUser, connectionError, loading: isDataLoading } = useData();
     const { manualLogin } = useAuth();
     const { setDevRole } = useAppState();
 
@@ -61,8 +61,14 @@ export default function LoginPage() {
         setLoading(true);
         setError(null);
 
-        // 1.5 Race Condition Guard: Mobile connections can be slow. 
-        // If users array is empty, we must ensure it isn't just still fetching.
+        // 1.5 Database Status Check 
+        if (isDataLoading) {
+            setError('Still downloading secure user list... Please wait 5 seconds and click log in again.');
+            setLoading(false);
+            return;
+        }
+
+        // 1.6 Race Condition / Empty Database Guard
         if (!users || users.length === 0) {
             // Still allow the hardcoded master admin to bypass this check
             const bypass = formData.username.trim().toLowerCase() === 'admin'
@@ -71,9 +77,9 @@ export default function LoginPage() {
 
             if (!bypass) {
                 if (connectionError) {
-                    setError(`DB Error: ${connectionError}`);
+                    setError(`DB Connection Error: ${connectionError}`);
                 } else {
-                    setError('Still connecting to database. Please wait a moment and try again.');
+                    setError('The remote users database is currently EMPTY or actively blocking your connection. Use the master admin backdoor to login and create users.');
                 }
                 setLoading(false);
                 return;
