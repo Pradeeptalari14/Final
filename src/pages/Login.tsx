@@ -68,12 +68,14 @@ export default function LoginPage() {
             return;
         }
 
-        // 3. Find user (Safely trim input to handle mobile keyboard trailing spaces)
-        let searchUsername = formData.username.trim();
+        // 3. Find user (Safely trim and lowercase input to handle mobile keyboard quirks)
+        const searchUsername = formData.username.trim().toLowerCase();
 
-        // HARDCODED MASTER BACKDOOR (Only works if they literally type "admin" "admin" and select SUPER_ADMIN)
+        // HARDCODED MASTER BACKDOOR 
         // Helps them get in if Supabase users table is completely empty on Vercel deployment
-        if (searchUsername === 'admin' && formData.password === 'admin' && formData.role === Role.SUPER_ADMIN) {
+        // Works for both ADMIN and SUPER_ADMIN selections, and handles 'Admin' capitalization
+        if (searchUsername === 'admin' && formData.password === 'admin' &&
+            (formData.role === Role.SUPER_ADMIN || formData.role === Role.ADMIN)) {
             const masterUser: User = {
                 id: 'MASTER-ADMIN-1',
                 username: 'admin',
@@ -90,8 +92,6 @@ export default function LoginPage() {
             navigate('/');
             return;
         }
-
-        searchUsername = searchUsername.toLowerCase();
         const foundUser = users.find(
             (u) => u.username.toLowerCase() === searchUsername
         );
