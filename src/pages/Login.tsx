@@ -529,6 +529,12 @@ export default function LoginPage() {
                                     </div>
 
                                 </div>
+
+                                <div className="mt-4 text-center">
+                                    <span className="text-[9px] text-slate-400 font-mono tracking-widest opacity-50 cursor-default">
+                                        BUILD V8.1.3 (MOBILE)
+                                    </span>
+                                </div>
                             </div>
                         </motion.div>
                     </div>
