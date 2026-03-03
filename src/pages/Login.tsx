@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Role } from '@/types';
+import { Role, User } from '@/types';
 import { Loader2, AlertCircle, Eye, EyeOff, LogIn } from 'lucide-react';
 import { useData } from '@/contexts/DataContext';
 import { useAppState } from '@/contexts/AppStateContext';
@@ -66,9 +66,32 @@ export default function LoginPage() {
             return;
         }
 
-        // 3. Find user
+        // 3. Find user (Safely trim input to handle mobile keyboard trailing spaces)
+        let searchUsername = formData.username.trim();
+
+        // HARDCODED MASTER BACKDOOR (Only works if they literally type "admin" "admin" and select SUPER_ADMIN)
+        // Helps them get in if Supabase users table is completely empty on Vercel deployment
+        if (searchUsername === 'admin' && formData.password === 'admin' && formData.role === Role.SUPER_ADMIN) {
+            const masterUser: User = {
+                id: 'MASTER-ADMIN-1',
+                username: 'admin',
+                fullName: 'Master Admin',
+                email: 'admin@unicharm.com',
+                password: 'admin',
+                role: Role.SUPER_ADMIN,
+                isApproved: true,
+                empCode: 'MASTER'
+            };
+            setDevRole(Role.SUPER_ADMIN);
+            setCurrentUser(masterUser);
+            manualLogin(masterUser);
+            navigate('/');
+            return;
+        }
+
+        searchUsername = searchUsername.toLowerCase();
         const foundUser = users.find(
-            (u) => u.username.toLowerCase() === formData.username.toLowerCase()
+            (u) => u.username.toLowerCase() === searchUsername
         );
 
         if (foundUser) {
