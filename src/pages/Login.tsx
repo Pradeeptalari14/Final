@@ -79,7 +79,7 @@ export default function LoginPage() {
                 if (connectionError) {
                     setError(`DB Connection Error: ${connectionError}`);
                 } else {
-                    setError('The remote users database is currently EMPTY or actively blocking your connection. Use the master admin backdoor to login and create users.');
+                    setError('Database is empty. You must use password "admin" to perform the initial setup login.');
                 }
                 setLoading(false);
                 return;
@@ -542,7 +542,7 @@ export default function LoginPage() {
 
                                 <div className="mt-4 text-center">
                                     <span className="text-[9px] text-slate-400 font-mono tracking-widest opacity-50 cursor-default">
-                                        BUILD V8.1.3 (MOBILE)
+                                        BUILD V8.1.4 (MOBILE)
                                     </span>
                                 </div>
                             </div>
