@@ -40,6 +40,20 @@ export default defineConfig({
             '@': path.resolve(__dirname, './src')
         }
     },
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+                    'vendor-recharts': ['recharts'],
+                    'vendor-exceljs': ['exceljs'],
+                    'vendor-lucide': ['lucide-react'],
+                    'vendor-supabase': ['@supabase/supabase-js'],
+                }
+            }
+        },
+        chunkSizeWarningLimit: 1000,
+    },
     test: {
         globals: true,
         environment: 'jsdom',

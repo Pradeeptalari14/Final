@@ -1,8 +1,8 @@
 import { useRef } from 'react';
 import * as ReactWindow from 'react-window';
-// @ts-expect-error - react-window typings can be inconsistent with ESM resolution in some environments
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const FixedSizeList = ReactWindow.FixedSizeList || (ReactWindow as any).default?.FixedSizeList;
+const FixedSizeList = (ReactWindow as any)['FixedSizeList'] || (ReactWindow as any).default?.FixedSizeList;
 import { AutoSizer } from 'react-virtualized-auto-sizer';
 import { SheetData, SheetStatus, Role, User, AppSettings } from '@/types';
 import { Badge } from '@/components/ui/badge';

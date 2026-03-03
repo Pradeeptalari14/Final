@@ -61,7 +61,6 @@ export const StaffLeaderboard: React.FC<StaffLeaderboardProps> = ({ sheets, role
 
             // FAILSAFE: If still no photo and name is Pradeep, force the Male Avatar
             if (!finalPhotoUrl && (name.toLowerCase().includes('pradeep') || name.toLowerCase().includes('pk') || (u.empCode === 'EMP-001'))) {
-                console.log('Leaderboard: Activating Failsafe for Pradeep');
                 finalPhotoUrl = 'data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%23e0e7ff%22%2F%3E%3Cpath%20d%3D%22M50%2030c-11%200-20%209-20%2020s9%2020%2020%2020%2020-9%2020-20-9-20-20-20zm0%2045c-15%200-28%208-35%2020h70c-7-12-20-20-35-20z%22%20fill%3D%22%234f46e5%22%2F%3E%3C%2Fsvg%3E';
             }
 
