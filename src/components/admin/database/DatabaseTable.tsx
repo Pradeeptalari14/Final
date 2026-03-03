@@ -35,15 +35,89 @@ export function DatabaseTable({
     const { settings } = useAppState();
     const navigate = useNavigate();
 
+    const parseTimeWithDate = (timeString: string | undefined, dateString: string | undefined): number | null => {
+        if (!timeString) return null;
+
+        // If it's already a full ISO string (or similar), use it directly
+        if (timeString.includes('T') || timeString.includes('-')) {
+            const time = new Date(timeString).getTime();
+            return isNaN(time) ? null : time;
+        }
+
+        // If it sends "HH:MM" or "HH:MM:SS" time string
+        // We need to combine it with the sheet's date to get a valid timestamp
+        if (dateString) {
+            const datePart = dateString.split('T')[0]; // Extract YYYY-MM-DD
+            const dateTime = new Date(`${datePart}T${timeString}`);
+            const ts = dateTime.getTime();
+            return isNaN(ts) ? null : ts;
+        }
+
+        return null;
+    };
+
     const getDuration = (sheet: SheetData) => {
-        if (sheet.status !== SheetStatus.COMPLETED || !sheet.updatedAt) return '-';
-        const start = new Date(sheet.createdAt).getTime();
-        const end = new Date(sheet.updatedAt).getTime();
-        const diffMs = end - start;
+        if (sheet.status !== SheetStatus.COMPLETED) return '-';
+
+        // 1. Resolve Start Time
+        let startMs: number | null = null;
+
+        // Try parsing loadingStartTime as a time string combined with sheet date
+        if (sheet.loadingStartTime) {
+            startMs = parseTimeWithDate(sheet.loadingStartTime, sheet.date || sheet.createdAt);
+        }
+
+        // Fallback to createdAt if loadingStartTime is missing or invalid
+        if (!startMs && sheet.createdAt) {
+            startMs = new Date(sheet.createdAt).getTime();
+        }
+
+        // 2. Resolve End Time
+        // Priority: completedAt -> loadingApprovedAt -> loadingEndTime -> updatedAt
+        let endMs: number | null = null;
+
+        const endCandidates = [
+            sheet.completedAt,
+            sheet.loadingApprovedAt,
+            sheet.loadingEndTime,
+            sheet.updatedAt
+        ];
+
+        for (const candidate of endCandidates) {
+            if (candidate) {
+                // Try parsing as ISO first (most likely for completedAt/approvedAt)
+                if (candidate.includes('T') || candidate.includes('-')) {
+                    const ts = new Date(candidate).getTime();
+                    if (!isNaN(ts)) {
+                        endMs = ts;
+                        break;
+                    }
+                }
+
+                // Try parsing as Time String (likely for loadingEndTime)
+                const tsFromTime = parseTimeWithDate(candidate, sheet.date || sheet.createdAt);
+                if (tsFromTime) {
+                    endMs = tsFromTime;
+                    break;
+                }
+            }
+        }
+
+        if (!startMs || !endMs) return '-';
+
+        // Handle day rollover (if end time is less than start time, assume next day)
+        if (endMs < startMs) {
+            endMs += 24 * 60 * 60 * 1000;
+        }
+
+        const diffMs = endMs - startMs;
         if (diffMs < 0) return '-';
 
         const hours = Math.floor(diffMs / (1000 * 60 * 60));
         const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+        if (isNaN(hours) || isNaN(minutes)) return '-';
+
         return `${hours}h ${minutes}m`;
     };
 

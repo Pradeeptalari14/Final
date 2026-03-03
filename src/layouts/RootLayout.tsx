@@ -11,7 +11,8 @@ import {
     FileText,
     WifiOff,
     BarChart3,
-    Monitor
+    Monitor,
+    LifeBuoy
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
@@ -20,6 +21,7 @@ import { useAppState } from '@/contexts/AppStateContext';
 import { Role, User, AppSettings } from '@/types';
 import { t } from '@/lib/i18n';
 import { NotificationBell } from '@/components/ui/NotificationBell';
+import { GlobalChat } from '@/components/chat/GlobalChat';
 
 export default function RootLayout() {
     const { currentUser, isOnline } = useData();
@@ -148,6 +150,7 @@ export default function RootLayout() {
                     <Outlet />
                 </div>
             </main>
+            <GlobalChat />
         </div>
     );
 }
@@ -267,6 +270,15 @@ function SidebarContent({
                     label={t('reports', settings.language)}
                     collapsed={collapsed && !isMobile}
                     active={location.pathname === '/reports'}
+                />
+
+                {/* HELPDESK */}
+                <NavItem
+                    to="/helpdesk"
+                    icon={LifeBuoy}
+                    label="Helpdesk"
+                    collapsed={collapsed && !isMobile}
+                    active={location.pathname === '/helpdesk'}
                 />
 
                 {/* DATABASE (Moving to bottom as it was omitted from priority list but essential) */}

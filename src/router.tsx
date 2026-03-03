@@ -42,6 +42,7 @@ const SettingsPage = lazyWithRetry(() => import('./pages/Settings'));
 const TVModePerformance = lazyWithRetry(() => import('./components/admin/analytics/TVModePerformance'));
 const StagingSheet = lazyWithRetry(() => import('./components/sheets/StagingSheet'));
 const LoadingSheet = lazyWithRetry(() => import('./components/sheets/LoadingSheet'));
+const HelpdeskPage = lazyWithRetry(() => import('./pages/Helpdesk'));
 
 export const router = createBrowserRouter([
     {
@@ -93,7 +94,16 @@ export const router = createBrowserRouter([
                     </LazyErrorBoundary>
                 )
             },
-
+            {
+                path: 'helpdesk',
+                element: (
+                    <LazyErrorBoundary>
+                        <Suspense fallback={<LoadingFallback />}>
+                            <HelpdeskPage />
+                        </Suspense>
+                    </LazyErrorBoundary>
+                )
+            },
             // ...
 
             {

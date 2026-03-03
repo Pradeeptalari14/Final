@@ -197,3 +197,20 @@ export interface ShiftUser {
     lastActive: string;
     avatar?: string;
 }
+
+export type TicketPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+export type TicketStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
+
+export interface Ticket {
+    id: string;
+    title: string;
+    description: string;
+    priority: TicketPriority;
+    status: TicketStatus;
+    reportedBy: string; // User ID
+    reportedAt: string;
+    resolvedBy?: string; // User ID
+    resolvedAt?: string;
+    assignedTo?: string; // Appointed IT User
+    comments?: Comment[];
+}

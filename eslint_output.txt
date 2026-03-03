@@ -1,0 +1,18 @@
+
+C:\Users\makso\Downloads\unicharm-operations_v8\src\components\chat\GlobalChat.tsx
+   49:17  error    Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+C:\Users\makso\Downloads\unicharm-operations_v8\src\components\chat\GlobalChat.tsx:49:17
+  47 |
+  48 |         const newMsg = {
+> 49 |             id: Date.now().toString(),
+     |                 ^^^^^^^^^^ Cannot call impure function
+  50 |             text,
+  51 |             senderId: currentUser.id,
+  52 |             receiverId,  react-hooks/purity
+  187:64  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         @typescript-eslint/no-explicit-any
+
+??? 2 problems (1 error, 1 warning)
+

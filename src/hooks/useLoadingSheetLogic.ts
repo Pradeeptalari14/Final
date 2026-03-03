@@ -107,6 +107,7 @@ export const useLoadingSheetLogic = () => {
         };
 
         loadSheet();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id, sheets, currentUser, dataLoading, refreshSheets, fetchSheetById]);
 
     // --- Role-based Redirect ---

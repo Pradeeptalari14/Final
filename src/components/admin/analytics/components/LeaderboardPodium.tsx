@@ -31,13 +31,31 @@ const PodiumItem = ({ user, rank, metricLabel, theme = 'dark' }: PodiumItemProps
                     "absolute inset-0 rounded-full border-4 shadow-xl overflow-hidden flex items-center justify-center",
                     theme === 'light' ? "bg-white border-slate-100" : "bg-slate-800 border-slate-700"
                 )}>
-                    {user.fullName ? (
-                        <span className={cn("text-2xl font-black", theme === 'light' ? "text-slate-500" : "text-slate-500")}>
-                            {user.fullName.split(' ').map(n => n[0]).join('')}
-                        </span>
-                    ) : (
-                        <span className="text-2xl font-black text-slate-400">?</span>
-                    )}
+                    {user.photoURL ? (
+                        <img
+                            src={user.photoURL}
+                            alt={user.fullName}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                            }}
+                        />
+                    ) : null}
+
+                    {/* Fallback Initials (Hidden if photo loads) */}
+                    <div className={cn(
+                        "absolute inset-0 flex items-center justify-center",
+                        user.photoURL ? "hidden" : ""
+                    )}>
+                        {user.fullName ? (
+                            <span className={cn("text-2xl font-black", theme === 'light' ? "text-slate-500" : "text-slate-500")}>
+                                {user.fullName.split(' ').map(n => n[0]).join('')}
+                            </span>
+                        ) : (
+                            <span className="text-2xl font-black text-slate-400">?</span>
+                        )}
+                    </div>
                 </div>
                 <div className={cn(
                     "absolute -bottom-2 translate-x-1/2 right-1/2 w-8 h-8 rounded-full flex items-center justify-center text-white font-bold shadow-lg z-20 bg-gradient-to-br",
