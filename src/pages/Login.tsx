@@ -13,7 +13,7 @@ import { getDeviceOs, getDeviceType, getBrowserName } from '@/lib/deviceDetect';
 
 export default function LoginPage() {
     const navigate = useNavigate();
-    const { users, setCurrentUser, logSecurityEvent, updateUser } = useData();
+    const { users, setCurrentUser, logSecurityEvent, updateUser, connectionError } = useData();
     const { manualLogin } = useAuth();
     const { setDevRole } = useAppState();
 
@@ -70,7 +70,11 @@ export default function LoginPage() {
                 && (formData.role === Role.SUPER_ADMIN || formData.role === Role.ADMIN);
 
             if (!bypass) {
-                setError('Still connecting to database. Please wait a moment and try again.');
+                if (connectionError) {
+                    setError(`DB Error: ${connectionError}`);
+                } else {
+                    setError('Still connecting to database. Please wait a moment and try again.');
+                }
                 setLoading(false);
                 return;
             }

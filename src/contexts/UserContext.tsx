@@ -14,6 +14,7 @@ export interface UserContextType {
     logSecurityEvent: (action: string, details: string, actor?: string, severity?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL') => Promise<void>;
     logActivity: (action: string, details: string) => Promise<void>;
     isOnline: boolean;
+    connectionError: string | null;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -38,7 +39,7 @@ export function UserProvider({ children, queryClient }: { children: React.ReactN
         };
     }, []);
 
-    const { data: users = [], isLoading: usersLoading } = useQuery<User[]>({
+    const { data: users = [], isLoading: usersLoading, error: queryError } = useQuery<User[]>({
         queryKey: ['users'],
         queryFn: async () => await dataService.getUsers(),
         staleTime: 1000 * 60 * 5,
@@ -91,7 +92,8 @@ export function UserProvider({ children, queryClient }: { children: React.ReactN
             updateUser,
             logSecurityEvent,
             logActivity,
-            isOnline
+            isOnline,
+            connectionError: queryError ? (queryError as Error).message : null
         }}>
             {children}
         </UserContext.Provider>

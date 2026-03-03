@@ -52,7 +52,8 @@ function DataBridge({ children }: { children: React.ReactNode }) {
         securityLogs: [],  // Handled locally in Audit views now
         activityLogs: [],  // Handled locally in Audit views now
         loadMoreArchived: async () => { }, // Handled by persistence/pagination now
-        getAllUsers: () => userDomain.users
+        getAllUsers: () => userDomain.users,
+        connectionError: userDomain.connectionError || null
     };
 
     return (

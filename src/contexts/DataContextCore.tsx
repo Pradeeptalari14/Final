@@ -28,6 +28,7 @@ export interface DataContextType {
     setCurrentUser: (user: User | null) => void;
     isOnline: boolean;
     syncStatus: 'CONNECTING' | 'LIVE' | 'OFFLINE';
+    connectionError: string | null;
 }
 
 export const DataContext = createContext<DataContextType | undefined>(undefined);
