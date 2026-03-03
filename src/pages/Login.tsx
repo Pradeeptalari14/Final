@@ -548,7 +548,7 @@ export default function LoginPage() {
 
                                 <div className="mt-4 text-center">
                                     <span className="text-[9px] text-slate-400 font-mono tracking-widest opacity-50 cursor-default">
-                                        BUILD V8.1.4 (MOBILE)
+                                        BUILD V8.1.6 (MOBILE)
                                     </span>
                                 </div>
                             </div>
