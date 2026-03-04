@@ -38,8 +38,8 @@ export const dataService = {
                 .from('sheets')
                 .select('*')
                 .or('data->isArchived.is.null,data->isArchived.eq.false')
-                .limit(limitActive), // Applied limit
-
+                .order('created_at', { ascending: false })
+                .limit(limitActive),
 
             // Archived Sheets (Recent ones)
             supabase
@@ -53,8 +53,15 @@ export const dataService = {
         if (activeRes.error) throw activeRes.error;
         if (archivedRes.error) throw archivedRes.error;
 
-        const activeSheets = activeRes.data?.map((row: { data: unknown }) => row.data as SheetData) || [];
-        const archivedSheets = archivedRes.data?.map((row: { data: unknown }) => row.data as SheetData) || [];
+        const activeSheets = activeRes.data?.map((row) => ({
+            ...(row.data as SheetData),
+            id: row.id
+        })) || [];
+
+        const archivedSheets = archivedRes.data?.map((row) => ({
+            ...(row.data as SheetData),
+            id: row.id
+        })) || [];
 
         return [...activeSheets, ...archivedSheets];
     },
@@ -144,12 +151,115 @@ export const dataService = {
         const { error: error3 } = await supabase.from('activity_logs').delete().neq('id', '0');
         if (error3) console.error('Error clearing activity_logs:', error3);
 
-        // Optional: Clear users too? Usually we keep the admin, but "Nuclear" implies everything.
-        // If users are stored in auth.users, we can't delete them from here without service key.
-        // If in public.users table:
         const { error: error4 } = await supabase.from('users').delete().neq('id', '0');
         if (error4) console.error('Error clearing users:', error4);
 
+        const { error: error5 } = await supabase.from('messages').delete().neq('id', '0');
+        if (error5) console.error('Error clearing messages:', error5);
+
         return { success: true };
+    },
+
+    // --- CHAT SYSTEM ---
+    async sendMessage(msg: Omit<import('@/types').ChatMessage, 'id' | 'timestamp'>) {
+        const { data, error } = await supabase.from('messages').insert({
+            sender_id: msg.senderId,
+            receiver_id: msg.receiverId,
+            message: msg.message
+        }).select().single();
+
+        if (error) {
+            if (error.code === 'PGRST205') {
+                console.error("Supabase SQL Table Not Created:", error.message);
+                throw new Error("Missing 'messages' table in database. Run SQL migration first.");
+            }
+            throw error;
+        }
+
+        return {
+            data: {
+                id: data.id,
+                senderId: data.sender_id,
+                receiverId: data.receiver_id,
+                message: data.message,
+                timestamp: data.timestamp
+            },
+            error: null
+        };
+    },
+
+    async getOnlineUserIds(): Promise<string[]> {
+        const { data, error } = await supabase.from('sessions').select('*');
+        if (error) {
+            console.error('Error fetching sessions:', error);
+            return [];
+        }
+
+        const now = Date.now();
+        const activeIds = data
+            .map(row => row.data as import('@/types').LoginSession)
+            .filter(session => {
+                const lastActive = new Date(session.lastActive).getTime();
+                return (now - lastActive) < 10 * 60 * 1000; // 10 minutes for "Online"
+            })
+            .map(session => session.userId);
+
+        return Array.from(new Set(activeIds));
+    },
+
+    async getRecentMessages(limit = 200, currentUserId?: string) {
+        if (!currentUserId) {
+            console.warn("getRecentMessages called without currentUserId. Returning empty array for privacy.");
+            return [];
+        }
+
+        let query = supabase
+            .from('messages')
+            .select('*')
+            .or(`sender_id.eq.${currentUserId},receiver_id.eq.${currentUserId}`);
+
+        const { data, error } = await query
+            .order('timestamp', { ascending: false })
+            .limit(limit);
+
+        if (error) {
+            if (error.code === 'PGRST205') {
+                console.warn("Supabase 'messages' table is missing. Returning empty chat history.");
+                return [];
+            }
+            throw error;
+        }
+
+        // Map DB snake_case to camelCase
+        return (data || []).map(row => ({
+            id: row.id,
+            senderId: row.sender_id,
+            receiverId: row.receiver_id,
+            message: row.message,
+            timestamp: row.timestamp
+        })).reverse() as import('@/types').ChatMessage[]; // Reverse to chronological
+    },
+
+    subscribeToMessages(callback: (msg: import('@/types').ChatMessage) => void) {
+        const channel = supabase.channel('public:messages')
+            .on(
+                'postgres_changes',
+                { event: 'INSERT', schema: 'public', table: 'messages' },
+                (payload) => {
+                    const row = payload.new;
+                    callback({
+                        id: row.id,
+                        senderId: row.sender_id,
+                        receiverId: row.receiver_id,
+                        message: row.message,
+                        timestamp: row.timestamp
+                    });
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }
 };

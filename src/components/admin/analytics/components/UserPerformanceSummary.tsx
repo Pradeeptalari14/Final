@@ -18,7 +18,7 @@ export function UserPerformanceSummary({ collapsed, user: propUser, sheets: prop
 
     const stats = useMemo(() => {
         if (!targetUser) return null;
-        return calculateUserStats(targetUser.fullName || targetUser.username, targetSheets);
+        return calculateUserStats(targetUser, targetSheets);
     }, [targetUser, targetSheets]);
 
     if (!stats || !targetUser || (targetUser.role === Role.ADMIN && !propUser)) return null;

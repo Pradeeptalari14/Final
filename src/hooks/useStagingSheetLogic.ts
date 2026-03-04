@@ -180,7 +180,9 @@ export const useStagingSheetLogic = () => {
 
             // If new, invoke addSheet (which does INSERT)
             if (isNew) {
-                setFormData((prev) => ({ ...prev, id: targetId }));
+                sheetToSave.createdBy = currentUser?.username || 'Unknown';
+                sheetToSave.createdAt = new Date().toISOString();
+                setFormData((prev) => ({ ...prev, id: targetId, createdBy: sheetToSave.createdBy, createdAt: sheetToSave.createdAt }));
                 const { error } = await addSheet(sheetToSave);
                 if (error) throw error;
                 if (!quiet) addToast('success', 'New sheet created successfully');

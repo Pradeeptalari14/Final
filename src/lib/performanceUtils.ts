@@ -9,13 +9,14 @@ export interface UserStats {
     efficiency: number;
 }
 
-export function calculateUserStats(userId: string, sheets: SheetData[]): UserStats {
+export function calculateUserStats(user: User, sheets: SheetData[]): UserStats {
+    const { fullName, username } = user;
     const userSheets = sheets.filter(
         (s) =>
-            s.supervisorName === userId ||
-            s.loadingSvName === userId ||
-            s.createdBy === userId ||
-            s.completedBy === userId
+            s.supervisorName === fullName || s.supervisorName === username ||
+            s.loadingSvName === fullName || s.loadingSvName === username ||
+            s.createdBy === fullName || s.createdBy === username ||
+            s.completedBy === fullName || s.completedBy === username
     );
 
     if (userSheets.length === 0) {
@@ -97,8 +98,12 @@ export interface ShiftLeadStats {
     avgLoadingTime: number;
 }
 
-export function calculateStagingStats(userIdOrName: string, sheets: SheetData[]): StagingStats {
-    const userSheets = sheets.filter(s => s.supervisorName === userIdOrName || s.createdBy === userIdOrName);
+export function calculateStagingStats(user: User, sheets: SheetData[]): StagingStats {
+    const { fullName, username } = user;
+    const userSheets = sheets.filter(s =>
+        s.supervisorName === fullName || s.supervisorName === username ||
+        s.createdBy === fullName || s.createdBy === username
+    );
 
     // Unique "Staging Places" (Docks)
     const stagingPlaces = new Set(userSheets.map(s => s.loadingDoc).filter(Boolean)).size;
@@ -117,8 +122,12 @@ export function calculateStagingStats(userIdOrName: string, sheets: SheetData[])
     };
 }
 
-export function calculateLoadingStats(userIdOrName: string, sheets: SheetData[]): LoadingStats {
-    const userSheets = sheets.filter(s => s.loadingSvName === userIdOrName || s.completedBy === userIdOrName);
+export function calculateLoadingStats(user: User, sheets: SheetData[]): LoadingStats {
+    const { fullName, username } = user;
+    const userSheets = sheets.filter(s =>
+        s.loadingSvName === fullName || s.loadingSvName === username ||
+        s.completedBy === fullName || s.completedBy === username
+    );
     const completed = userSheets.filter(s => s.status === SheetStatus.COMPLETED);
 
     const quantity = completed.reduce((acc, s) => {
@@ -148,8 +157,12 @@ export function calculateLoadingStats(userIdOrName: string, sheets: SheetData[])
     };
 }
 
-export function calculateShiftLeadStats(userIdOrName: string, sheets: SheetData[]): ShiftLeadStats {
-    const userSheets = sheets.filter(s => s.loadingApprovedBy === userIdOrName || s.slName === userIdOrName);
+export function calculateShiftLeadStats(user: User, sheets: SheetData[]): ShiftLeadStats {
+    const { fullName, username } = user;
+    const userSheets = sheets.filter(s =>
+        s.loadingApprovedBy === fullName || s.loadingApprovedBy === username ||
+        s.slName === fullName || s.slName === username
+    );
 
     const stagingPlaces = new Set(userSheets.map(s => s.loadingDoc).filter(Boolean)).size;
     const vehicles = userSheets.filter(s => s.status === SheetStatus.COMPLETED).length;
@@ -184,6 +197,6 @@ export function calculateShiftLeadStats(userIdOrName: string, sheets: SheetData[
 export function getAllUsersStats(users: User[], sheets: SheetData[]) {
     return users.map(user => ({
         ...user,
-        stats: calculateUserStats(user.fullName || user.username, sheets)
+        stats: calculateUserStats(user, sheets)
     }));
 }

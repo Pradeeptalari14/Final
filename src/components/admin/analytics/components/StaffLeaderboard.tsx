@@ -82,18 +82,18 @@ export const StaffLeaderboard: React.FC<StaffLeaderboardProps> = ({ sheets, role
             };
 
             if (roleFilter === 'STAGING') {
-                const stats = calculateStagingStats(name, sheets);
+                const stats = calculateStagingStats(u, sheets);
                 metric.sheetsCount = stats.totalStagingPlaces;
                 metric.totalQty = stats.totalQuantity;
                 metric.subLabel = 'Staging Places';
             } else if (roleFilter === 'LOADING') {
-                const stats = calculateLoadingStats(name, sheets);
+                const stats = calculateLoadingStats(u, sheets);
                 metric.sheetsCount = stats.totalVehicles;
                 metric.totalQty = stats.totalQuantity;
                 metric.avgTime = stats.avgTimeMinutes;
                 metric.subLabel = 'Vehicles';
             } else {
-                const stats = calculateShiftLeadStats(name, sheets);
+                const stats = calculateShiftLeadStats(u, sheets);
                 metric.sheetsCount = stats.vehiclesDispatched;
                 metric.totalQty = stats.totalQuantity;
                 metric.avgTime = stats.avgLoadingTime;

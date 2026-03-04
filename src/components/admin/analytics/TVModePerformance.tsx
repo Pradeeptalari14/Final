@@ -82,7 +82,7 @@ export default function TVModePerformance() {
             ranked = users
                 .filter(u => u.role === Role.STAGING_SUPERVISOR || u.role === Role.ADMIN)
                 .map(u => {
-                    const stats = calculateStagingStats(u.fullName || u.username, sourceData);
+                    const stats = calculateStagingStats(u, sourceData);
                     return {
                         ...u,
                         rankMetric: stats.totalQuantity,
@@ -93,7 +93,7 @@ export default function TVModePerformance() {
             ranked = users
                 .filter(u => u.role === Role.LOADING_SUPERVISOR || u.role === Role.ADMIN)
                 .map(u => {
-                    const stats = calculateLoadingStats(u.fullName || u.username, sourceData);
+                    const stats = calculateLoadingStats(u, sourceData);
                     return {
                         ...u,
                         rankMetric: stats.totalVehicles,
@@ -104,7 +104,7 @@ export default function TVModePerformance() {
             ranked = users
                 .filter(u => u.role === Role.SHIFT_LEAD || u.role === Role.ADMIN)
                 .map(u => {
-                    const stats = calculateShiftLeadStats(u.fullName || u.username, sourceData);
+                    const stats = calculateShiftLeadStats(u, sourceData);
                     return {
                         ...u,
                         rankMetric: stats.vehiclesDispatched,
