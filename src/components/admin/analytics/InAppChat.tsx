@@ -3,6 +3,10 @@ import { X, Send, Paperclip, Phone, Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { useData } from '@/contexts/DataContext';
+import { useChat } from '@/contexts/ChatContext';
+import { toast } from 'sonner';
+import { User, ChatMessage } from '@/types';
 
 interface InAppChatProps {
     recipientName: string;
@@ -12,30 +16,19 @@ interface InAppChatProps {
 }
 
 export function InAppChat({ recipientName, onClose, index }: InAppChatProps) {
-    const [messages, setMessages] = useState<{ id: string; text: string; sender: 'me' | 'them'; time: string }[]>([]);
+    const { users, currentUser } = useData();
+    const { messages: allMessages, sendMessage } = useChat();
     const [input, setInput] = useState('');
     const scrollRef = useRef<HTMLDivElement>(null);
-    const timersRef = useRef<NodeJS.Timeout[]>([]);
 
-    useEffect(() => {
-        return () => {
-            // eslint-disable-next-line react-hooks/exhaustive-deps
-            timersRef.current.forEach(timer => clearTimeout(timer));
-        };
-    }, []);
+    const recipientUser = users.find((u: User) => u.fullName === recipientName || u.username === recipientName);
+    const recipientId = recipientUser?.id;
 
-    // Initial Simulated History
-    useEffect(() => {
-        if (recipientName) {
-            const timer = setTimeout(() => {
-                setMessages([
-                    { id: '1', text: `Hi ${recipientName.split(' ')[0]}, regarding the roster...`, sender: 'me', time: '10:30 AM' },
-                    { id: '2', text: 'Hey! Sure, let me check.', sender: 'them', time: '10:32 AM' }
-                ]);
-            }, 0);
-            return () => clearTimeout(timer);
-        }
-    }, [recipientName]);
+    const messages = allMessages.filter(
+        (m: ChatMessage) =>
+            (String(m.senderId) === String(currentUser?.id) && String(m.receiverId) === String(recipientId)) ||
+            (String(m.senderId) === String(recipientId) && String(m.receiverId) === String(currentUser?.id))
+    );
 
     // Auto-scroll
     useEffect(() => {
@@ -44,25 +37,16 @@ export function InAppChat({ recipientName, onClose, index }: InAppChatProps) {
         }
     }, [messages]);
 
-    const handleSend = (e?: React.FormEvent) => {
+    const handleSend = async (e?: React.FormEvent) => {
         e?.preventDefault();
-        if (!input.trim()) return;
+        if (!input.trim() || !recipientId || !currentUser) return;
 
-        const newMsg = { id: Date.now().toString(), text: input, sender: 'me' as const, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
-        setMessages(prev => [...prev, newMsg]);
-        setInput('');
-
-        // Simulate reply with tracked timer
-        const replyTimer = setTimeout(() => {
-            setMessages(prev => [...prev, {
-                id: (Date.now() + 1).toString(),
-                text: "Thanks! I'm on it.",
-                sender: 'them',
-                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            }]);
-        }, 1500);
-
-        timersRef.current.push(replyTimer);
+        try {
+            await sendMessage(recipientId, input);
+            setInput('');
+        } catch (error) {
+            toast.error("Failed to send message");
+        }
     };
 
     // Calculate position: right-4 (16px) + (index * width + gap)
@@ -104,19 +88,34 @@ export function InAppChat({ recipientName, onClose, index }: InAppChatProps) {
 
             {/* Messages Area */}
             <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-slate-50 dark:bg-slate-950 custom-scrollbar" ref={scrollRef}>
-                <div className="text-center text-[9px] text-slate-400 font-bold uppercase tracking-widest my-2">Today</div>
-                {messages.map((msg) => (
-                    <div key={msg.id} className={cn("flex w-full", msg.sender === 'me' ? "justify-end" : "justify-start")}>
-                        <div className={cn(
-                            "max-w-[85%] rounded-2xl px-3 py-2 text-xs font-medium leading-relaxed shadow-sm",
-                            msg.sender === 'me'
-                                ? "bg-indigo-600 text-white rounded-br-none"
-                                : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-bl-none"
-                        )}>
-                            <p>{msg.text}</p>
-                        </div>
+                {messages.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-slate-400 space-y-2 opacity-60">
+                        <p className="text-xs font-medium">No messages yet.</p>
+                        <p className="text-[10px]">Send a message to start the conversation!</p>
                     </div>
-                ))}
+                ) : (
+                    <>
+                        <div className="text-center text-[9px] text-slate-400 font-bold uppercase tracking-widest my-2">Conversation History</div>
+                        {messages.map((msg: ChatMessage) => (
+                            <div key={msg.id} className={cn("flex w-full", String(msg.senderId) === String(currentUser?.id) ? "justify-end" : "justify-start")}>
+                                <div className={cn(
+                                    "max-w-[85%] rounded-2xl px-3 py-2 text-xs font-medium leading-relaxed shadow-sm",
+                                    String(msg.senderId) === String(currentUser?.id)
+                                        ? "bg-indigo-600 text-white rounded-br-none"
+                                        : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-bl-none"
+                                )}>
+                                    <p>{msg.message}</p>
+                                    <span className={cn(
+                                        "text-[9px] mt-1 block font-medium opacity-70",
+                                        String(msg.senderId) === String(currentUser?.id) ? "text-indigo-200 text-right" : "text-slate-400"
+                                    )}>
+                                        {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                </div>
+                            </div>
+                        ))}
+                    </>
+                )}
             </div>
 
             {/* Input Area */}
